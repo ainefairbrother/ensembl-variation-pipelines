@@ -23,6 +23,10 @@
     {
         "source_name": "10000 Genomes",
         "file_location": "/nfs/production/flicek/ensembl/variation/new_website/1kg/ALL.GRCh38.20170504_VEP.vcf.gz"
+    },
+    {
+        "source_name": "focus",
+        "file_location": "/nfs/production/flicek/ensembl/variation/new_website/focus/homo_sapiens_grch38_focus.vcf.gz"
     }
   ]
 }
