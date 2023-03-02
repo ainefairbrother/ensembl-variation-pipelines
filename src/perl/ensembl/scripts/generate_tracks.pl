@@ -171,7 +171,7 @@ sub write_wig_from_bed {
 
   # Clear up
   unlink($wig_file);
-  # unlink($bed_file);
+  unlink($bed_file);
 
   return $bw;
 }
@@ -346,3 +346,7 @@ while(<$bws_fh>) {
 close($bws_fh);
 my $target_file = $out_dir . "/$base_name.bw";
 bigwig_cat(\@bws, $target_file);
+
+foreach my $bw_file (@bws){
+  unlink($bw_file)
+}
