@@ -100,9 +100,9 @@ sub _bedfile {
 sub to_bigwig {
   my ($wig_path, $indexed_path) = @_;
 
-  die "Cannot find $wig_path" unless  -f $wig_path;
+  die "Cannot find $wig_path" unless -f $wig_path;
 
-  if(! defined $indexed_path) {
+  if(!defined $indexed_path) {
       my $indexed_name = $wig_path->basename('.wig').'.bw';
       $indexed_path = $wig_path->sibling($indexed_name);
   }
@@ -135,7 +135,7 @@ sub bigwig_cat {
   return $target_path;
 }
 
-sub write_wig_from_bed {
+sub write_bw_from_bed {
   my ($bed_file) = @_;
 
   my $wig_file = $bed_file;
@@ -165,15 +165,38 @@ sub write_wig_from_bed {
 
   # Convert to bigWig
   print "Converting to bigwig file...\n";
-  my $bw = $bed_file;
-  $bw =~ s/.bed$/.bw/;
-  $bw = to_bigwig($wig_file, $bw);
+  my $bw_file = $bed_file;
+  $bw_file =~ s/.bed$/.bw/;
+  $bw_file = to_bigwig($wig_file, $bw_file);
 
   # Clear up
   unlink($wig_file);
   unlink($bed_file);
-
-  return $bw;
+  
+  my $target_file = $out_dir . "/$base_name.bw";
+  if (-f $target_file) {
+    # rename target bigwig file
+    my $tmp_target_file = $target_file . "_tmp";
+    my $cmd = 'mv';
+    system($cmd, $target_file, $tmp_target_file) == 0 or confess "$cmd failed: $?";
+    
+    # concat currently generated bigwig files
+    $cmd = 'bigWigCat';
+    system($cmd, $target_file, $tmp_target_file, $bw_file) == 0 or confess "$cmd failed: $?";
+    
+    # remove tmp target bigwig file
+    $cmd = 'rm';
+    system($cmd, $tmp_target_file) == 0 or confess "$cmd failed: $?";
+  }
+  else {
+    my $cmd = "cp";
+    system($cmd, $bw_file, $target_file) == 0 or confess "cp failed: $?";
+  }
+  
+  # Clear up
+  unlink($bw_file);
+  
+  return $bw_file;
 }
 
 sub write_bigbed_from_bed{
@@ -216,6 +239,7 @@ sub write_bigbed_from_bed{
 sub write_beds_from_vcf {
   my ($vcf_file) = @_;
   
+  use Data::Dumper;
   my $vcf = Bio::EnsEMBL::IO::Parser::VCF4->open($vcf_file) or die "Opening $vcf_file: $!";
   $vcf->next;
   
@@ -332,7 +356,7 @@ close($bbs_fh);
 my $bw_files = $out_dir . "/bw-files" . ".txt";
 open(my $bws_fh, ">", $bw_files) or die "Opening $bw_files: $!";
 foreach my $bed (@beds) {
-  my $bw = write_wig_from_bed($bed);
+  my $bw = write_bw_from_bed($bed);
   print $bws_fh "$bw\n";
 }
 close($bws_fh);
@@ -344,9 +368,3 @@ while(<$bws_fh>) {
   push @bws, $_;
 }
 close($bws_fh);
-my $target_file = $out_dir . "/$base_name.bw";
-bigwig_cat(\@bws, $target_file);
-
-foreach my $bw_file (@bws){
-  unlink($bw_file)
-}
