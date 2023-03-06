@@ -17,6 +17,7 @@ use Bio::EnsEMBL::Variation::Utils::Constants;
 use Carp;
 use Path::Tiny qw(path);
 use List::MoreUtils qw(zip);
+use Cwd;
 
 ###############################################################
 ##########             CONFIGURE                        #######
@@ -24,8 +25,8 @@ use List::MoreUtils qw(zip);
 
 my ($vcf_file, $out_dir, $config_dir) = @ARGV;
 
-$out_dir = "" unless $out_dir;
-$config_dir = "" unless $config_dir;
+$out_dir = cwd() unless $out_dir;
+$config_dir = cwd() unless $config_dir;
 
 my %all_cons = %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
 
@@ -240,71 +241,78 @@ sub write_beds_from_vcf {
   my ($vcf_file) = @_;
   
   use Data::Dumper;
-  my $vcf = Bio::EnsEMBL::IO::Parser::VCF4->open($vcf_file) or die "Opening $vcf_file: $!";
-  $vcf->next;
-  
+  my $vcf = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($vcf_file) or die "Opening $vcf_file: $!";
+  # print Dumper($vcf->{tabix_file}->seqnames), "\n";
+  my $sequences = $vcf->{tabix_file}->seqnames;
+  # $vcf->next;
+  # print Dumper($vcf->{'record'}), "\n";
   print "writing bed files...\n";
-  while ($vcf->{'record'}) {
-    my $chrom = $vcf->get_seqname;
-    my $pos = $vcf->get_raw_start;
-    my $ref = $vcf->get_reference;
-    my $alts = $vcf->get_alternatives; # this is an array of alternative nucleotide sequences
-    my $ids = $vcf->get_IDs;
-    my $csq = $vcf->get_info->{'CSQ'};
-    
+  for my $sequence (@${sequences}) {
+    $vcf->seek($sequence, 1, 1e10);
     $vcf->next;
-    
-    # bedTobigBed don't support chr names greater than 32 char long
-    next if length $chrom > 31;
-    
-    # currently we have some merged rsIDs in the VCFs
-    next if scalar @${ids} != 1;
+    while ($vcf->{'record'}) {
+      my $chrom = $vcf->get_seqname;
+      my $pos = $vcf->get_raw_start;
+      my $ref = $vcf->get_reference;
+      my $alts = $vcf->get_alternatives; # this is an array of alternative nucleotide sequences
+      my $ids = $vcf->get_IDs;
+      my $csq = $vcf->get_info->{'CSQ'};
+      # print "$chrom $pos $ref $alts $ids $csq\n";
+      $vcf->next;
+      # print Dumper($vcf->{'record'}), "\n";
+      
+      # bedTobigBed don't support chr names greater than 32 char long
+      next if length $chrom > 31;
+      
+      # currently we have some merged rsIDs in the VCFs
+      next if scalar @${ids} != 1;
 
-    # convert to zero-based co-ordinate
-    my $start_pos = $pos - 1;
+      # convert to zero-based co-ordinate
+      my $start_pos = $pos - 1;
 
-    # get variant class - should be gotten by vep (get class of most severe?)
-    # is checking by longest alt sufficient here?
-    my ($longest_alt) = sort { length($b) <=> length($a) } @$alts;
-    my $length_str = (length $longest_alt < 2 ? "1" : "0").(length $ref < 2 ? "1" : "0");
+      # get variant class - should be gotten by vep (get class of most severe?)
+      # is checking by longest alt sufficient here?
+      my ($longest_alt) = sort { length($b) <=> length($a) } @$alts;
+      my $length_str = (length $longest_alt < 2 ? "1" : "0").(length $ref < 2 ? "1" : "0");
 
-    my $switch = {
-      "11" => "SNV",
-      "01" => "INS",
-      "10" => "DEL",
-      "00" => "INDEL"
-    };
-    my $type = $switch->{$length_str};
+      my $switch = {
+        "11" => "SNV",
+        "01" => "INS",
+        "10" => "DEL",
+        "00" => "INDEL"
+      };
+      my $type = $switch->{$length_str};
 
-    # ideally we should have CSQ field in the vcf prepper pipeline
-    next unless $csq;
-    my @csqs = split ',', $csq;
-    
-    # get most severe consequence
-    my $most_severe_csq = ".";
-    my $highest_rank = 100;
-    foreach (@csqs) {
-      my $csq = (split '\|', $_)[1];
-    
-      foreach (split '&', $csq){
-        my $rank = $all_cons{$_}->rank;
-        $most_severe_csq = $_ if $rank < $highest_rank;
+      # ideally we should have CSQ field in the vcf prepper pipeline
+      next unless $csq;
+      my @csqs = split ',', $csq;
+      
+      # get most severe consequence
+      my $most_severe_csq = ".";
+      my $highest_rank = 100;
+      foreach (@csqs) {
+        my $csq = (split '\|', $_)[1];
+      
+        foreach (split '&', $csq){
+          my $rank = $all_cons{$_}->rank;
+          $most_severe_csq = $_ if $rank < $highest_rank;
+        }
       }
-    }
-  
-    # get variant group for the most severe consequence
-    die "Unknown consequence at $chrom:$start_pos: $most_severe_csq\n" unless $VARIANTGROUP{$most_severe_csq};
-    my $group = $VARIANTGROUP{$most_severe_csq};
     
-    my $bed = _bedfile($chrom);
-    next unless defined $bed;
+      # get variant group for the most severe consequence
+      die "Unknown consequence at $chrom:$start_pos: $most_severe_csq\n" unless $VARIANTGROUP{$most_severe_csq};
+      my $group = $VARIANTGROUP{$most_severe_csq};
+      
+      my $bed = _bedfile($chrom);
+      next unless defined $bed;
 
-    # print lines in bed files (separate for chrom)
-    my $line;
-    foreach my $id (@{$ids}){
-      # what about insertion?
-      $line = join "\t", ($chrom, $start_pos, $start_pos + length($ref), $id, $type, $ref, join("/", @{$alts}), $group, $most_severe_csq);
-      print $bed $line."\n";
+      # print lines in bed files (separate for chrom)
+      my $line;
+      foreach my $id (@{$ids}){
+        # what about insertion?
+        $line = join "\t", ($chrom, $start_pos, $start_pos + length($ref), $id, $type, $ref, join("/", @{$alts}), $group, $most_severe_csq);
+        print $bed $line."\n";
+      }
     }
   }
 
