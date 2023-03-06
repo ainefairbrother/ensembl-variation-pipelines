@@ -250,6 +250,11 @@ sub write_beds_from_vcf {
   print "writing bed files...\n";
   for my $sequence (@${sequences}) {
     $vcf->seek($sequence, 1, 1e10);
+    
+    my $bed = _bedfile($sequence);
+    next unless defined $bed;
+    print $beds_fh "$BEDFILENAMES{$sequence}\n";
+    
     $vcf->next;
     while ($vcf->{'record'}) {
       my $chrom = $vcf->get_seqname;
@@ -302,11 +307,6 @@ sub write_beds_from_vcf {
       # get variant group for the most severe consequence
       die "Unknown consequence at $chrom:$start_pos: $most_severe_csq\n" unless $VARIANTGROUP{$most_severe_csq};
       my $group = $VARIANTGROUP{$most_severe_csq};
-      
-      my $bed = _bedfile($chrom);
-      next unless defined $bed;
-          
-      print $beds_fh "$BEDFILENAMES{$chrom}\n";
 
       # print lines in bed files (separate for chrom)
       my $line;
