@@ -16,21 +16,24 @@ process generateTracks {
   # remove any whitespace in source name
   source=${source// /_}
   
-  # if vcf file is compressed we need to uncompress it
+  # if vcf file is uncompressed we need to compress it
   file_type=$(file ${vcf_file})
-  if [[ ${file_type} =~ compressed ]]; then
-    # create a temp dir to put uncompressed vcf file - we will remove it later
+  if [[ ! ${file_type} =~ compressed ]]; then
+    # create a temp dir to put compressed vcf file - we will remove it later
     temp_dir=${PWD}/${source}_temp
     mkdir -p ${temp_dir}
   
-    # uncompress vcf file
+    # compress vcf file
     vcf_filename=$(basename ${vcf_file})
-    uncompressed_vcf=${temp_dir}/${vcf_filename/.gz/}
-    bgzip -c -d ${vcf_file} > ${uncompressed_vcf}
+    compressed_vcf=${temp_dir}/${vcf_filename/.gz/}
+    bgzip -c ${vcf_file} > ${compressed_vcf}
     
-    # set the vcf_file to uncompressed vcf file
-    vcf_file=${uncompressed_vcf}
+    # set the vcf_file to compressed vcf file
+    vcf_file=${compressed_vcf}
   fi
+  
+  # tabix index the compressed vcf file if not already exist
+  tabix ${vcf_file} -l > /dev/null 2>&1 || tabix -p vcf -f ${vcf_file}
   
   out_dir=${PWD}/${source}_out
   mkdir -p ${out_dir}

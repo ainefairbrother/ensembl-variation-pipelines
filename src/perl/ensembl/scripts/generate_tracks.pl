@@ -240,12 +240,13 @@ sub write_bigbed_from_bed{
 sub write_beds_from_vcf {
   my ($vcf_file) = @_;
   
-  use Data::Dumper;
   my $vcf = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($vcf_file) or die "Opening $vcf_file: $!";
-  # print Dumper($vcf->{tabix_file}->seqnames), "\n";
   my $sequences = $vcf->{tabix_file}->seqnames;
-  # $vcf->next;
-  # print Dumper($vcf->{'record'}), "\n";
+
+  # keep log of bed file names
+  my $bed_files = $out_dir . "/bed-files.txt";
+  open(my $beds_fh, ">", $bed_files) || die "Opening $bed_files: $!";
+  
   print "writing bed files...\n";
   for my $sequence (@${sequences}) {
     $vcf->seek($sequence, 1, 1e10);
@@ -257,9 +258,8 @@ sub write_beds_from_vcf {
       my $alts = $vcf->get_alternatives; # this is an array of alternative nucleotide sequences
       my $ids = $vcf->get_IDs;
       my $csq = $vcf->get_info->{'CSQ'};
-      # print "$chrom $pos $ref $alts $ids $csq\n";
+
       $vcf->next;
-      # print Dumper($vcf->{'record'}), "\n";
       
       # bedTobigBed don't support chr names greater than 32 char long
       next if length $chrom > 31;
@@ -305,6 +305,8 @@ sub write_beds_from_vcf {
       
       my $bed = _bedfile($chrom);
       next unless defined $bed;
+          
+      print $beds_fh "$BEDFILENAMES{$chrom}\n";
 
       # print lines in bed files (separate for chrom)
       my $line;
@@ -315,18 +317,16 @@ sub write_beds_from_vcf {
       }
     }
   }
+  
+  close($beds_fh);
 
-  # sort the bed files and keep log of bed file names
-  my $bed_files = $out_dir . "/bed-files.txt";
-  open(my $beds_fh, ">", $bed_files) || die "Opening $bed_files: $!";
+  # sort the bed files
   foreach my $bed (values %BEDFILENAMES) {
     my $cmd = "LC_COLLATE=C sort -S1G -k1,1 -k2,2n -o $bed $bed";
     system($cmd) == 0 or die "sorting failed: $!";
-  
-    print $beds_fh "$bed\n";
   }
-  close($beds_fh);
 
+  # close all bed file handles
   foreach my $bed (values %BEDFILES) {
     close($bed);
   }
