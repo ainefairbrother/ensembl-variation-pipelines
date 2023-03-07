@@ -138,6 +138,12 @@ sub bigwig_cat {
 
 sub write_bw_from_bed {
   my ($bed_file) = @_;
+  
+  # return if empty
+  if (-z $bed_file) {
+    unlink($bed_file);
+    return; 
+  }
 
   my $wig_file = $bed_file;
   $wig_file =~ s/.bed$/.wig/;
@@ -241,14 +247,17 @@ sub write_beds_from_vcf {
   my ($vcf_file) = @_;
   
   my $vcf = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($vcf_file) or die "Opening $vcf_file: $!";
-  my $sequences = $vcf->{tabix_file}->seqnames;
+  my $sequences = $vcf->{tabix_file}->seqnames; 
+  
+  # we need to sort so that bigwigCat do not complain about overlap 
+  my @sorted_sequences = sort(@$sequences);
 
   # keep log of bed file names
   my $bed_files = $out_dir . "/bed-files.txt";
   open(my $beds_fh, ">", $bed_files) || die "Opening $bed_files: $!";
   
   print "writing bed files...\n";
-  for my $sequence (@${sequences}) {
+  for my $sequence (@sorted_sequences) {
     $vcf->seek($sequence, 1, 1e10);
     
     my $bed = _bedfile($sequence);
@@ -365,14 +374,6 @@ my $bw_files = $out_dir . "/bw-files" . ".txt";
 open(my $bws_fh, ">", $bw_files) or die "Opening $bw_files: $!";
 foreach my $bed (@beds) {
   my $bw = write_bw_from_bed($bed);
-  print $bws_fh "$bw\n";
-}
-close($bws_fh);
-
-my @bws;
-open($bws_fh, "<", $bw_files) or die "Opening $bw_files: $!";
-while(<$bws_fh>) {
-  chomp;
-  push @bws, $_;
+  print $bws_fh "$bw\n" if $bw;
 }
 close($bws_fh);
