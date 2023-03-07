@@ -17,12 +17,10 @@ process generateTracks {
   source=${source// /_}
   
   # if vcf file is uncompressed we need to compress it
+  temp_dir=${PWD}/${source}_temp
+  mkdir -p ${temp_dir}  
   file_type=$(file ${vcf_file})
   if [[ ! ${file_type} =~ compressed ]]; then
-    # create a temp dir to put compressed vcf file - we will remove it later
-    temp_dir=${PWD}/${source}_temp
-    mkdir -p ${temp_dir}
-  
     # compress vcf file
     vcf_filename=$(basename ${vcf_file})
     compressed_vcf=${temp_dir}/${vcf_filename/.gz/}
@@ -43,7 +41,7 @@ process generateTracks {
   # run the track generation script
   perl !{projectDir}/../../src/perl/ensembl/scripts/generate_tracks.pl ${vcf_file} ${out_dir} ${config_dir}
 
-  # remove temp dir with uncompressed vcf file
+  # remove temp dir with compressed vcf file
   if [[ -d ${temp_dir} ]]; then
     rm -r ${temp_dir}
   fi
