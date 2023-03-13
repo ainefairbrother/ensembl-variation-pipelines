@@ -8,6 +8,7 @@ string	id;		"ID of the variant"
 string	class;		"Class of the variant"
 lstring	ref;   		"Reference allele"
 lstring	alts;		"Alternative allele(s)"
-uint	variantGroup;	"Id of the variant group the variant belongs to"
+uint  variantGroup;	"Id of the variant group the variant belongs to"
 string	consequence;	"Most severe consequence of the variant"
+string  spdi;	"SPDI notation of the variant"
 )

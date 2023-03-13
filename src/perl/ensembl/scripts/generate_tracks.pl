@@ -315,15 +315,18 @@ sub write_beds_from_vcf {
       next unless $csq;
       my @csqs = split ',', $csq;
       
-      # get most severe consequence
+      # get most severe consequence and spdi
+      my $spdi = ".";
       my $most_severe_csq = ".";
       my $highest_rank = 100;
       foreach (@csqs) {
         my $csq = (split '\|', $_)[1];
+        my $spdi_here = (split '\|', $_)[21];
       
         foreach (split '&', $csq){
           my $rank = $all_cons{$_}->rank;
           $most_severe_csq = $_ if $rank < $highest_rank;
+          $spdi = $spdi_here;
         }
       }
     
@@ -335,7 +338,7 @@ sub write_beds_from_vcf {
       my $line;
       foreach my $id (@{$ids}){
         # what about insertion?
-        $line = join "\t", ($chrom, $start_pos, $start_pos + length($ref), $id, $type, $ref, join("/", @{$alts}), $group, $most_severe_csq);
+        $line = join "\t", ($chrom, $start_pos, $start_pos + length($ref), $id, $type, $ref, join("/", @{$alts}), $group, $most_severe_csq, $spdi);
         print $bed $line."\n";
       }
     }
