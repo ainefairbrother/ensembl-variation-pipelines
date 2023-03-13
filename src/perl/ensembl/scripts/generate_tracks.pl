@@ -281,8 +281,10 @@ sub write_beds_from_vcf {
       # currently we have some merged rsIDs in the VCFs
       next if scalar @${ids} != 1;
 
-      # convert to zero-based co-ordinate
-      my $start_pos = $pos - 1;
+      # do not convert to zero-based co-ordinate
+      #my $start_pos = $pos - 1;
+      my $start_pos = $pos;
+      
 
       # get variant class - should be gotten by vep (get class of most severe?)
       # is checking by longest alt sufficient here?
@@ -291,12 +293,24 @@ sub write_beds_from_vcf {
 
       my $switch = {
         "11" => "SNV",
-        "01" => "INS",
-        "10" => "DEL",
-        "00" => "INDEL"
+        "01" => "insertion",
+        "10" => "deletion",
+        "00" => "indel"
       };
       my $type = $switch->{$length_str};
 
+      # determine end pos based on variant type
+      my $end_pos;
+      if($type eq "SNV"){
+        $end_pos = $start_pos;
+      }
+      elsif ($type eq "insertion"){
+        $end_pos = $start_pos + 1;
+      }
+      else{
+        $end_pos = $start_pos + length($ref) - 1;
+      }
+      
       # ideally we should have CSQ field in the vcf prepper pipeline
       next unless $csq;
       my @csqs = split ',', $csq;
