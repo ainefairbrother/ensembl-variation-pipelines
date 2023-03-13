@@ -221,7 +221,7 @@ sub write_bigbed_from_bed{
   }
 
   # my $bed_fields = join(',', (4..((scalar @VALID_INFO) + 3)));
-  my $bed_fields = join(',', (4..9));
+  my $bed_fields = join(',', (4..10));
   $cmd .=  " | mergeBed -i stdin -c $bed_fields -o first > $merged_bed_file";
   system($cmd) == 0 or confess "$cmd failed: $?";
 
@@ -236,7 +236,7 @@ sub write_bigbed_from_bed{
   @args = ();
   push(@args, $merged_bed_file, "${config_dir}/grch38.chrom.sizes", $bb_file);
   push(@args, '-tab');
-  push(@args, '-type=bed3+6');
+  push(@args, '-type=bed3+7');
   push(@args, "-as=${config_dir}/vcf_prepper.as");
   system($cmd, @args) == 0 or confess "$cmd failed: $?";
 
