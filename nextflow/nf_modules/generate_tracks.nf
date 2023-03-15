@@ -6,7 +6,7 @@
 
 process generateTracks {
   input: 
-  tuple val(source),val(vcfFile)
+  tuple val(source), val(vcfFile)
   
   shell:
   '''

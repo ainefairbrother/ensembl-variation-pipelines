@@ -2,27 +2,27 @@
   "homo_sapiens_grch38": [
     {
       "source_name": "dbSNP",
-      "file_location": "/nfs/production/flicek/ensembl/variation/new_website/dbSNP/GCF_000001405.39_VEP.vcf.gz"
+      "file_location": "/nfs/production/flicek/ensembl/variation/data/dbSNP/latest/GCF_000001405.39.gz"
     },
     {
         "source_name": "gnomAD genomes",
-        "file_location": "/nfs/production/flicek/ensembl/variation/new_website/gnomadg/gnomad.genomes.v3.1.2.sites.trimmed_info_VEP.vcf.gz"
+        "file_location": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v3.1.2/grch38/genomes/gnomad.genomes.v3.1.2.sites.##CHR##_trimmed_info.vcf.bgz"
     },
     {
         "source_name": "gnomAD exomes",
-        "file_location": "/nfs/production/flicek/ensembl/variation/new_website/gnomade/gnomad.exomes.r2.1.1.sites.liftover_grch38_VEP.vcf.gz"
+        "file_location": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v2.1.1/grch38/exomes/gnomad.exomes.r2.1.1.sites.##CHR##.liftover_grch38_no_VEP.vcf.gz"
     },
     {
         "source_name": "ClinVar",
-        "file_location": "/nfs/production/flicek/ensembl/variation/new_website/ClinVar/clinvar_20220917_VEP.vcf.gz"
+        "file_location": "/nfs/production/flicek/ensembl/variation/data/ClinVar/clinvar_20220917.vcf.gz"
     },
     {
         "source_name": "GWAS",
-        "file_location": "/nfs/production/flicek/ensembl/variation/new_website/GWAS/gwas_catalog_v1.0.2-associations_e107_r2022-09-14_VEP.vcf.gz"
+        "file_location": "/nfs/production/flicek/ensembl/variation/new_website/vcfs/homo_sapiens_grch38/GWAS/input_gwas_catalog_v1.0.2-associations_e107_r2022-09-14.vcf"
     },
     {
         "source_name": "10000 Genomes",
-        "file_location": "/nfs/production/flicek/ensembl/variation/new_website/1kg/ALL.GRCh38.20170504_VEP.vcf.gz"
+        "file_location": "/nfs/production/flicek/ensembl/variation/data/1kg/updated_20170504/ALL.##CHR##_GRCh38.genotypes.20170504.vcf.gz"
     },
     {
         "source_name": "focus",
