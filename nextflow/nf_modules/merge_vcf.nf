@@ -27,27 +27,51 @@ process mergeVCF {
     mkdir -p $output_dir
     
     # configure the output file names
-    output_filename=$(basename ${vcf_file_template/\\#\\#CHR\\#\\#/})
+    output_filename=$(basename ${vcf_file_template/\\#\\#CHR\\#\\#/all})
     temp_output_filename=temp_${output_filename/.gz/}
     
-    if [[ ${vcf_file_template} =~ bgz$ ]]; then
+    if [[ "${source}" == "10000_Genomes" ]]; then
+      for file in $input_files;
+      do
+        # remove genotype from name as we are actually removing genotypes
+        new_file=$(basename ${file/genotypes./})
+        new_file=${new_file/.gz/}
+
+        # get the headers removing all genotype related content
+        tabix ${file} -H | grep -v "^##FORMAT" | awk '{if(/^#CHR/) for(i=1;i<=8;i++) printf $i"\t"; else print}' > ${output_dir}/filtered_${new_file}
+        
+        # get the content of the file
+        chr=$(tabix ${file} -l)
+        echo "" >> ${output_dir}/filtered_${new_file}
+        tabix ${file} ${chr} | cut -d'	' -f1-8 >> ${output_dir}/filtered_${new_file}
+        
+        # compress and tabix
+        bgzip ${output_dir}/filtered_${new_file}
+        tabix -p vcf ${output_dir}/filtered_${new_file}.gz
+      done
+      
+      input_files=${output_dir}/filtered_${new_file/chr[1-9XY]/*}.gz
+      
       # vcf-concat cannot parse bgzip file - use bcftools and hope it works 
-      bcftools concat --no-version ${input_files} -Oz -o ${output_dir}/${temp_output_filename}
-    else
-      # we are using vcf-concat because some sources may need padding for missing column (Y chr for 1000G)
-      vcf-concat --pad-missing ${input_files} > ${output_dir}/${temp_output_filename}
+      # vcf-concat --pad-missing ${input_files} > ${output_dir}/${temp_output_filename}
     fi
+      
+    # concat the input files
+    bcftools concat --no-version ${input_files} -Oz -o ${output_dir}/${temp_output_filename}
     
-    # sort the output file and compress it (we create a temp dir for this)
+    # sort the output file and compress it
     temp_dir=${output_dir}/temp_${source}
     mkdir -p ${temp_dir}
-    # we still have header problem from vcf-concat - it does not include all header lines from all files and some header lines may get missing. bcftools sort 
-    # complains if it does not find a header value for a field
     bcftools sort -T ${temp_dir} ${output_dir}/${temp_output_filename} -Oz -o ${output_dir}/${output_filename}
     
     # delete the temporary dirs
-    rm $temp_dir
     rm ${output_dir}/${temp_output_filename}
+    
+    # delete the temporary input files if the source is 1000 Genomes
+    if [[ "${source}" == "10000_Genomes" ]]; then
+      # not using the $input_files directly as in weird case some actual input source gets deleted
+      rm ${output_dir}/filtered_*
+    fi
   fi
   '''
 }
