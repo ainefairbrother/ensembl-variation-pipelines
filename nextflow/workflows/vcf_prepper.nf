@@ -12,9 +12,16 @@ params.input_config = "${projectDir}/../nf_config/input_sources.json"
 params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
 params.state = "pre"
 
+// params for nextflow-vep
+params.vep_config = "${projectDir}/../nf_config/vep.ini"
+params.outdir = params.output_dir
+
 // module imports
 include { mergeVCF } from "${projectDir}/../nf_modules/merge_vcf.nf"
+include { runVEP } from "${projectDir}/../nf_modules/run_vep.nf"
 include { generateTracks } from "${projectDir}/../nf_modules/generate_tracks.nf"
+include { filterChr } from "${projectDir}/../nf_modules/filter_chr.nf"
+include { renameChr } from "${projectDir}/../nf_modules/rename_chr.nf"
 
 
 log.info 'Starting workflow.....'
@@ -32,16 +39,24 @@ workflow {
     
     // create a directory for this genome in the output directory
     genome_outdir = params.output_dir + "/" + genome
-    outdir = file(genome_outdir)
-    outdir.mkdir()
+    file(genome_outdir).mkdir()
     
     ch = Channel.fromList(vcf_files)
     
-    if ( params.state.equals("pre") ){
-      mergeVCF(ch, genome_outdir)
-      params.state = "vep"
+    state = params.state
+    //if ( state.equals("pre") ) {
+    //  mergeVCF(ch, source_vcf_outdir)
+    //  state = "vep"
+    //}
+    //if ( state.equals("vep") ) {
+    //  runVEP(ch, genome_outdir)
+    //  state = "post"
+    //}
+    if( state.equals("post")  ) {
+      filterChr(ch, genome_outdir)
+      renameChr(filterChr.out.source, filterChr.out.vcfFile, genome_outdir)
+      state = "focus"
     }
-    // runVEP(ch)
     // generateTracks(ch)
   }
 }
