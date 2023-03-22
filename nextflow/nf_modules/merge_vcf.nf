@@ -23,13 +23,18 @@ process mergeVCF {
     input_files=${vcf_file_template/\\#\\#CHR\\#\\#/*}
     
     # create a source dir under output dir
-    output_dir=!{output_dir}/${source}
+    source_dir=!{output_dir}/${source}
+    mkdir -p $source_dir
+    
+    # create a source dir under output dir
+    output_dir=${source_dir}/source
     mkdir -p $output_dir
     
     # configure the output file names
     output_filename=$(basename ${vcf_file_template/\\#\\#CHR\\#\\#/all})
     temp_output_filename=temp_${output_filename/.gz/}
     
+    # need to remove genotype for 1000 Genomes files
     if [[ "${source}" == "10000_Genomes" ]]; then
       for file in $input_files;
       do
@@ -51,9 +56,6 @@ process mergeVCF {
       done
       
       input_files=${output_dir}/filtered_${new_file/chr[1-9XY]/*}.gz
-      
-      # vcf-concat cannot parse bgzip file - use bcftools and hope it works 
-      # vcf-concat --pad-missing ${input_files} > ${output_dir}/${temp_output_filename}
     fi
       
     # concat the input files
@@ -63,6 +65,9 @@ process mergeVCF {
     temp_dir=${output_dir}/temp_${source}
     mkdir -p ${temp_dir}
     bcftools sort -T ${temp_dir} ${output_dir}/${temp_output_filename} -Oz -o ${output_dir}/${output_filename}
+    
+    # create index
+    bcftools index -t ${output_dir}/${output_filename}
     
     # delete the temporary dirs
     rm ${output_dir}/${temp_output_filename}
