@@ -7,7 +7,7 @@
 process mergeVCF {
   input: 
   tuple val(source), val(vcfFile)
-  val output_dir
+  val genome_dir
   
   shell:
   '''
@@ -23,10 +23,10 @@ process mergeVCF {
     input_files=${vcf_file_template/\\#\\#CHR\\#\\#/*}
     
     # create a source dir under output dir
-    source_dir=!{output_dir}/${source}
+    source_dir=!{genome_dir}/${source}
     mkdir -p $source_dir
     
-    # create a source dir under output dir
+    # create output dir
     output_dir=${source_dir}/source
     mkdir -p $output_dir
     
