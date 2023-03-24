@@ -22,6 +22,7 @@ include { runVEP } from "${projectDir}/../nf_modules/run_vep.nf"
 include { generateTracks } from "${projectDir}/../nf_modules/generate_tracks.nf"
 include { filterChr } from "${projectDir}/../nf_modules/filter_chr.nf"
 include { renameChr } from "${projectDir}/../nf_modules/rename_chr.nf"
+include { removeDupIDs } from "${projectDir}/../nf_modules/remove_dup_ids.nf"
 
 
 log.info 'Starting workflow.....'
@@ -53,8 +54,9 @@ workflow {
     //  state = "post"
     //}
     if( state.equals("post")  ) {
-      filterChr(ch, genome_outdir)
-      renameChr(filterChr.out.source, filterChr.out.vcfFile, genome_outdir)
+      renameChr(ch, genome_outdir)
+      filterChr(renameChr.out.vcfFile)
+      removeDupIDs(filterChr.out.vcfFile)
       state = "focus"
     }
     // generateTracks(ch)

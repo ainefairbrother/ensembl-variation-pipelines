@@ -5,10 +5,12 @@
 */
 
 process renameChr {
-  input: 
-  val source
-  val vcfFile
+  input:
+  tuple val(source), val(vcfFile)
   val genome_dir
+  
+  output:
+  env output_file, emit: vcfFile
   
   shell:
   '''
@@ -26,9 +28,17 @@ process renameChr {
   output_dir=${source_dir}/vcfs
   mkdir -p $output_dir
   
+  # format output file name
+  output_file_name=$(basename ${vcf_file/_VEP/_renamed_VEP})
+  output_file=${output_dir}/${output_file_name}
+  
   # synonym file that contains mapping between seq region name and synonym
   chr_synonym_file=!{projectDir}/../nf_config/homo_sapiens_grch38_synonyms.txt
   
-  bcftools annotate --rename-chrs ${chr_synonym_file} ${vcf_file} -Oz -o ${vcf_file}
+  # rename chr synonyms
+  bcftools annotate --no-version --rename-chrs ${chr_synonym_file} ${vcf_file} -Oz -o ${output_file}
+  
+  # indexing the file because next stage requires it
+  bcftools index -t ${output_file}
   '''
 }

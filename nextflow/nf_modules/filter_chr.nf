@@ -5,37 +5,30 @@
 */
 
 process filterChr {
-  input: 
-  tuple val(source), val(vcfFile)
-  val genome_dir
+  input:
+  val renamedVCFFile
   
   output:
-  val source, emit: source
   env output_file, emit: vcfFile
   
   shell:
   '''
-  vcf_file=!{vcfFile}
+  renamed_vcf_file=!{renamedVCFFile}
   
-  # remove any whitespace in source name
-  source="!{source}"
-  source=${source// /_}
+  # get output dir
+  output_dir=$(dirname ${renamed_vcf_file})
   
-  # create a source dir under output dir
-  source_dir=!{genome_dir}/${source}
-  mkdir -p $source_dir
-  
-  # create output dir
-  output_dir=${source_dir}/vcfs
-  mkdir -p $output_dir
-  
-  # format output file name
-  output_file_name=$(basename ${vcf_file/_VEP/_filtered_VEP})
+  # format output file
+  output_file_name=$(basename ${renamed_vcf_file/_renamed_VEP/_filtered_VEP})
+  output_file_name=$(basename ${output_file_name/.gz/})    # we won't compress the output file
   output_file=${output_dir}/${output_file_name}
   
   # seq regions that we want to keep
-  keep_regions=$(tabix ${vcf_file} -l | grep -v -E '(CTG|PATCH|TEST)' |  paste -sd,)
+  keep_regions=$(tabix ${renamed_vcf_file} -l | grep -v -E '(CTG|PATCH|TEST)' |  paste -sd,)
   
-  bcftools view -r ${keep_regions} ${vcf_file} -Oz -o ${output_file}
+  # only keep the regions that we want to keep
+  bcftools view -r ${keep_regions} ${renamed_vcf_file} -Ov -o ${output_file}
+  
+  rm ${renamed_vcf_file} ${renamed_vcf_file}.tbi
   '''
 }
