@@ -27,7 +27,7 @@ process filterChr {
   keep_regions=$(tabix ${renamed_vcf_file} -l | grep -v -E '(CTG|PATCH|TEST)' |  paste -sd,)
   
   # only keep the regions that we want to keep
-  bcftools view -r ${keep_regions} ${renamed_vcf_file} -Ov -o ${output_file}
+  bcftools view -r ${keep_regions} ${renamed_vcf_file} -Oz -o ${output_file}
   
   rm ${renamed_vcf_file} ${renamed_vcf_file}.tbi
   '''

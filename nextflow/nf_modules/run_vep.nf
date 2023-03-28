@@ -32,6 +32,7 @@ process runVEP {
   repositories="/hps/software/users/ensembl/repositories/${USER}"
   
   module load openjdk-1.8.0_265-b01-gcc-9.3.0-w3gaafy
+  module add nextflow-22.10.1-gcc-11.2.0-ju5saqw
   
   cd ${output_dir}
   nextflow -C ${repositories}/ensembl-vep/nextflow/nf_config/nextflow.config \\
@@ -40,7 +41,7 @@ process runVEP {
     --vep_config !{projectDir}/../nf_config/vep.ini \\
     --outdir ${output_dir} \\
     --output_prefix ${output_file_prefix} \\
-    --singularity_dir /hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images
+    --singularity_dir /hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images \\
     -profile lsf \\
     --bin_size 1000000 \\
     -resume \\

@@ -1,12 +1,16 @@
 #!/usr/bin/env nextflow
 
 /*
-* This script filter out variants from some specific seq region (patches, contigs, etc.)
+* This script rename all the duplicated rsID to '.' in a VCF file 
 */
 
 process removeDupIDs {
   input:
   val filteredVCFFile
+  
+  output:
+  env output_file, emit: vcfFile
+  env index_file, emit: indexFile
   
   shell:
   '''
@@ -23,7 +27,7 @@ process removeDupIDs {
   cp ${filtered_vcf_file} ${output_file}
   
   # get the duplicated rsID list
-  awk '!/^#/{if (uniq[$3]++) print($3)}' ${output_file} | sort -u > duplicated_ids.txt 
+  bcftools view --no-version ${output_file} | awk '!/^#/{if (uniq[$3]++) print($3)}' | sort -u > duplicated_ids.txt 
   
   # only keep the regions that we want to keep
   while IFS= read -r id;
@@ -34,6 +38,9 @@ process removeDupIDs {
   # bgzip and sort for next step
   bgzip ${output_file}
   bcftools index -t ${output_file}.gz
+  
+  #output_file=${output_file}.gz
+  index_file=${output_file}.tbi
   
   rm ${filtered_vcf_file}
   '''
