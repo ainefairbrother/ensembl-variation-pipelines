@@ -6,42 +6,44 @@
 
 process removeDupIDs {
   input:
-  val filteredVCFFile
+  tuple val(original), path(vcfFile)
   
   output:
-  env output_file, emit: vcfFile
-  env index_file, emit: indexFile
+  tuple val(original), path("processed-${original}-*.vcf.gz"), path("processed-${original}-*.vcf.gz.tbi"), emit: file
   
   shell:
   '''
-  filtered_vcf_file=!{filteredVCFFile}
-  
-  # get output dir
-  output_dir=$(dirname ${filtered_vcf_file})
-  
   # format output file name
-  output_file_name=$(basename ${filtered_vcf_file/_filtered_VEP/_processed_VEP})
-  output_file=${output_dir}/${output_file_name}
+  output_file=processed-!{original}-!{vcfFile}
   
-  # we will do infile change - keep filtered_vcf_file as backup in case the job fails at mid-point
-  cp ${filtered_vcf_file} ${output_file}
-  
-  # get the duplicated rsID list
-  bcftools view --no-version ${output_file} | awk '!/^#/{if (uniq[$3]++) print($3)}' | sort -u > duplicated_ids.txt 
+  # get the duplicated rsID list and load it into an array
+  bcftools view --no-version !{vcfFile} | awk '!/^#/{if (uniq[$3]++ && $3 != ".") print($3)}' | sort -u > duplicated_ids.txt 
+  export duplicated_id=`cat duplicated_ids.txt | xargs`
   
   # only keep the regions that we want to keep
-  while IFS= read -r id;
-  do
-    awk -i inplace -v var=$id -F'\t' 'BEGIN {OFS = FS} {gsub(var, ".", $3)}1' ${output_file}
-  done < duplicated_ids.txt
+  awk '
+    BEGIN {
+      split(ENVIRON["duplicated_id"], t_ids, " ")
+      for (i in t_ids) ids[t_ids[i]] = ""
+    }
+    /^##/ {
+      print
+    }
+    /^#/ {
+      OFS="\t"
+      print
+    }
+    !/^#/ {
+      OFS="\t"
+      if ($3 in ids) {
+        $3 = ".";
+      }
+      print;
+    }
+  ' !{vcfFile} > ${output_file}
   
-  # bgzip and sort for next step
+  # bgzip and index for next step
   bgzip ${output_file}
   bcftools index -t ${output_file}.gz
-  
-  #output_file=${output_file}.gz
-  index_file=${output_file}.tbi
-  
-  rm ${filtered_vcf_file}
   '''
 }

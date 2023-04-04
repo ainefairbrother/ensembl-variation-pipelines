@@ -1,0 +1,7 @@
+1 1 10 rs2272756 SNV G A 3 non_coding_transcript_exon_variant
+1 5 11 rs13303065 SNV C T 1 intron_variant
+1 5 11 rs13303065 SNV C G 1 coding_variant
+19 2 4 rs115438739 SNV G A 4 intron_variant
+20 5 5 rs201385366 SNV C T 2 intron_variant
+21 5 9 rs1234 deletion CTATG C 2 intron_variant
+21 5 9 rs1234 deletion CTATG CTA 3 coding_variant

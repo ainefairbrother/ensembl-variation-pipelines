@@ -67,7 +67,6 @@ impl Line {
     fn compatible(&self, other: &Line) -> bool {
         self.chromosome == other.chromosome &&
         self.start == other.start &&
-        self.end == other.end &&
         self.variety == other.variety &&
         self.reference == other.reference
     }
@@ -83,6 +82,7 @@ impl Line {
             if self.compatible(more) {
                 self.alts.extend(more.alts.clone());
                 if more.severity_rank < self.severity_rank {
+                    self.end = more.end;
                     self.variety = more.variety.clone();
                     self.group = more.group;
                     self.severity = more.severity.to_string();
@@ -171,58 +171,61 @@ fn main() -> Result<(), VCFError> {
         
         let csq = record.info(b"CSQ").map(|csqs| {
             csqs.iter().map(|csq| {
-                let s = String::from_utf8(csq.to_vec()).unwrap();
+                let s = String::from_utf8_lossy(csq);
                 s.split("|").nth(1).unwrap_or("").to_string()
-            }).collect::<Vec<_>>()
+            }).collect::<Vec<String>>()
         }).unwrap_or(vec![]);
         // if csq is empty we won't have most severe consequence
         if csq.is_empty(){ continue; }
         
-        let variety = record.info(b"CSQ").map(|csqs| {
+        let class = record.info(b"CSQ").map(|csqs| {
             csqs.iter().map(|csq| {
-                let s = String::from_utf8(csq.to_vec()).unwrap();
+                let s = String::from_utf8_lossy(csq);
                 s.split("|").nth(21).unwrap_or("").to_string()
-            }).collect::<Vec<_>>()
+            }).collect::<Vec<String>>()
         }).unwrap_or(vec![]);
         
         for id in ids.iter() {
             for alt in alts.iter() {
-                for (csq, variety) in csq.iter().zip(variety.iter()) {
-                    let mut variant_group = 0;
-                    let mut most_severe_csq = "";
-                    let mut msc_rank = 255;
-                    
+                let mut variant_group = 0;
+                let mut most_severe_csq = "";
+                let mut msc_rank = 255;
+                let mut variety = "";
+                
+                for (csq, variety_here) in csq.iter().zip(class.iter()) {
                     for csq in csq.split("&") {
                         let severity_here = (*severity.get(csq).unwrap_or(&String::from("0"))).parse::<u8>().unwrap();
                         if severity_here < msc_rank {
                             variant_group = *variant_groups.get(csq).unwrap_or(&0);
                             most_severe_csq = csq;
                             msc_rank = severity_here;
+                            variety = variety_here;
                         }
                     }
-                    
-                    // let variety = match (alt.len()<2, reference.len()<2) {
-                    //     (true, true) => { "SNV" },
-                    //     (true, false) => { "DEL" },
-                    //     (false, true) => { "INS" },
-                    //     (false, false) => { "INDEL" },
-                    // };
-                    
-                    let more = Line {
-                        chromosome: String::from_utf8(record.chromosome.to_vec()).unwrap(),
-                        start: record.position,
-                        end: record.position+ref_len,
-                        id: id.to_string(),
-                        variety: variety.to_string(),
-                        reference: reference.clone(),
-                        alts: HashSet::from([alt.to_string()]),
-                        group: variant_group,
-                        severity: most_severe_csq.to_string(),
-                        severity_rank: msc_rank
-                    };
-                    
-                    lines.merge(Some(more), &mut out);
                 }
+                
+                let mut end = record.position + ref_len - 1;
+                if variety.eq(&String::from("SNV")) {
+                    end = record.position;
+                }
+                else if variety.eq(&String::from("insertion")) {
+                    end = record.position + 1;
+                }
+                
+                let more = Line {
+                    chromosome: String::from_utf8(record.chromosome.to_vec()).unwrap(),
+                    start: record.position,
+                    end: end,
+                    id: id.to_string(),
+                    variety: variety.to_string(),
+                    reference: reference.clone(),
+                    alts: HashSet::from([alt.to_string()]),
+                    group: variant_group,
+                    severity: most_severe_csq.to_string(),
+                    severity_rank: msc_rank
+                };
+                
+                lines.merge(Some(more), &mut out);
             }
         }
     }

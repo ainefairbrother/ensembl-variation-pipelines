@@ -221,7 +221,7 @@ sub write_bigbed_from_bed{
   }
 
   # my $bed_fields = join(',', (4..((scalar @VALID_INFO) + 3)));
-  my $bed_fields = join(',', (4..10));
+  my $bed_fields = join(',', (4..9));
   $cmd .=  " | mergeBed -i stdin -c $bed_fields -o first > $merged_bed_file";
   system($cmd) == 0 or confess "$cmd failed: $?";
 
@@ -236,7 +236,7 @@ sub write_bigbed_from_bed{
   @args = ();
   push(@args, $merged_bed_file, "${config_dir}/grch38.chrom.sizes", $bb_file);
   push(@args, '-tab');
-  push(@args, '-type=bed3+7');
+  push(@args, '-type=bed3+6');
   push(@args, "-as=${config_dir}/vcf_prepper.as");
   system($cmd, @args) == 0 or confess "$cmd failed: $?";
 
@@ -316,17 +316,17 @@ sub write_beds_from_vcf {
       my @csqs = split ',', $csq;
       
       # get most severe consequence and spdi
-      my $spdi = ".";
+      # my $spdi = ".";
       my $most_severe_csq = ".";
       my $highest_rank = 100;
       foreach (@csqs) {
         my $csq = (split '\|', $_)[1];
-        my $spdi_here = (split '\|', $_)[21];
+        # my $spdi_here = (split '\|', $_)[21];
       
         foreach (split '&', $csq){
           my $rank = $all_cons{$_}->rank;
           $most_severe_csq = $_ if $rank < $highest_rank;
-          $spdi = $spdi_here;
+          # $spdi = $spdi_here;
         }
       }
     
