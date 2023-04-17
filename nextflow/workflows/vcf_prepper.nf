@@ -16,13 +16,14 @@ params.state = "pre"
 params.vep_config = "${projectDir}/../nf_config/vep.ini"
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
 params.bin_size = 250000
-params.outdir = "/nfs/production/flicek/ensembl/variation/new_website/homo_sapiens_grch38/"
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"
-
+// pre
 include { mergeVCF } from "${projectDir}/../nf_modules/merge_vcf.nf"
-
+// vep
+include { vep } from "${repo_dir}/ensembl-vep/nextflow/workflows/run_vep.nf"
+// post
 include { filterChr } from "${projectDir}/../nf_modules/filter_chr.nf"
 include { renameChr } from "${projectDir}/../nf_modules/rename_chr.nf"
 include { removeDupIDs } from "${projectDir}/../nf_modules/remove_dup_ids.nf"
@@ -51,6 +52,7 @@ workflow {
   ch_params['index_file'] = []
   ch_params['outdir'] = []
   ch_params['output_prefix'] = []
+  ch_params['vep_ini'] = []
 
   genomes = params.config.keySet()
   for (genome in genomes) {
@@ -60,9 +62,10 @@ workflow {
     file(genome_outdir).mkdir()
   
     for (source in params.config.get(genome)){
-      
+      source_name = source.source_name
+    
       // create a directory for this genome in the output directory
-      source_outdir = genome_outdir + "/" + source.replace(" ", "_")
+      source_outdir = genome_outdir + "/" + source_name.replace(" ", "_")
       file(source_outdir).mkdir()
       
       // check if index file exist otherwise create it
@@ -77,24 +80,35 @@ workflow {
         }
       }
       
-      // output filename
-      prefix = file(source.file_location).getSimpleName() + "_VEP"
+      // output file prefix for VEP output file
+      //prefix = file(source.file_location).getSimpleName() + "_VEP"
+      
+      // output file prefix for VEP output file
+      vep_ini = "${projectDir}/../nf_config/${source_name}.ini"
       
       ch_params['vcf_file'].add(source.file_location)
       ch_params['index_file'].add(index_file)
-      ch_params['outdir'].add(source_outdir)
-      ch_params['output_prefix'].add(prefix)
+      //ch_params['outdir'].add(source_outdir)
+      //ch_params['output_prefix'].add(prefix)
+      ch_params['vep_ini'].add(vep_ini)
     }
   }
   
   vcf_files = Channel.from(ch_params['vcf_file'])
   index_files = Channel.from(ch_params['index_file'])
-  outdir = Channel.from(ch_params['outdir'])
+  //outdir = Channel.from(ch_params['outdir'])
+  vep_config = Channel.from(ch_params['vep_ini'])
 
   state = params.state
 
-  //vep(vcf_files, params.vep_config)
-  
+  //if ( state.equals("merge") ) {
+  //  mergeVCF(ch, source_vcf_outdir)
+  //  state = "vep"
+  //}
+  //if ( state.equals("vep") ) {
+    // for multiple vcf this may not be working 
+    //vep(vcf_files, vep_config)
+  //}
   //if( state.equals("post")  ) {
     //checkVCF(vcf_files, index_files)
     //readVCF(checkVCF.out, params.bin_size)
@@ -105,10 +119,6 @@ workflow {
     //mergeVCF(removeDupIDs.out.file.groupTuple())
     //state = "focus"
   //}
-  //if ( state.equals("merge") ) {
-  //  mergeVCF(ch, source_vcf_outdir)
-  //  state = "vep"
-  //}
   //if( state.equals("focus")  ) {
   //  createFocusVCF(removeDupIDs.out.vcfFile.collect(), removeDupIDs.out.indexFile.collect(), genome_outdir)
   //  state = "tracks"
@@ -116,9 +126,6 @@ workflow {
   if( state.equals("tracks")  ) {
     readChrVCF(vcf_files, index_files)
     splitChrVCF(readChrVCF.out.transpose())
-    //checkVCF(vcf_files, index_files)
-    //readVCF(checkVCF.out, params.bin_size)
-    //splitVCF(readVCF.out.transpose())
     vcfToBed(splitChrVCF.out.files.transpose())
     bedToBigBed(vcfToBed.out.bed.groupTuple())
   }
