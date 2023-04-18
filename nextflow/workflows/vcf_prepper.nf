@@ -13,9 +13,8 @@ params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
 params.state = "pre"
 
 // params for nextflow-vep
-params.vep_config = "${projectDir}/../nf_config/vep.ini"
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
-params.bin_size = 250000
+params.bin_size = 10000
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"
@@ -28,17 +27,17 @@ include { filterChr } from "${projectDir}/../nf_modules/filter_chr.nf"
 include { renameChr } from "${projectDir}/../nf_modules/rename_chr.nf"
 include { removeDupIDs } from "${projectDir}/../nf_modules/remove_dup_ids.nf"
 
-include { createFocusVCF } from "${projectDir}/../nf_modules/create_focus_vcf.nf"
+//include { checkVCF; checkVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/check_VCF.nf"
+//include { readVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/read_VCF.nf"
+//include { splitVCF; splitVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/split_VCF.nf"
+//include { mergeVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/merge_VCF.nf"
 
-include { checkVCF; checkVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/check_VCF.nf"
-include { readVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/read_VCF.nf"
-include { splitVCF; splitVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/split_VCF.nf"
-include { mergeVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/merge_VCF.nf"
-
+// tracks
 include { readChrVCF } from "${projectDir}/../nf_modules/read_chr_vcf.nf"
 include { splitChrVCF } from "${projectDir}/../nf_modules/split_chr_vcf.nf"
 include { vcfToBed } from "${projectDir}/../nf_modules/vcf_to_bed.nf"
 include { bedToBigBed } from "${projectDir}/../nf_modules/bed_to_bigbed.nf"
+include { createFocusVCF } from "${projectDir}/../nf_modules/create_focus_vcf.nf"
 
 
 log.info 'Starting workflow.....'
@@ -50,13 +49,13 @@ workflow {
   ch_params = [:]
   ch_params['vcf_file'] = []
   ch_params['index_file'] = []
-  ch_params['outdir'] = []
-  ch_params['output_prefix'] = []
+  //ch_params['outdir'] = []
+  //ch_params['output_prefix'] = []
   ch_params['vep_ini'] = []
 
   genomes = params.config.keySet()
   for (genome in genomes) {
-  
+
     // create a directory for this genome in the output directory
     genome_outdir = params.output_dir + "/" + genome
     file(genome_outdir).mkdir()
@@ -71,44 +70,38 @@ workflow {
       // check if index file exist otherwise create it
       index_file = file(source.file_location + ".tbi")
       if (!index_file.exists()){
-        def sout = new StringBuilder(), serr = new StringBuilder()
-        check_parsing = "tabix -p vcf -f $params.vcf".execute()
-        check_parsing.consumeProcessOutput(sout, serr)
-        check_parsing.waitFor()
-        if( serr ){
-          exit 1, "The specified VCF file has issues in parsing: $serr"
-        }
+        exit 1, "index file does not exist - $index_file"
       }
       
       // output file prefix for VEP output file
       //prefix = file(source.file_location).getSimpleName() + "_VEP"
       
       // output file prefix for VEP output file
-      vep_ini = "${projectDir}/../nf_config/${source_name}.ini"
+      vep_ini = "${projectDir}/../nf_config/vep_ini/${genome}.ini"
       
       ch_params['vcf_file'].add(source.file_location)
       ch_params['index_file'].add(index_file)
       //ch_params['outdir'].add(source_outdir)
-      //ch_params['output_prefix'].add(prefix)
+      //ch_params['output_prefix'].add(prefix)    
       ch_params['vep_ini'].add(vep_ini)
     }
   }
   
-  vcf_files = Channel.from(ch_params['vcf_file'])
-  index_files = Channel.from(ch_params['index_file'])
-  //outdir = Channel.from(ch_params['outdir'])
-  vep_config = Channel.from(ch_params['vep_ini'])
+  vcf_files = Channel.fromList(ch_params['vcf_file'])
+  index_files = Channel.fromList(ch_params['index_file'])
+  //outdir = Channel.fromList(ch_params['outdir'])
+  vep_config = Channel.fromList(ch_params['vep_ini'])
 
   state = params.state
 
-  //if ( state.equals("merge") ) {
+  //if ( state.equals("pre") ) {
   //  mergeVCF(ch, source_vcf_outdir)
   //  state = "vep"
   //}
-  //if ( state.equals("vep") ) {
+  if ( state.equals("vep") ) {
     // for multiple vcf this may not be working 
-    //vep(vcf_files, vep_config)
-  //}
+    vep(vcf_files, vep_config)
+  }
   //if( state.equals("post")  ) {
     //checkVCF(vcf_files, index_files)
     //readVCF(checkVCF.out, params.bin_size)
@@ -123,10 +116,10 @@ workflow {
   //  createFocusVCF(removeDupIDs.out.vcfFile.collect(), removeDupIDs.out.indexFile.collect(), genome_outdir)
   //  state = "tracks"
   //}
-  if( state.equals("tracks")  ) {
-    readChrVCF(vcf_files, index_files)
-    splitChrVCF(readChrVCF.out.transpose())
-    vcfToBed(splitChrVCF.out.files.transpose())
-    bedToBigBed(vcfToBed.out.bed.groupTuple())
-  }
+  //if( state.equals("tracks")  ) {
+    //readChrVCF(vcf_files, index_files)
+    //splitChrVCF(readChrVCF.out.transpose())
+    //vcfToBed(splitChrVCF.out.files.transpose())
+    //bedToBigBed(vcfToBed.out.bed.groupTuple())
+  //}
 }
