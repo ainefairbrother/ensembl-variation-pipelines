@@ -14,7 +14,7 @@ params.state = "pre"
 
 // params for nextflow-vep
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
-params.bin_size = 10000
+params.bin_size = 250000
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"
@@ -23,9 +23,10 @@ include { mergeVCF } from "${projectDir}/../nf_modules/merge_vcf.nf"
 // vep
 include { vep } from "${repo_dir}/ensembl-vep/nextflow/workflows/run_vep.nf"
 // post
-include { filterChr } from "${projectDir}/../nf_modules/filter_chr.nf"
 include { renameChr } from "${projectDir}/../nf_modules/rename_chr.nf"
 include { removeDupIDs } from "${projectDir}/../nf_modules/remove_dup_ids.nf"
+include { indexVCF } from "${projectDir}/../nf_modules/index_vcf.nf"
+
 
 //include { checkVCF; checkVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/check_VCF.nf"
 //include { readVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/read_VCF.nf"
@@ -47,11 +48,12 @@ params.config = slurper.parse(new File(params.input_config))
 
 workflow {
   ch_params = [:]
-  ch_params['vcf_file'] = []
-  ch_params['index_file'] = []
-  //ch_params['outdir'] = []
-  //ch_params['output_prefix'] = []
-  ch_params['vep_ini'] = []
+  ch_params['vcf_files'] = []
+  ch_params['index_files'] = []
+  ch_params['outdirs'] = []
+  ch_params['input_prefixes'] = []
+  ch_params['vep_ini_files'] = []
+  ch_params['synonyms'] = []
 
   genomes = params.config.keySet()
   for (genome in genomes) {
@@ -64,8 +66,8 @@ workflow {
       source_name = source.source_name
     
       // create a directory for this genome in the output directory
-      source_outdir = genome_outdir + "/" + source_name.replace(" ", "_")
-      file(source_outdir).mkdir()
+      vep_outdir = genome_outdir + "/" + source_name.replace(" ", "_") + "/vcfs"
+      file(vep_outdir).mkdir()
       
       // check if index file exist otherwise create it
       index_file = file(source.file_location + ".tbi")
@@ -74,23 +76,29 @@ workflow {
       }
       
       // output file prefix for VEP output file
-      //prefix = file(source.file_location).getSimpleName() + "_VEP"
+      prefix = file(source.file_location).getSimpleName()
       
-      // output file prefix for VEP output file
+      // vep config file
       vep_ini = "${projectDir}/../nf_config/vep_ini/${genome}.ini"
       
-      ch_params['vcf_file'].add(source.file_location)
-      ch_params['index_file'].add(index_file)
-      //ch_params['outdir'].add(source_outdir)
-      //ch_params['output_prefix'].add(prefix)    
-      ch_params['vep_ini'].add(vep_ini)
+      // a tsv file containing chrom names and their synonyms (to be used by bcftools to rename synonyms)
+      synonyms = "${projectDir}/../nf_config/synonyms/${genome}.txt"
+      
+      ch_params['vcf_files'].add(source.file_location)
+      ch_params['index_files'].add(index_file)
+      ch_params['outdirs'].add(vep_outdir)
+      ch_params['input_prefixes'].add(prefix)
+      ch_params['vep_ini_files'].add(vep_ini)
+      ch_params['synonyms'].add(synonyms)
     }
   }
   
-  vcf_files = Channel.fromList(ch_params['vcf_file'])
-  index_files = Channel.fromList(ch_params['index_file'])
-  //outdir = Channel.fromList(ch_params['outdir'])
-  vep_config = Channel.fromList(ch_params['vep_ini'])
+  vcf_files = Channel.fromList(ch_params['vcf_files'])
+  index_files = Channel.fromList(ch_params['index_files'])
+  outdirs = Channel.fromList(ch_params['outdirs'])
+  input_prefixes = Channel.fromList(ch_params['input_prefixes'])
+  vep_configs = Channel.fromList(ch_params['vep_ini_files'])
+  synonyms = Channel.fromList(ch_params['synonyms'])
 
   state = params.state
 
@@ -100,18 +108,18 @@ workflow {
   //}
   if ( state.equals("vep") ) {
     // for multiple vcf this may not be working 
-    vep(vcf_files, vep_config)
+    vep(vcf_files, vep_configs, outdirs)
+    
+    state = "post"
   }
-  //if( state.equals("post")  ) {
-    //checkVCF(vcf_files, index_files)
-    //readVCF(checkVCF.out, params.bin_size)
-    //splitVCF(readVCF.out.transpose())
-    //renameChr(splitVCF.out.files.transpose())
-    //filterChr(renameChr.out.file)
-    //removeDupIDs(filterChr.out.file)
-    //mergeVCF(removeDupIDs.out.file.groupTuple())
-    //state = "focus"
-  //}
+  if( state.equals("post")  ) {
+    renameChr(vep.out, synonyms)
+    removeDupIDs(renameChr.out)
+    indexVCF(removeDupIDs.out)
+    
+    state = "focus"
+  }
+  
   //if( state.equals("focus")  ) {
   //  createFocusVCF(removeDupIDs.out.vcfFile.collect(), removeDupIDs.out.indexFile.collect(), genome_outdir)
   //  state = "tracks"

@@ -6,23 +6,23 @@
 
 process renameChr {
   input:
-  tuple val(original), path(vcfFile), path(indexFile)
+  val input_vcf
+  path synonym_file
   
   output:
-  tuple val(original), path("renamed-${original}-*.vcf.gz"), path("renamed-${original}-*.vcf.gz.tbi"), emit: file
+  tuple env(output_dir), env(prefix)
   
   shell:
   '''
-  # format output file name
-  output_file=renamed-!{original}-!{vcfFile}
-  
-  # synonym file that contains mapping between seq region name and synonym
-  chr_synonym_file=!{projectDir}/../nf_config/homo_sapiens_grch38_synonyms.txt
+  # format input and output file name
+  input_file=!{input_vcf}
+  output_file=${input_file/.vcf.gz_vep_out.vcf.gz/_renamed_VEP.vcf.gz}
   
   # rename chr synonyms
-  bcftools annotate --no-version --force --rename-chrs ${chr_synonym_file} !{vcfFile} -Oz -o ${output_file}
+  bcftools annotate --no-version --force --rename-chrs !{synonym_file} ${input_file} -Oz -o ${output_file}
   
-  # indexing the file because next stage requires it
-  bcftools index -t ${output_file}
+  # for next job create parameters
+  output_dir=$(dirname ${output_file})
+  prefix=$(basename ${output_file/_renamed_VEP.vcf.gz/})
   '''
 }

@@ -1,49 +1,25 @@
 #!/usr/bin/env nextflow
 
 /*
-* This script rename all the duplicated rsID to '.' in a VCF file 
+* This script post prcess a VCF file after running through VEP. It will -
+* - remove any seq region with PATCH/TEST/CTG in it's name
+* - remove any variant with duplicated rsIDs
 */
 
 process removeDupIDs {
-  input:
-  tuple val(original), path(vcfFile)
+  input: 
+  tuple val(output_dir), val(prefix)
   
   output:
-  tuple val(original), path("processed-${original}-*.vcf.gz"), path("processed-${original}-*.vcf.gz.tbi"), emit: file
+  env output_file
   
-  shell:
+  shell: 
   '''
-  # format output file name
-  output_file=processed-!{original}-!{vcfFile}
+  # format input and output file name
+  input_file=!{output_dir}/!{prefix}_renamed_VEP.vcf.gz
+  output_file=!{output_dir}/!{prefix}_processed_VEP.vcf.gz
   
-  # get the duplicated rsID list and load it into an array
-  bcftools view --no-version !{vcfFile} | awk '!/^#/{if (uniq[$3]++ && $3 != ".") print($3)}' | sort -u > duplicated_ids.txt 
-  export duplicated_id=`cat duplicated_ids.txt | xargs`
-  
-  # only keep the regions that we want to keep
-  awk '
-    BEGIN {
-      split(ENVIRON["duplicated_id"], t_ids, " ")
-      for (i in t_ids) ids[t_ids[i]] = ""
-    }
-    /^##/ {
-      print
-    }
-    /^#/ {
-      OFS="\t"
-      print
-    }
-    !/^#/ {
-      OFS="\t"
-      if ($3 in ids) {
-        $3 = ".";
-      }
-      print;
-    }
-  ' !{vcfFile} > ${output_file}
-  
-  # bgzip and index for next step
-  bgzip ${output_file}
-  bcftools index -t ${output_file}.gz
+  pyenv local variation-eva
+  python3 !{projectDir}/../../src/python/ensembl/scripts/remove_duplicate_ids.py ${input_file}
   '''
 }
