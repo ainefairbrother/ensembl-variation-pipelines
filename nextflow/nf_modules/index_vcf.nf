@@ -13,7 +13,7 @@ process indexVCF {
   
   shell:
   '''
-  # indexing the file
+  # indexing the file - (only supports tbi index currently)
   bcftools index -t !{input_vcf}
   '''
 }

@@ -9,12 +9,13 @@ import java.io.File
 
 // params default
 params.input_config = "${projectDir}/../nf_config/input_sources.json"
-params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
+//params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
+params.output_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/test_v108"
 params.state = "pre"
 
 // params for nextflow-vep
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
-params.bin_size = 250000
+params.bin_size = 100
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"
@@ -69,10 +70,16 @@ workflow {
       vep_outdir = genome_outdir + "/" + source_name.replace(" ", "_") + "/vcfs"
       file(vep_outdir).mkdir()
       
-      // check if index file exist otherwise create it
-      index_file = file(source.file_location + ".tbi")
-      if (!index_file.exists()){
-        exit 1, "index file does not exist - $index_file"
+      // check if index file exists
+      index_file = ""
+      if (file(source.file_location + ".tbi").exists()){
+        index_file = file(source.file_location + ".tbi")
+      }
+      else if (file(source.file_location + ".csi").exists()){
+        index_file = file(source.file_location + ".csi")
+      }
+      else{
+        exit 1, "index file does not exist for - " + source.file_location
       }
       
       // output file prefix for VEP output file
@@ -115,7 +122,8 @@ workflow {
   if( state.equals("post")  ) {
     renameChr(vep.out, synonyms)
     removeDupIDs(renameChr.out)
-    indexVCF(removeDupIDs.out)
+    // we do not really need index file 
+    //indexVCF(removeDupIDs.out)
     
     state = "focus"
   }

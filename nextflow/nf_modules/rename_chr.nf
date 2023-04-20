@@ -16,7 +16,7 @@ process renameChr {
   '''
   # format input and output file name
   input_file=!{input_vcf}
-  output_file=${input_file/.vcf.gz_vep_out.vcf.gz/_renamed_VEP.vcf.gz}
+  output_file=${input_file/_VEP.vcf.gz/_renamed_VEP.vcf.gz}
   
   # rename chr synonyms
   bcftools annotate --no-version --force --rename-chrs !{synonym_file} ${input_file} -Oz -o ${output_file}
