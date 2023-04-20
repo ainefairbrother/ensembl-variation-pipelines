@@ -82,8 +82,10 @@ impl Line {
             if self.compatible(more) {
                 self.alts.extend(more.alts.clone());
                 if more.severity_rank < self.severity_rank {
-                    self.end = more.end;
-                    self.variety = more.variety.clone();
+                    if more.end > self.end {
+                        self.end = more.end;
+                        self.variety = more.variety.clone();
+                    }
                     self.group = more.group;
                     self.severity = more.severity.to_string();
                     self.severity_rank = more.severity_rank;
@@ -199,11 +201,19 @@ fn main() -> Result<(), VCFError> {
                             variant_group = *variant_groups.get(csq).unwrap_or(&0);
                             most_severe_csq = csq;
                             msc_rank = severity_here;
+                            
+                            // variety should always be same for each variant 
+                            // dbSNP merges all variants that have variety in SPDI notation but in vcf we can see different variety for same variant
+                            // VEP though would report "sequence_alteration" for all if there are different variety in a variant
                             variety = variety_here;
                         }
                     }
                 }
                 
+                // what happens when the variety is "sequence_alteration"
+                // we will take end = start + ref length - 1, which is true for all except insertion and SNV
+                // for insertion it is alright, because the other variety will always have larger end 
+                // for SNV it is also alright, because it should not be appearing in a "sequence_alteration" in the first place
                 let mut end = record.position + ref_len - 1;
                 if variety.eq(&String::from("SNV")) {
                     end = record.position;
