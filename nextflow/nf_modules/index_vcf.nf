@@ -6,14 +6,17 @@
 
 process indexVCF {
   input:
-  val input_vcf
+  tuple path(input_vcf), val(genome), val(index_type)
   
   output:
-  tuple val(input_vcf), val("${input_vcf}.gz")
+  tuple path(input_vcf), path("${input_vcf}.{tbi,csi}"), val(genome)
   
   shell:
   '''
-  # indexing the file - (only supports tbi index currently)
-  bcftools index -t !{input_vcf}
+  if [[ "!{index_type}" == "tbi" ]]; then
+    bcftools index -t !{input_vcf}
+  else
+    bcftools index -c !{input_vcf}
+  fi
   '''
 }

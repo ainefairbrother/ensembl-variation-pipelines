@@ -7,17 +7,14 @@
 nextflow.enable.dsl=2
 
 // defaults
-prefix = "out"
-params.outdir = ""
 params.cpus = 1
 
 process readChrVCF {
   input:
-  path(vcf)
-  path(indexFile)
+  tuple path(vcf), path(vcf_index), val(genome)
 
   output:
-  tuple path(vcf), path(indexFile), path("*.chrom")
+  tuple path(vcf), path(vcf_index), path("*.chrom"), val(genome)
 
   shell:
   '''

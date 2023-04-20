@@ -120,22 +120,30 @@ workflow {
     state = "post"
   }
   if( state.equals("post")  ) {
-    renameChr(vep.out, synonyms)
+    renameChr(vep.out, vep.out
+      .map{ file(it)
+        .getParent()
+        .getParent()
+        .getParent()
+        .getSimpleName() }
+    )
     removeDupIDs(renameChr.out)
-    // we do not really need index file 
-    //indexVCF(removeDupIDs.out)
+    indexVCF(removeDupIDs.out)
+    
+    state = "tracks"
+  }
+  
+  if( state.equals("tracks")  ) {
+    readChrVCF(indexVCF.out)
+    splitChrVCF(readChrVCF.out.transpose())
+    vcfToBed(splitChrVCF.out.transpose())
+    
+    bedToBigBed(vcfToBed.out.groupTuple())
+    //bedToBigWig(vcfToBed.out.groupTuple())
     
     state = "focus"
   }
-  
-  //if( state.equals("focus")  ) {
-  //  createFocusVCF(removeDupIDs.out.vcfFile.collect(), removeDupIDs.out.indexFile.collect(), genome_outdir)
-  //  state = "tracks"
-  //}
-  //if( state.equals("tracks")  ) {
-    //readChrVCF(vcf_files, index_files)
-    //splitChrVCF(readChrVCF.out.transpose())
-    //vcfToBed(splitChrVCF.out.files.transpose())
-    //bedToBigBed(vcfToBed.out.bed.groupTuple())
-  //}
+  if( state.equals("focus")  ) {
+    //createFocusVCF(removeDupIDs.out.vcfFile.collect(), removeDupIDs.out.indexFile.collect(), genome_outdir)  
+  }
 }

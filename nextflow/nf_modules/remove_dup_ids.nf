@@ -8,10 +8,10 @@
 
 process removeDupIDs {
   input: 
-  tuple val(output_dir), val(prefix)
+  tuple val(output_dir), val(prefix), val(genome), val(index_type)
   
   output:
-  env output_file
+  tuple env(output_file), val(genome), val(index_type)
   
   shell: 
   '''

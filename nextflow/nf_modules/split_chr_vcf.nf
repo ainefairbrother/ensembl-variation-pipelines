@@ -7,21 +7,22 @@
 nextflow.enable.dsl=2
 
 // defaults
-prefix = "out"
-params.outdir = ""
 params.cpus = 1
 
 process splitChrVCF {
   input:
-  tuple path(vcf), path(indexFile), path(chrFile)
+  tuple path(vcf), path(index_file), path(chr_file), val(genome)
 
   output:
-  tuple val("${vcf}"), path("split.*.vcf.gz"), path(indexFile), emit: files
+  tuple val("${vcf}"), path("split.*.vcf.gz"), val(genome)
+  
+  afterScript 'rm ${chr_file}'
 
   shell:
   '''
-  chr_file=!{chrFile}
+  chr_file=!{chr_file}
   chr=$(basename ${chr_file/.chrom/})
-  bcftools view -O z -o split.${chr}.vcf.gz !{vcf} "${chr}"
+  
+  bcftools view -Oz -o split.${chr}.vcf.gz !{vcf} "${chr}"
   '''
 }
