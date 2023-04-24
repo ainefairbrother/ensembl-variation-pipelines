@@ -1,23 +1,22 @@
 #!/usr/bin/env nextflow
 
 /*
-* This script generate bed file from VCF file
+* This script generate bigbed file from bed file
 */
 
 process bedToBigBed {
   input: 
-  tuple val(original), path(bed_files), val(genome)
-  
-  afterScript 'rm all.bed'
+  tuple val(original_vcf), path(bed), val(genome), val(source)
   
   shell:
+  output_dir = params.output_dir
+  output_bb = file(original_vcf).getSimpleName() + ".bb"
+  
   '''
   chrom_sizes=!{projectDir}/../nf_config/chrom_sizes/!{genome}.chrom.sizes
+  bedToBigBed -type=bed3+6 !{bed} ${chrom_sizes} !{output_bb}
   
-  cat !{bed_files} > all.bed
-  LC_COLLATE=C sort -S1G -k1,1 -k2,2n all.bed > all.sorted.bed
-  bedToBigBed -type=bed3+6 all.sorted.bed ${chrom_sizes} all.bb
-  
-  
+  mkdir -p !{output_dir}/!{genome}/!{source}/tracks
+  mv !{output_bb} !{output_dir}/!{genome}/!{source}/tracks/
   '''
 }

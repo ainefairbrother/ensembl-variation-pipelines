@@ -9,13 +9,12 @@ import java.io.File
 
 // params default
 params.input_config = "${projectDir}/../nf_config/input_sources.json"
-//params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
-params.output_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/test_v108"
+params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
 params.state = "pre"
 
 // params for nextflow-vep
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
-params.bin_size = 100
+params.bin_size = 250000
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"
@@ -27,19 +26,15 @@ include { vep } from "${repo_dir}/ensembl-vep/nextflow/workflows/run_vep.nf"
 include { renameChr } from "${projectDir}/../nf_modules/rename_chr.nf"
 include { removeDupIDs } from "${projectDir}/../nf_modules/remove_dup_ids.nf"
 include { indexVCF } from "${projectDir}/../nf_modules/index_vcf.nf"
-
-
-//include { checkVCF; checkVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/check_VCF.nf"
-//include { readVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/read_VCF.nf"
-//include { splitVCF; splitVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/split_VCF.nf"
-//include { mergeVCF } from "${repo_dir}/ensembl-vep/nextflow/nf_modules/merge_VCF.nf"
-
 // tracks
 include { readChrVCF } from "${projectDir}/../nf_modules/read_chr_vcf.nf"
 include { splitChrVCF } from "${projectDir}/../nf_modules/split_chr_vcf.nf"
 include { vcfToBed } from "${projectDir}/../nf_modules/vcf_to_bed.nf"
+include { concatBed } from "${projectDir}/../nf_modules/concat_bed.nf"
 include { bedToBigBed } from "${projectDir}/../nf_modules/bed_to_bigbed.nf"
-include { createFocusVCF } from "${projectDir}/../nf_modules/create_focus_vcf.nf"
+include { bedToBigWig } from "${projectDir}/../nf_modules/bed_to_bigwig.nf"
+// focus track
+include { createFocusTrack } from "${projectDir}/../nf_modules/create_focus_track.nf"
 
 
 log.info 'Starting workflow.....'
@@ -120,12 +115,10 @@ workflow {
     state = "post"
   }
   if( state.equals("post")  ) {
-    renameChr(vep.out, vep.out
-      .map{ file(it)
-        .getParent()
-        .getParent()
-        .getParent()
-        .getSimpleName() }
+    renameChr(
+      vep.out,
+      vep.out.map{ file(it).getParent().getParent().getParent().getSimpleName() },
+      vep.out.map{ file(it).getParent().getParent().getSimpleName() },
     )
     removeDupIDs(renameChr.out)
     indexVCF(removeDupIDs.out)
@@ -137,13 +130,14 @@ workflow {
     readChrVCF(indexVCF.out)
     splitChrVCF(readChrVCF.out.transpose())
     vcfToBed(splitChrVCF.out.transpose())
+    concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
     
-    bedToBigBed(vcfToBed.out.groupTuple())
-    //bedToBigWig(vcfToBed.out.groupTuple())
+    bedToBigBed(concatBed.out)
+    bedToBigWig(concatBed.out)
     
     state = "focus"
   }
   if( state.equals("focus")  ) {
-    //createFocusVCF(removeDupIDs.out.vcfFile.collect(), removeDupIDs.out.indexFile.collect(), genome_outdir)  
+    createFocusTrack(concatBed.out.groupTuple(by: [2]))  
   }
 }

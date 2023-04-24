@@ -8,9 +8,10 @@ process renameChr {
   input:
   val input_file
   val genome
+  val source
   
   output:
-  tuple env(output_dir), env(prefix), val(genome), env(index_type)
+  tuple env(output_dir), env(prefix), val(genome), val(source), env(index_type)
   
   shell:
   '''

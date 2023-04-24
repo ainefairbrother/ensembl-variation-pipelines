@@ -6,15 +6,15 @@
 
 process vcfToBed {
   input: 
-  tuple val(original_vcf), path(vcf_file), val(genome)
+  tuple val(original_vcf), path(vcf_file), val(genome), val(source)
   
   output:
-  tuple val(original_vcf), path(output_filename), val(genome)
+  tuple val(original_vcf), path(output_filename), val(genome), val(source)
   
   shell:
   output_filename = file(original_vcf).getSimpleName() + "-" + vcf_file
+  
   '''
-  # run the track generation script
   !{projectDir}/../../bin/vcf_to_bed \
     !{vcf_file} \
     !{output_filename} \
