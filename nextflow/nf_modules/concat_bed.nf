@@ -6,10 +6,10 @@
 
 process concatBed {
   input: 
-  tuple val(original_vcf), path(bed_files), val(genome), val(source)
+  tuple val(original_vcf), path(bed_files), val(genome), val(source), val(priority)
   
   output: 
-  tuple val(original_vcf), path(output_bed), val(genome), val(source)
+  tuple val(original_vcf), path(output_bed), val(genome), val(source), val(priority)
   
   afterScript 'rm all.bed'
   

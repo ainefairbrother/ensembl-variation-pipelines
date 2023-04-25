@@ -9,11 +9,14 @@ process renameChr {
   val input_file
   val genome
   val source
+  val priorities
   
   output:
-  tuple env(output_dir), env(prefix), val(genome), val(source), env(index_type)
+  tuple env(output_dir), env(prefix), val(genome), val(source), val(priority), env(index_type)
   
   shell:
+  priority = priorities[genome][source]
+  
   '''
   # format input and output file name
   input_file=!{input_file}

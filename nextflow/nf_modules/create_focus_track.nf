@@ -6,7 +6,7 @@
 
 process createFocusTrack {
   input:
-  tuple val(original_vcf), path(bed_files), val(genome), val(source)
+  tuple val(original_vcfs), path(bed_files), val(genome), val(sources), val(priorities)
   
   afterScript 'rm all.bed'
   
@@ -18,10 +18,30 @@ process createFocusTrack {
   output_bw = genome + ".bw"
   
   '''
-  # we need a way to order the bed files with priority
+  priorities="!{priorities}"
+  priorities=(${priorities//[,\\[\\]]/})
+  bed_files=(!{bed_files})
+  
+  # we need to order the bed files with priority
+  total_idx=${#priorities[@]}
+  let "total_idx--"
+  for idx in $(seq 1 ${total_idx});
+  do
+    prev_idx=$((idx-1))
+    if [[ ${priorities[${idx}]} < ${priorities[${prev_idx}]} ]]; then
+      temp=${priorities[${idx}]}
+      priorities[${idx}]=${priorities[${prev_idx}]}
+      priorities[${prev_idx}]=${temp}
+      
+      temp=${bed_files[${idx}]}
+      bed_files[${idx}]=${bed_files[${prev_idx}]}
+      bed_files[${prev_idx}]=${temp}
+    fi
+  done
+  
   !{projectDir}/../../bin/merge_bed \
     all.bed \
-    !{bed_files} \
+    ${bed_files[@]} \
     
   LC_COLLATE=C sort -S1G -k1,1 -k2,2n all.bed > !{output_bed}
     

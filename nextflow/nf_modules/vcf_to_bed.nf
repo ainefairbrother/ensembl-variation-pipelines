@@ -6,10 +6,10 @@
 
 process vcfToBed {
   input: 
-  tuple val(original_vcf), path(vcf_file), val(genome), val(source)
+  tuple val(original_vcf), path(vcf_file), val(genome), val(source), val(priority)
   
   output:
-  tuple val(original_vcf), path(output_filename), val(genome), val(source)
+  tuple val(original_vcf), path(output_filename), val(genome), val(source), val(priority)
   
   shell:
   output_filename = file(original_vcf).getSimpleName() + "-" + vcf_file

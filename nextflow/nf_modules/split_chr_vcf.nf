@@ -11,10 +11,10 @@ params.cpus = 1
 
 process splitChrVCF {
   input:
-  tuple path(vcf), path(index_file), path(chr_file), val(genome), val(source)
+  tuple path(vcf), path(index_file), path(chr_file), val(genome), val(source), val(priority)
 
   output:
-  tuple val("${vcf}"), path("split.*.vcf.gz"), val(genome), val(source)
+  tuple val("${vcf}"), path("split.*.vcf.gz"), val(genome), val(source), val(priority)
   
   afterScript 'rm ${chr_file}'
 

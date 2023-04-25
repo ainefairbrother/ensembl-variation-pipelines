@@ -6,7 +6,7 @@
 
 process bedToBigBed {
   input: 
-  tuple val(original_vcf), path(bed), val(genome), val(source)
+  tuple val(original_vcf), path(bed), val(genome), val(source), val(priorities)
   
   shell:
   output_dir = params.output_dir

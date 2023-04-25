@@ -44,11 +44,10 @@ params.config = slurper.parse(new File(params.input_config))
 workflow {
   ch_params = [:]
   ch_params['vcf_files'] = []
-  ch_params['index_files'] = []
   ch_params['outdirs'] = []
-  ch_params['input_prefixes'] = []
   ch_params['vep_ini_files'] = []
-  ch_params['synonyms'] = []
+  
+  priorities = [:]
 
   genomes = params.config.keySet()
   for (genome in genomes) {
@@ -56,6 +55,8 @@ workflow {
     // create a directory for this genome in the output directory
     genome_outdir = params.output_dir + "/" + genome
     file(genome_outdir).mkdir()
+    
+    priorities[genome] = [:]
   
     for (source in params.config.get(genome)){
       source_name = source.source_name
@@ -66,25 +67,22 @@ workflow {
       
       // check if index file exists
       index_file = ""
-      if (file(source.file_location + ".tbi").exists() && !file(source.file_location + ".csi").exists()){
+      if (!file(source.file_location + ".tbi").exists() && !file(source.file_location + ".csi").exists()){
         exit 1, "index file does not exist for - " + source.file_location
       }
-      
-      // output file prefix for VEP output file
-      prefix = file(source.file_location).getSimpleName()
       
       // vep config file
       vep_ini = "${projectDir}/../nf_config/vep_ini/${genome}.ini"
       
-      // a tsv file containing chrom names and their synonyms (to be used by bcftools to rename synonyms)
-      synonyms = "${projectDir}/../nf_config/synonyms/${genome}.txt"
-      
       ch_params['vcf_files'].add(source.file_location)
       ch_params['outdirs'].add(vep_outdir)
       ch_params['vep_ini_files'].add(vep_ini)
+      
+      // priority of a source in a genome - used in focus track creation
+      priorities[genome][source_name] = source.priority ? source.priority : 100
     }
   }
-  
+
   vcf_files = Channel.fromList(ch_params['vcf_files'])
   outdirs = Channel.fromList(ch_params['outdirs'])
   vep_configs = Channel.fromList(ch_params['vep_ini_files'])
@@ -97,6 +95,7 @@ workflow {
       vep.out,
       vep.out.map{ file(it).getParent().getParent().getParent().getSimpleName() },
       vep.out.map{ file(it).getParent().getParent().getSimpleName() },
+      priorities
     )
   removeDupIDs(renameChr.out)
   indexVCF(removeDupIDs.out)

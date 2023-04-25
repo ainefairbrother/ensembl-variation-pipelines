@@ -11,10 +11,10 @@ params.cpus = 1
 
 process readChrVCF {
   input:
-  tuple path(vcf), path(vcf_index), val(genome), val(source)
+  tuple path(vcf), path(vcf_index), val(genome), val(source), val(priority)
 
   output:
-  tuple path(vcf), path(vcf_index), path("*.chrom"), val(genome), val(source)
+  tuple path(vcf), path(vcf_index), path("*.chrom"), val(genome), val(source), val(priority)
 
   shell:
   '''

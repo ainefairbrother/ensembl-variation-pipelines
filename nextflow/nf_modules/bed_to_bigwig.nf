@@ -6,7 +6,7 @@
 
 process bedToBigWig {
   input: 
-  tuple val(original_vcf), path(bed), val(genome), val(source)
+  tuple val(original_vcf), path(bed), val(genome), val(source), val(priorities)
   
   afterScript 'rm all.bed'
   
