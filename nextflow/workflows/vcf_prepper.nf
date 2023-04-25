@@ -10,7 +10,6 @@ import java.io.File
 // params default
 params.input_config = "${projectDir}/../nf_config/input_sources.json"
 params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
-params.state = "pre"
 
 // params for nextflow-vep
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
@@ -67,13 +66,7 @@ workflow {
       
       // check if index file exists
       index_file = ""
-      if (file(source.file_location + ".tbi").exists()){
-        index_file = file(source.file_location + ".tbi")
-      }
-      else if (file(source.file_location + ".csi").exists()){
-        index_file = file(source.file_location + ".csi")
-      }
-      else{
+      if (file(source.file_location + ".tbi").exists() && !file(source.file_location + ".csi").exists()){
         exit 1, "index file does not exist for - " + source.file_location
       }
       
@@ -87,57 +80,34 @@ workflow {
       synonyms = "${projectDir}/../nf_config/synonyms/${genome}.txt"
       
       ch_params['vcf_files'].add(source.file_location)
-      ch_params['index_files'].add(index_file)
       ch_params['outdirs'].add(vep_outdir)
-      ch_params['input_prefixes'].add(prefix)
       ch_params['vep_ini_files'].add(vep_ini)
-      ch_params['synonyms'].add(synonyms)
     }
   }
   
   vcf_files = Channel.fromList(ch_params['vcf_files'])
-  index_files = Channel.fromList(ch_params['index_files'])
   outdirs = Channel.fromList(ch_params['outdirs'])
-  input_prefixes = Channel.fromList(ch_params['input_prefixes'])
   vep_configs = Channel.fromList(ch_params['vep_ini_files'])
-  synonyms = Channel.fromList(ch_params['synonyms'])
 
-  state = params.state
-
-  //if ( state.equals("pre") ) {
-  //  mergeVCF(ch, source_vcf_outdir)
-  //  state = "vep"
-  //}
-  if ( state.equals("vep") ) {
-    // for multiple vcf this may not be working 
-    vep(vcf_files, vep_configs, outdirs)
-    
-    state = "post"
-  }
-  if( state.equals("post")  ) {
-    renameChr(
+  //mergeVCF(ch, source_vcf_outdir)
+  
+  vep(vcf_files, vep_configs, outdirs)
+  
+  renameChr(
       vep.out,
       vep.out.map{ file(it).getParent().getParent().getParent().getSimpleName() },
       vep.out.map{ file(it).getParent().getParent().getSimpleName() },
     )
-    removeDupIDs(renameChr.out)
-    indexVCF(removeDupIDs.out)
-    
-    state = "tracks"
-  }
+  removeDupIDs(renameChr.out)
+  indexVCF(removeDupIDs.out)
   
-  if( state.equals("tracks")  ) {
-    readChrVCF(indexVCF.out)
-    splitChrVCF(readChrVCF.out.transpose())
-    vcfToBed(splitChrVCF.out.transpose())
-    concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
+  readChrVCF(indexVCF.out)
+  splitChrVCF(readChrVCF.out.transpose())
+  vcfToBed(splitChrVCF.out.transpose())
+  concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
     
-    bedToBigBed(concatBed.out)
-    bedToBigWig(concatBed.out)
-    
-    state = "focus"
-  }
-  if( state.equals("focus")  ) {
-    createFocusTrack(concatBed.out.groupTuple(by: [2]))  
-  }
+  bedToBigBed(concatBed.out)
+  bedToBigWig(concatBed.out)
+  
+  createFocusTrack(concatBed.out.groupTuple(by: [2]))  
 }
