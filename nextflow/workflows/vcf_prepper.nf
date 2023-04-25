@@ -14,6 +14,7 @@ params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
 // params for nextflow-vep
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
 params.bin_size = 250000
+params.remove_patch = 1
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"

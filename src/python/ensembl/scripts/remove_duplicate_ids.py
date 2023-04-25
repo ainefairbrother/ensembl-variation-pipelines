@@ -12,11 +12,14 @@ input_vcf.close()
 
 input_vcf = VCF(sys.argv[1])
 ouput_file = sys.argv[1].replace("renamed", "processed")
+remove_patch = int(sys.argv[2])
 w = Writer(ouput_file, input_vcf)
 for variant in input_vcf:
-    chr = variant.CHROM
-    if ("CTG" in chr) or ("PATCH" in chr) or ("TEST" in chr):
-        continue
+    
+    if remove_patch:
+        chr = variant.CHROM
+        if ("CTG" in chr) or ("PATCH" in chr) or ("TEST" in chr):
+            continue
 
     if id_count[variant.ID]:
         variant.ID = "."
