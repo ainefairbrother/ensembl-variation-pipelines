@@ -93,6 +93,7 @@ If `nextflow-vep` is skipped, the VCF file provided in the `input_config.json` s
 - `skip_create_config` : (optional) If value is 1, the pipeline will skip creating the config files, default: `0`.
 
 The config files that falls under this condition are -
+
 `synonyms files`: File containing sequence region synonyms and their original names in tab limited file created from Ensembl core database. Needed for `renameChr` step.
 
 `chrom sizes files`: File containing sequence regions and their lengths in tab limited file. Used by UCSC tools to create bigWig and bogBeds.
