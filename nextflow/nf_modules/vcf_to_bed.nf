@@ -6,6 +6,7 @@
 
 process vcfToBed {
   input: 
+  val config_done
   tuple val(original_vcf), path(vcf_file), val(genome), val(source), val(priority)
   
   output:

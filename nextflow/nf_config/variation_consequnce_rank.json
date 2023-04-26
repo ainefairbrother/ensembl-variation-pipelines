@@ -37,6 +37,7 @@
    "upstream_gene_variant" : "24",
    "start_retained_variant" : "15",
    "frameshift_variant" : "5",
+   "coding_transcript_variant" : "23",
    "intron_variant" : "21",
    "splice_polypyrimidine_tract_variant" : "13"
 }

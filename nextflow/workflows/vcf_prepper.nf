@@ -16,10 +16,16 @@ params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/websi
 params.bin_size = 250000
 params.remove_patch = 1
 params.skip_vep = 0
+params.skip_create_config = 0
+params.ini_file = "${projectDir}/../../nextflow/nf_config/DEFAULT.ini"
+params.rank_file = "${projectDir}/../../nextflow/nf_config/variation_consequnce_rank.json"
+params.version = 108
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"
 // pre
+include { createRankFile } from "${projectDir}/../nf_modules/create_rank_file.nf"
+include { createConfigs } from "${projectDir}/../nf_modules/create_configs.nf"
 include { mergeVCF } from "${projectDir}/../nf_modules/merge_vcf.nf"
 // vep
 include { vep } from "${repo_dir}/ensembl-vep/nextflow/workflows/run_vep.nf"
@@ -92,10 +98,12 @@ workflow {
   vcf_files = Channel.fromList(ch_params['vcf_files'])
   outdirs = Channel.fromList(ch_params['outdirs'])
   vep_configs = Channel.fromList(ch_params['vep_ini_files'])
+  genomes = Channel.fromList(ch_params['genomes'])
+  sources = Channel.fromList(ch_params['sources'])
 
+  createRankFile(params.rank_file)
+  createConfigs(createRankFile.out, genomes)
   //mergeVCF(ch, source_vcf_outdir)
-  
-  
   if (!params.skip_vep) {
     vep(vcf_files, vep_configs, outdirs)
     renameChr(
@@ -106,9 +114,6 @@ workflow {
       )
   }
   else {
-    genomes = Channel.fromList(ch_params['genomes'])
-    sources = Channel.fromList(ch_params['sources'])
-    
     renameChr(
       vcf_files,
       genomes,
@@ -121,7 +126,7 @@ workflow {
   
   readChrVCF(indexVCF.out)
   splitChrVCF(readChrVCF.out.transpose())
-  vcfToBed(splitChrVCF.out.transpose())
+  vcfToBed(createConfigs.out, splitChrVCF.out.transpose())
   concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
     
   bedToBigBed(concatBed.out)
