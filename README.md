@@ -27,8 +27,7 @@ nextflow \
 
 - `input_config` : (optional) Give the full path of the input configuration file, default: `ensembl-variation-pipelines/nextflow/nf_config/input_sources.json`.
 
-This is a json configuration file containing the source file information for each species. You can specify the location of VCf file and also the priority of that file in the config. The priority is used for generating focus track.
-Variants from VCF file that have higher priority value will be stacked on top of variants from VCF file with lower priority value. e.g. - 
+This is a json configuration file containing the source file information. You can specify the location of VCF files and also their priority in the config. The priority is used for generating focus track files. Variants from VCF file that have higher priority value will be stacked on top of variants from VCF file with lower priority value. e.g. - 
 
 ```
 {
@@ -46,10 +45,9 @@ Variants from VCF file that have higher priority value will be stacked on top of
 }
 ```
 
-In the above case, GWAS variants will be stacked on top of dbSNP variant. What it means is if GWAS has a variant with name `rs100` and dbSNP also has the same variant we will only keep the variant from dbSNP. Priority is optional
-and by default it's value is 100. 
+In the above case, GWAS variants will be stacked on top of dbSNP variant. What it means is that, if GWAS and dbSNP both have a variant with name `rs100` only the variant from dbSNP will be kept. Priority is optional and by default it's value is 100. 
 
-- `output_dir` : (optional) Give the full path of the input configuration file, default: `/nfs/production/flicek/ensembl/variation/new_website`
+- `output_dir` : (optional) Give the full path of the dir where the outputs will be generated, default: `/nfs/production/flicek/ensembl/variation/new_website`
 
 The generated VEP VCF and track files will be stored there. The directory structure would be - 
 
@@ -90,17 +88,17 @@ The generated VEP VCF and track files will be stored there. The directory struct
 
 - `skip_vep` : (optional) If value is 1, the pipeline will skip running `nextflow-vep`, default: `0`. 
 
-In `nextflow-vep` is skipped, the VCF file provided in the `input_config.json` should be VCF files that are already run through VEP (with configuration required by vcf_prepper pipeline)
+If `nextflow-vep` is skipped, the VCF file provided in the `input_config.json` should be VCF files that have already been run through VEP (with appropriate configuration required by vcf_prepper pipeline)
 
 - `skip_create_config` : (optional) If value is 1, the pipeline will skip creating the config files, default: `0`.
 
 The config files that falls under this condition are -
-* synonyms file: File containing sequence region synonyms and their original names in tab limited file created from Ensembl core database. Needed for renameChr step.
+* synonyms file: File containing sequence region synonyms and their original names in tab limited file created from Ensembl core database. Needed for `renameChr` step.
 * chrom sizes file: File containing sequence regions and their lengths in tab limited file. Used by UCSC tools to create bigWig and bogBeds.
 
-- `ini_file` : (optional) A INI file that is used by the createConfigs step to generate the config files, default: `ensembl-variation-pipelines/nextflow/nf_config/DEFAULT.ini`.
+- `ini_file` : (optional) A INI file that is used by the `createConfigs` step to generate the config files, default: `ensembl-variation-pipelines/nextflow/nf_config/DEFAULT.ini`.
 
-The file generally looks like this -
+The file format is -
 ```
 [database]
 host = <hostname>
@@ -113,17 +111,17 @@ port = <port>
 user = <user>
 ```
 
-Add the appropriate server information so that the core database related to the species and Ensembl version can be found there. If `skip_create_config` is set to `1` this option is ignored.
+Add the appropriate server information so that the core database related to the species and Ensembl version can be found. If `skip_create_config` is set to `1` this option is ignored.
 
 - `rank_file` : (optional) Give the full path of the rank file to be generated and used, default: `ensembl-variation-pipelines/nextflow/nf_config/variation_consequnce_rank.json`
 
-This rank file contains the rank of variant consequence and used to determine the most severe consequence of a variant. The pipeline generate this file automatically using Ensembl Variation api and later used in the vcfToBed step.
+This rank file contains the rank of variant consequence and used to determine the most severe consequence of a variant. The pipeline generate this file automatically using Ensembl Variation api and later use it in the `vcfToBed` step.
 
-Make sure you are checked out to appropriate ensembl-variation repository to get the appropriate ranks. ideally it would be the same version as provided by the `--version` parameter.
+Make sure you are checked out to appropriate `ensembl-variation` repository to get the appropriate ranks. ideally it would be the same version as provided by the `--version` parameter.
 
 - `version` : (optional) Give the Ensembl version to be used, default: `108`.
 
-Currently, used to get the appropriate Ensembl core database when creating the configs in createConfigs step.
+Currently, used to get the appropriate Ensembl core database when creating the configs in `createConfigs` step.
 
 ## Pipeline Flow
 
