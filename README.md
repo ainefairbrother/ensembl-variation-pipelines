@@ -1,5 +1,39 @@
 # ensembl-variation-pipelines
 
+## Pre-requisite
+
+### Repositories
+
+Following repositories are needed for this pipeline - 
+
+- `ensembl-variation`
+- `ensembl-vep`
+
+Make sure you have checked out to correct branch of these repositories.
+
+### Python dependencies
+
+The python dependencies are currently available in `variation-eva` pyenv environment. To have access to this environment please add these to your `.bashrc` - 
+
+```
+PYENV_ROOT="/hps/software/users/ensembl/variation/.pyenv"
+if [[ -d "$PYENV_ROOT" ]]; then
+    export PYENV_ROOT
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init --path)"
+    eval "$(pyenv init -)"
+    eval "$(pyenv virtualenv-init -)"
+fi
+```
+
+### Rust setup
+
+These pipeline requires you can run rust executables. There is no Rust environment available in codon. You need to install using your codon user. Run the following command - 
+
+```
+curl https://sh.rustup.rs -sSf | sh
+```
+
 ## Usage
 
 Example command:
