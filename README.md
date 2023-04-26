@@ -84,6 +84,46 @@ The generated VEP VCF and track files will be stored there. The directory struct
   .
 ```
 
+- `bin_size` : (optional) This is a nextflow-vep pipeline parameter and determines the number of variants to split the VCF file by, default: `250000`.
+
+- `remove_patch` : (optional) If value is 1, the pipeline will ignore sequence region with `PATCH`, `TEST`, `CTG` in name, default: `1`.
+
+- `skip_vep` : (optional) If value is 1, the pipeline will skip running `nextflow-vep`, default: `0`. 
+
+In `nextflow-vep` is skipped, the VCF file provided in the `input_config.json` should be VCF files that are already run through VEP (with configuration required by vcf_prepper pipeline)
+
+- `skip_create_config` : (optional) If value is 1, the pipeline will skip creating the config files, default: `0`.
+
+The config files that falls under this condition are -
+* synonyms file: File containing sequence region synonyms and their original names in tab limited file created from Ensembl core database. Needed for renameChr step.
+* chrom sizes file: File containing sequence regions and their lengths in tab limited file. Used by UCSC tools to create bigWig and bogBeds.
+
+- `ini_file` : (optional) A INI file that is used by the createConfigs step to generate the config files, default: `ensembl-variation-pipelines/nextflow/nf_config/DEFAULT.ini`.
+
+The file generally looks like this -
+```
+[database]
+host = <hostname>
+port = <port>
+user = <user>
+
+[grch37_database]
+host = <hostname>
+port = <port>
+user = <user>
+```
+
+Add the appropriate server information so that the core database related to the species and Ensembl version can be found there. If `skip_create_config` is set to `1` this option is ignored.
+
+- `rank_file` : (optional) Give the full path of the rank file to be generated and used, default: `ensembl-variation-pipelines/nextflow/nf_config/variation_consequnce_rank.json`
+
+This rank file contains the rank of variant consequence and used to determine the most severe consequence of a variant. The pipeline generate this file automatically using Ensembl Variation api and later used in the vcfToBed step.
+
+Make sure you are checked out to appropriate ensembl-variation repository to get the appropriate ranks. ideally it would be the same version as provided by the `--version` parameter.
+
+- `version` : (optional) Give the Ensembl version to be used, default: `108`.
+
+Currently, used to get the appropriate Ensembl core database when creating the configs in createConfigs step.
 
 ## Pipeline Flow
 

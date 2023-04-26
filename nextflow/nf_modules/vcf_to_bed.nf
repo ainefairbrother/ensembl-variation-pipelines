@@ -14,12 +14,13 @@ process vcfToBed {
   
   shell:
   output_filename = file(original_vcf).getSimpleName() + "-" + vcf_file
+  rank_file = params.rank_file
   
   '''
   !{projectDir}/../../bin/vcf_to_bed \
     !{vcf_file} \
     !{output_filename} \
-    !{projectDir}/../nf_config/variation_consequnce_rank.json
+    !{rank_file}
     
   rm !{vcf_file}
   '''
