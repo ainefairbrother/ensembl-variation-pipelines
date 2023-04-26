@@ -1,6 +1,91 @@
 # ensembl-variation-pipelines
 
-## pipeline flow
+## Usage
+
+Example command:
+
+```
+module add nextflow-22.10.1-gcc-11.2.0-ju5saqw
+
+nextflow \
+-C ${ENSEMBL_ROOT}/ensembl-variation-pipelines/nextflow/nf_config/nextflow.config \
+  run ${ENSEMBL_ROOT}/ensembl-variation-pipelines/nextflow/workflows/vcf_prepper.nf \
+  -profile lsf \
+  --input_config <path/to/input_config.json> \
+  --output_dir <path/to/output_dir> \
+  --bin_size 250000 \
+  --remove_patch 1 \
+  --skip_vep 0 \
+  --skip_create_config 0 \
+  --ini_file <path/to/ini_file> \
+  --rank_file <path/to/variation_consequnce_rank.json> \
+  --version 108 \
+  -resume
+```
+
+## Options
+
+- `input_config` : (optional) Give the full path of the input configuration file, default: `ensembl-variation-pipelines/nextflow/nf_config/input_sources.json`.
+
+This is a json configuration file containing the source file information for each species. You can specify the location of VCf file and also the priority of that file in the config. The priority is used for generating focus track.
+Variants from VCF file that have higher priority value will be stacked on top of variants from VCF file with lower priority value. e.g. - 
+
+```
+{
+  "homo_sapiens_grch38" : [
+    {
+        "source_name": "dbSNP",
+        "file_location": "/path/to/GCF_000001405.39_VEP.vcf.gz",
+        "priority": 1
+    },
+    {
+        "source_name": "GWAS",
+        "file_location": "/path/to/input_gwas_catalog_v1.0.2-associations_e107_r2022-09-14_test.vcf.gz"
+    }
+  ]
+}
+```
+
+In the above case, GWAS variants will be stacked on top of dbSNP variant. What it means is if GWAS has a variant with name `rs100` and dbSNP also has the same variant we will only keep the variant from dbSNP. Priority is optional
+and by default it's value is 100. 
+
+- `output_dir` : (optional) Give the full path of the input configuration file, default: `/nfs/production/flicek/ensembl/variation/new_website`
+
+The generated VEP VCF and track files will be stored there. The directory structure would be - 
+
+```
+<output_dir>
+  |
+  -- <genome 1>
+      |
+      -- <source 1>
+          |
+          -- vcfs
+              |
+              -- *.vcf.gz
+          -- tracks
+              |
+              -- *.bb
+              -- *.bw
+      -- <source 2>
+      .
+      .
+      -- focus
+          |
+          -- vcfs
+              |
+              -- *.vcf.gz
+          -- tracks
+              |
+              -- *.bb
+              -- *.bw
+  -- <genome 2>
+  .
+  .
+```
+
+
+## Pipeline Flow
 
 ```mermaid
 flowchart TD

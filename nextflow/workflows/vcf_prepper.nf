@@ -10,8 +10,6 @@ import java.io.File
 // params default
 params.input_config = "${projectDir}/../nf_config/input_sources.json"
 params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
-
-// params for nextflow-vep
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
 params.bin_size = 250000
 params.remove_patch = 1
