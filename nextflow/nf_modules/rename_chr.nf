@@ -12,24 +12,22 @@ process renameChr {
   val priorities
   
   output:
-  tuple env(output_dir), env(prefix), val(genome), val(source), val(priority), env(index_type)
+  tuple val(output_dir), val(prefix), val(genome), val(source), val(priority), env(index_type)
   
   shell:
   priority = priorities[genome][source]
+  output_dir = file(input_file).getParent()
+  prefix = file(input_file).getSimpleName()
   
   '''
-  # format input and output file name
-  input_file=!{input_file}
-  output_file=${input_file/_VEP.vcf.gz/_renamed_VEP.vcf.gz}
+  output_file=!{output_dir}/!{prefix}_renamed_VEP.vcf.gz
   synonym_file=!{projectDir}/../nf_config/synonyms/!{genome}.txt
   
   # rename chr synonyms
-  bcftools annotate --no-version --force --rename-chrs ${synonym_file} ${input_file} -Oz -o ${output_file}
+  bcftools annotate --no-version --force --rename-chrs ${synonym_file} !{input_file} -Oz -o ${output_file}
   
   # for next job create parameters
-  output_dir=$(dirname ${output_file})
-  prefix=$(basename ${output_file/_renamed_VEP.vcf.gz/})
-  if [[ -f ${input_file}.tbi ]]; then
+  if [[ -f !{input_file}.tbi ]]; then
     index_type=tbi
   else
     index_type=csi

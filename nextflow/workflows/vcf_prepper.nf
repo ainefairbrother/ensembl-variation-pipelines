@@ -15,6 +15,7 @@ params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
 params.bin_size = 250000
 params.remove_patch = 1
+params.skip_vep = 0
 
 // module imports
 repo_dir = "/hps/software/users/ensembl/repositories/${USER}"
@@ -47,6 +48,8 @@ workflow {
   ch_params['vcf_files'] = []
   ch_params['outdirs'] = []
   ch_params['vep_ini_files'] = []
+  ch_params['genomes'] = []
+  ch_params['sources'] = []
   
   priorities = [:]
 
@@ -78,6 +81,8 @@ workflow {
       ch_params['vcf_files'].add(source.file_location)
       ch_params['outdirs'].add(vep_outdir)
       ch_params['vep_ini_files'].add(vep_ini)
+      ch_params['genomes'].add(genome)
+      ch_params['sources'].add(source_name)
       
       // priority of a source in a genome - used in focus track creation
       priorities[genome][source_name] = source.priority ? source.priority : 100
@@ -90,14 +95,27 @@ workflow {
 
   //mergeVCF(ch, source_vcf_outdir)
   
-  vep(vcf_files, vep_configs, outdirs)
   
-  renameChr(
-      vep.out,
-      vep.out.map{ file(it).getParent().getParent().getParent().getSimpleName() },
-      vep.out.map{ file(it).getParent().getParent().getSimpleName() },
+  if (!params.skip_vep) {
+    vep(vcf_files, vep_configs, outdirs)
+    renameChr(
+        vep.out,
+        vep.out.map{ file(it).getParent().getParent().getParent().getSimpleName() },
+        vep.out.map{ file(it).getParent().getParent().getSimpleName() },
+        priorities
+      )
+  }
+  else {
+    genomes = Channel.fromList(ch_params['genomes'])
+    sources = Channel.fromList(ch_params['sources'])
+    
+    renameChr(
+      vcf_files,
+      genomes,
+      sources,
       priorities
     )
+  }
   removeDupIDs(renameChr.out)
   indexVCF(removeDupIDs.out)
   
