@@ -194,10 +194,10 @@ flowchart TD
     p20 --> p21
     p22 --> p23
     p23 --> p24
-    p24 --> p27
+    p24 -->|skip_vcf = 0| p27
     p23 --> p25
-    p25 --> p27
-    p23 -->|input_file| p27
+    p25 -->|skip_vcf = 0| p27
+    p23 -->|input_file, skip_vcf = 0| p27
     p26 -->|priorities| p27
     p27 --> p28
     p28 --> p29
@@ -212,4 +212,9 @@ flowchart TD
     p36 --> p38
     p36 --> p39
     p39 --> p40
+    p3 -->|skip_vep = 1| p27
+    p4 -->|skip_vep = 1| p27
+    p0 -->|skip_vep = 1| p27
 ```
+
+Note: added the `skip_vcf` part manually
