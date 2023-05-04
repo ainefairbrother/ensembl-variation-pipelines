@@ -14,7 +14,7 @@ process concatBed {
   afterScript 'rm all.bed'
   
   shell:
-  output_bed = file(original_vcf).getSimpleName() + ".bed"
+  output_bed = file(original_vcf).getName().replace(".vcf.gz", ".bed")
   
   '''
   cat !{bed_files} > all.bed

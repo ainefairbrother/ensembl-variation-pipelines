@@ -8,7 +8,7 @@
 
 process removeDupIDs {
   input: 
-  tuple val(output_dir), val(prefix), val(genome), val(source), val(priority), val(index_type)
+  tuple val(input_file), val(genome), val(source), val(priority), val(index_type)
   
   output:
   tuple env(output_file), val(genome), val(source), val(priority), val(index_type)
@@ -18,8 +18,8 @@ process removeDupIDs {
   
   '''
   # format input and output file name
-  input_file=!{output_dir}/!{prefix}_renamed_VEP.vcf.gz
-  output_file=!{output_dir}/!{prefix}_processed_VEP.vcf.gz
+  input_file=!{input_file}
+  output_file=${input_file/_renamed_VEP.vcf.gz/_processed_VEP.vcf.gz}
   
   pyenv local variation-eva
   python3 !{projectDir}/../../src/python/ensembl/scripts/remove_duplicate_ids.py ${input_file} !{remove_patch}

@@ -12,15 +12,18 @@ process renameChr {
   val priorities
   
   output:
-  tuple val(output_dir), val(prefix), val(genome), val(source), val(priority), env(index_type)
+  tuple env(output_file), val(genome), val(source), val(priority), env(index_type)
   
   shell:
   priority = priorities[genome][source]
-  output_dir = params.output_dir + "${genome}/${source}/vcfs/"
-  prefix = file(input_file).getSimpleName()
+  output_dir = params.output_dir + "/${genome}/${source}/vcfs"
+  file_name = file(input_file).getName()
   
   '''
-  output_file=!{output_dir}/!{prefix}_renamed_VEP.vcf.gz
+  output_file=!{output_dir}/!{file_name}
+  output_file=${output_file/_VEP/}
+  output_file=${output_file/.vcf.gz/_renamed_VEP.vcf.gz}
+  
   synonym_file=!{projectDir}/../nf_config/synonyms/!{genome}.txt
   
   # rename chr synonyms

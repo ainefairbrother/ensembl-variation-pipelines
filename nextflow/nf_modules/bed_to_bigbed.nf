@@ -10,7 +10,7 @@ process bedToBigBed {
   
   shell:
   output_dir = params.output_dir
-  output_bb = file(original_vcf).getSimpleName() + ".bb"
+  output_bb = file(original_vcf).getName().replace(".vcf.gz", ".bb")
   
   '''
   chrom_sizes=!{projectDir}/../nf_config/chrom_sizes/!{genome}.chrom.sizes
