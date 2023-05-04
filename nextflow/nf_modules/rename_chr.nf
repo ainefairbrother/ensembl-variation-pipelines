@@ -16,7 +16,7 @@ process renameChr {
   
   shell:
   priority = priorities[genome][source]
-  output_dir = file(input_file).getParent()
+  output_dir = params.output_dir + "${genome}/${source}/vcfs/"
   prefix = file(input_file).getSimpleName()
   
   '''

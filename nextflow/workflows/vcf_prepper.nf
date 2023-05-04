@@ -15,6 +15,7 @@ params.bin_size = 250000
 params.remove_patch = 1
 params.skip_vep = 0
 params.skip_create_config = 0
+params.rename_clinvar_ids = 1
 params.ini_file = "${projectDir}/../../nextflow/nf_config/DEFAULT.ini"
 params.rank_file = "${projectDir}/../../nextflow/nf_config/variation_consequnce_rank.json"
 params.version = 108
@@ -30,6 +31,7 @@ include { vep } from "${repo_dir}/ensembl-vep/nextflow/workflows/run_vep.nf"
 // post
 include { renameChr } from "${projectDir}/../nf_modules/rename_chr.nf"
 include { removeDupIDs } from "${projectDir}/../nf_modules/remove_dup_ids.nf"
+include { renameClinvarIDs } from "${projectDir}/../nf_modules/rename_clinvar_ids.nf"
 include { indexVCF } from "${projectDir}/../nf_modules/index_vcf.nf"
 // tracks
 include { readChrVCF } from "${projectDir}/../nf_modules/read_chr_vcf.nf"
@@ -120,7 +122,8 @@ workflow {
     )
   }
   removeDupIDs(renameChr.out)
-  indexVCF(removeDupIDs.out)
+  renameClinvarIDs(removeDupIDs.out)
+  indexVCF(renameClinvarIDs.out)
   
   readChrVCF(indexVCF.out)
   splitChrVCF(readChrVCF.out.transpose())
