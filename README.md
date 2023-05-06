@@ -54,6 +54,7 @@ nextflow \
   --ini_file <path/to/ini_file> \
   --rank_file <path/to/variation_consequnce_rank.json> \
   --version 108 \
+  --rename_clinvar_ids 1 \
   -resume
 ```
 
@@ -159,6 +160,8 @@ Make sure you are checked out to appropriate `ensembl-variation` repository to g
 
 Currently, used to get the appropriate Ensembl core database when creating the configs in `createConfigs` step.
 
+- `rename_clinvar_ids`: (optional) If value is 1, the pipeline will try to convert id of the ClinVar VCF from ClinVar accession to ClinVar variant ID. 
+
 ## Pipeline Flow
 
 ```mermaid
@@ -187,6 +190,7 @@ flowchart TD
     p26(( ))
     p27[renameChr]
     p28[removeDupIDs]
+    p9[renameClinvarIDs]
     p29[indexVCF]
     p30[readChrVCF]
     p31([transpose])
@@ -223,7 +227,8 @@ flowchart TD
     p23 -->|input_file, skip_vcf = 0| p27
     p26 -->|priorities| p27
     p27 --> p28
-    p28 --> p29
+    p28 --> p9
+    p9 --> p29
     p29 --> p30
     p30 --> p31
     p31 --> p32
