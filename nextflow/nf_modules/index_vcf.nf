@@ -6,7 +6,7 @@
 
 process indexVCF {
   input:
-  tuple path(input_vcf), val(genome), val(source), val(priority), val(index_type)
+  tuple val(input_vcf), val(genome), val(source), val(priority), val(index_type)
   
   output:
   tuple path(input_vcf), path("${input_vcf}.{tbi,csi}"), val(genome), val(source), val(priority)

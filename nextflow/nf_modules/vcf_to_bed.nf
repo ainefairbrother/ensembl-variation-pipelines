@@ -13,7 +13,7 @@ process vcfToBed {
   tuple val(original_vcf), path(output_filename), val(genome), val(source), val(priority)
   
   shell:
-  output_filename = file(original_vcf).getSimpleName() + "-" + vcf_file
+  output_filename = file(original_vcf).getName() + "-" + vcf_file
   rank_file = params.rank_file
   
   '''

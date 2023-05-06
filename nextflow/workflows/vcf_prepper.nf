@@ -70,10 +70,11 @@ workflow {
   
     for (source in params.config.get(genome)){
       source_name = source.source_name
+      source_name = source_name.replace(" ", "_") 
     
       // create a directory for this genome in the output directory
-      vep_outdir = genome_outdir + "/" + source_name.replace(" ", "_") + "/vcfs"
-      file(vep_outdir).mkdir()
+      vep_outdir = genome_outdir + "/" + source_name + "/vcfs"
+      file(vep_outdir).mkdirs()
       
       // check if index file exists
       index_file = ""
@@ -127,7 +128,7 @@ workflow {
   
   readChrVCF(indexVCF.out)
   splitChrVCF(readChrVCF.out.transpose())
-  vcfToBed(createConfigs.out, splitChrVCF.out.transpose())
+  vcfToBed(createConfigs.out.collect(), splitChrVCF.out.transpose())
   concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
     
   bedToBigBed(concatBed.out)
