@@ -9,20 +9,22 @@ process renameClinvarIDs {
   tuple val(input_file), val(genome), val(source), val(priority), val(index_type)
   
   output:
-  tuple env(input_file), val(genome), val(source), val(priority), val(index_type)
+  tuple val(input_file), val(genome), val(source), val(priority), val(index_type)
   
   when:
-  params.rename_clinvar_ids == 1 && source =~ /ClinVar/
+  rename_clinvar_ids = params.rename_clinvar_ids
   
   shell:
   '''
-  # format input and output file name
-  input_file=!{input_file}
-  output_file=${input_file/_processed_VEP.vcf.gz/_post_processed_VEP.vcf.gz}
-  
-  pyenv local variation-eva
-  python3 !{projectDir}/../../src/python/ensembl/scripts/rename_clinvar_ids.py ${input_file} ${output_file}
-  
-  mv ${output_file} ${input_file}
+  if [[ !{rename_clinvar_ids} == 1 && source =~ ClinVar ]]; then
+    # format input and output file name
+    input_file=!{input_file}
+    output_file=${input_file/_processed_VEP.vcf.gz/_post_processed_VEP.vcf.gz}
+    
+    pyenv local variation-eva
+    python3 !{projectDir}/../../src/python/ensembl/scripts/rename_clinvar_ids.py ${input_file} ${output_file}
+    
+    mv ${output_file} ${input_file}
+  fi
   '''
 }
