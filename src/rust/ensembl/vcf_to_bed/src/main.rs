@@ -1,4 +1,4 @@
-use std::{io::{BufReader,Write}, fs::File, env, collections::HashMap, collections::HashSet};
+use std::{process, io::{BufReader,Write}, fs::File, env, collections::HashMap, collections::HashSet};
 use vcf::{VCFError, VCFReader};
 use flate2::read::MultiGzDecoder;
 
@@ -210,10 +210,31 @@ fn main() -> Result<(), VCFError> {
                     }
                 }
                 
+                // we put "sequence_alteration" from VEP as indel
+                if variety.eq(&String::from("sequence_alteration")) {
+                    variety = "indel";
+                    
+                    let calc_variety = match (alt.len()<2, reference.len()<2, alt.len() == reference.len()) {
+                        (true, true, true) => { "SNV" },
+                        (true, false, false) => { "deletion" },
+                        (false, true, false) => { "insertion" },
+                        (false, false, false) => { "indel" },
+                        (false, false, true) => { "substitute" },
+                        _ => todo!(),
+                    };
+                    
+                    if calc_variety.eq(&String::from("SNV")) || calc_variety.eq(&String::from("substitute")) {
+                        println!("[ERROR] sequence_alteration contain variant allele of type {0}", calc_variety);
+                        println!("[ERROR] culprit variant - {0} {1}:{2}", 
+                            id, 
+                            String::from_utf8(record.chromosome.to_vec()).unwrap(), 
+                            record.position
+                        );
+                        process::exit(0x0001);
+                    }
+                }
+                
                 // what happens when the variety is "sequence_alteration"
-                // we will take end = start + ref length - 1, which is true for all except insertion and SNV
-                // for insertion it is alright, because the other variety will always have larger end 
-                // for SNV it is also alright, because it should not be appearing in a "sequence_alteration" in the first place
                 let mut end = record.position + ref_len - 1;
                 if variety.eq(&String::from("SNV")) {
                     end = record.position;
