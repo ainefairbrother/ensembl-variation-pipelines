@@ -14,6 +14,7 @@ params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/websi
 params.bin_size = 250000
 params.remove_patch = 1
 params.skip_vep = 0
+params.skip_tracks = 0
 params.skip_create_config = 0
 params.rename_clinvar_ids = 1
 params.ini_file = "${projectDir}/../../nextflow/nf_config/DEFAULT.ini"
@@ -50,6 +51,10 @@ def slurper = new JsonSlurper()
 params.config = slurper.parse(new File(params.input_config))
 
 workflow {
+  if (params.skip_vep && params.skip_tracks){
+    exit 0, "Skipping VEP and track file generation, nothing to do ..."
+  }
+
   ch_params = [:]
   ch_params['vcf_files'] = []
   ch_params['outdirs'] = []
@@ -96,43 +101,55 @@ workflow {
     }
   }
 
+  // set up Channels
   vcf_files = Channel.fromList(ch_params['vcf_files'])
   outdirs = Channel.fromList(ch_params['outdirs'])
   vep_configs = Channel.fromList(ch_params['vep_ini_files'])
   genomes = Channel.fromList(ch_params['genomes'])
   sources = Channel.fromList(ch_params['sources'])
 
+  // create config files
   createRankFile(params.rank_file)
   createConfigs(createRankFile.out, genomes)
+  
   //mergeVCF(ch, source_vcf_outdir)
+  
+  // run VEP on input VCF file
   if (!params.skip_vep) {
     vep(vcf_files, vep_configs, outdirs)
-    renameChr(
+  }
+  
+  // create track files from VEPed VCF file
+  if (!params.skip_tracks){
+    if(!params.skip_vep){
+      renameChr(
         vep.out,
         vep.out.map{ file(it).getParent().getParent().getParent().getSimpleName() },
         vep.out.map{ file(it).getParent().getParent().getSimpleName() },
         priorities
       )
-  }
-  else {
-    renameChr(
-      vcf_files,
-      genomes,
-      sources,
-      priorities
-    )
-  }
-  removeDupIDs(renameChr.out)
-  renameClinvarIDs(removeDupIDs.out)
-  indexVCF(renameClinvarIDs.out)
-  
-  readChrVCF(indexVCF.out)
-  splitChrVCF(readChrVCF.out.transpose())
-  vcfToBed(createConfigs.out.collect(), splitChrVCF.out.transpose())
-  concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
+    }
+    else {
+      renameChr(
+        vcf_files,
+        genomes,
+        sources,
+        priorities
+      )
+    }
     
-  bedToBigBed(concatBed.out)
-  bedToBigWig(concatBed.out)
-  
-  createFocusTrack(concatBed.out.groupTuple(by: [2]))  
+    removeDupIDs(renameChr.out)
+    renameClinvarIDs(removeDupIDs.out)
+    indexVCF(renameClinvarIDs.out)
+    
+    readChrVCF(indexVCF.out)
+    splitChrVCF(readChrVCF.out.transpose())
+    vcfToBed(createConfigs.out.collect(), splitChrVCF.out.transpose())
+    concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
+      
+    bedToBigBed(concatBed.out)
+    bedToBigWig(concatBed.out)
+    
+    createFocusTrack(concatBed.out.groupTuple(by: [2]))
+  } 
 }

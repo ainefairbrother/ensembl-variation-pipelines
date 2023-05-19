@@ -125,6 +125,8 @@ The generated VEP VCF and track files will be stored there. The directory struct
 
 If `nextflow-vep` is skipped, the VCF file provided in the `input_config.json` should be VCF files that have already been run through VEP (with appropriate configuration required by vcf_prepper pipeline)
 
+- `skip_tracks` : (optional) If value is 1, the pipeline will skip creating track files. 
+
 - `skip_create_config` : (optional) If value is 1, the pipeline will skip creating the config files, default: `0`.
 
 The config files that falls under this condition are -
