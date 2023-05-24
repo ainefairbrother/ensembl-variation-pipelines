@@ -66,9 +66,10 @@ struct Line {
 impl Line {
     fn compatible(&self, other: &Line) -> bool {
         self.chromosome == other.chromosome &&
+        self.id == other.id &&
         self.start == other.start &&
-        self.variety == other.variety &&
-        self.reference == other.reference
+        self.reference == other.reference &&
+        self.variety == other.variety
     }
     
     fn redundant(&self, other: &Line) -> bool {
