@@ -8,13 +8,12 @@ nextflow_process {
 
         when {
             params {
-                // define parameters here. Example:
-                // outdir = "tests/results"
+                rank_file = "${baseDir}/nf_config/variation_consequnce_rank.json"
             }
             process {
                 """
                 input[0] = "done"
-                input[1] = tuple "original.vcf.gx=z", file("$baseDir/data/test.vcf.gz"), "test_genome", "test_source", 1
+                input[1] = tuple("original.vcf.gz", file("$baseDir/tests/data/test.vcf.gz"), "test_genome", "test_source", 1)
                 """
             }
         }

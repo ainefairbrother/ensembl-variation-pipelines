@@ -17,7 +17,7 @@ process vcfToBed {
   rank_file = params.rank_file
   
   '''
-  !{projectDir}/../../bin/vcf_to_bed \
+  !{moduleDir}/../../bin/vcf_to_bed \
     !{vcf_file} \
     !{output_filename} \
     !{rank_file}
