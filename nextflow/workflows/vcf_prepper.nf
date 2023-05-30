@@ -120,6 +120,7 @@ workflow {
   }
   
   // create track files from VEPed VCF file
+  // first, post process the VEPed file
   if (!params.skip_tracks){
     if(!params.skip_vep){
       renameChr(
@@ -137,19 +138,21 @@ workflow {
         priorities
       )
     }
-    
     removeDupIDs(renameChr.out)
     renameClinvarIDs(removeDupIDs.out)
     indexVCF(renameClinvarIDs.out)
     
+    // then, we create bed files from the each VEPed VCF file
     readChrVCF(indexVCF.out)
     splitChrVCF(readChrVCF.out.transpose())
     vcfToBed(createConfigs.out.collect(), splitChrVCF.out.transpose())
     concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
-      
+
+    // then, we create bigBed and bigWig files from each bed file
     bedToBigBed(concatBed.out)
     bedToBigWig(concatBed.out)
-    
+
+    // in the same time, we also create the focus track files from concatenated bed file
     createFocusTrack(concatBed.out.groupTuple(by: [2]))
   } 
 }
