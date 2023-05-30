@@ -5,6 +5,8 @@
 */
 
 process bedToBigWig {
+  label 'bigmem'
+  
   input: 
   tuple val(original_vcf), path(bed), val(genome), val(source), val(priorities)
   

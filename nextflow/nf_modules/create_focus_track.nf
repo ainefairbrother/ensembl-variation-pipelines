@@ -5,6 +5,8 @@
 */
 
 process createFocusTrack {
+  label 'bigmem'
+
   input:
   tuple val(original_vcfs), path(bed_files), val(genome), val(sources), val(priorities)
   
