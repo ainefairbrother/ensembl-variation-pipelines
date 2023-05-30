@@ -225,13 +225,15 @@ fn main() -> Result<(), VCFError> {
                     };
                     
                     if calc_variety.eq(&String::from("SNV")) || calc_variety.eq(&String::from("substitute")) {
-                        println!("[ERROR] sequence_alteration contain variant allele of type {0}", calc_variety);
-                        println!("[ERROR] culprit variant - {0} {1}:{2}", 
+                        println!("[WARNING] sequence_alteration variant ({0} {1}:{2}) contain variant allele of type {3}",
                             id, 
                             String::from_utf8(record.chromosome.to_vec()).unwrap(), 
-                            record.position
+                            record.position,
+                            calc_variety
                         );
-                        process::exit(0x0001);
+                        
+                        // we are not treating this an error rather a warning so do not quit
+                        // process::exit(0x0001);
                     }
                 }
                 
