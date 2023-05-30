@@ -1,2 +1,4 @@
 **/target
 **/DEFAULT.ini
+**/.nextflow
+**/.nf-test
