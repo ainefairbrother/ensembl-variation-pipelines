@@ -189,32 +189,32 @@ fn main() -> Result<(), VCFError> {
         }).unwrap_or(vec![]);
         
         for id in ids.iter() {
-            for alt in alts.iter() {
-                let mut variant_group = 0;
-                let mut most_severe_csq = "";
-                let mut msc_rank = 255;
-                let mut variety = "";
-                
-                for (csq, variety_here) in csq.iter().zip(class.iter()) {
-                    for csq in csq.split("&") {
-                        let severity_here = (*severity.get(csq).unwrap_or(&String::from("0"))).parse::<u8>().unwrap();
-                        if severity_here < msc_rank {
-                            variant_group = *variant_groups.get(csq).unwrap_or(&0);
-                            most_severe_csq = csq;
-                            msc_rank = severity_here;
-                            
-                            // variety should always be same for each variant 
-                            // dbSNP merges all variants that have variety in SPDI notation but in vcf we can see different variety for same variant
-                            // VEP though would report "sequence_alteration" for all if there are different variety in a variant
-                            variety = variety_here;
-                        }
+            let mut variant_group = 0;
+            let mut most_severe_csq = "";
+            let mut most_severe_csq_rank = 255;
+            
+            // calculate most severe consequence and variant group of that consequence
+            for csq_str in csq.iter() {
+                for csq_here in csq_str.split("&") {
+                    let csq_rank_here = (*severity.get(csq_here).unwrap_or(&String::from("0"))).parse::<u8>().unwrap();
+                    if csq_rank_here < most_severe_csq_rank {
+                        variant_group = *variant_groups.get(csq_here).unwrap_or(&0);
+                        most_severe_csq = csq_here;
+                        most_severe_csq_rank = csq_rank_here;
                     }
                 }
-                
-                // we put "sequence_alteration" from VEP as indel
-                if variety.eq(&String::from("sequence_alteration")) {
-                    variety = "indel";
-                    
+            }
+            
+            // calcualte variant class - we store it as variety
+            // variety should always be same for each variant allele - VEP puts variant class at variant level (using Bio::EnsEMBL::Variation::Utils::Sequence::SO_variation_class)
+            // if cannot be deduced the default value is - sequence_alteration
+            let mut variety = class[0].to_string();
+            
+            // if sequence_alteration we check if we can convert it to indel (the condition is that all the variant allele is eiter insertion or deletion or indel)
+            if variety.eq(&String::from("sequence_alteration")) {
+                let mut convert_sequence_alteration = true;
+                for alt in alts.iter() {
+                    // note that we are not minimilizing the variant alleles here 
                     let calc_variety = match (alt.len()<2, reference.len()<2, alt.len() == reference.len()) {
                         (true, true, true) => { "SNV" },
                         (true, false, false) => { "deletion" },
@@ -224,6 +224,8 @@ fn main() -> Result<(), VCFError> {
                         _ => todo!(),
                     };
                     
+                    // if any of the variant allele is SNV or substitution we will log (because this is not a regualr case)
+                    // and, keep the variety as sequence_alteration
                     if calc_variety.eq(&String::from("SNV")) || calc_variety.eq(&String::from("substitute")) {
                         println!("[WARNING] sequence_alteration variant ({0} {1}:{2}) contain variant allele of type {3}",
                             id, 
@@ -231,36 +233,42 @@ fn main() -> Result<(), VCFError> {
                             record.position,
                             calc_variety
                         );
-                        
-                        // we are not treating this an error rather a warning so do not quit
-                        // process::exit(0x0001);
+                
+                        convert_sequence_alteration = false;
+                        break;
                     }
                 }
                 
-                // what happens when the variety is "sequence_alteration"
-                let mut end = record.position + ref_len - 1;
-                if variety.eq(&String::from("SNV")) {
-                    end = record.position;
+                if convert_sequence_alteration {
+                    variety = "indel".to_string();
                 }
-                else if variety.eq(&String::from("insertion")) {
-                    end = record.position + 1;
-                }
-                
-                let more = Line {
-                    chromosome: String::from_utf8(record.chromosome.to_vec()).unwrap(),
-                    start: record.position,
-                    end: end,
-                    id: id.to_string(),
-                    variety: variety.to_string(),
-                    reference: reference.clone(),
-                    alts: HashSet::from([alt.to_string()]),
-                    group: variant_group,
-                    severity: most_severe_csq.to_string(),
-                    severity_rank: msc_rank
-                };
-                
-                lines.merge(Some(more), &mut out);
             }
+
+            // alts: HashSet::from([alt.to_string()]),
+        
+            // what happens when the variety is "sequence_alteration"
+            let mut end = record.position + ref_len - 1;
+            if variety.eq(&String::from("SNV")) {
+                end = record.position;
+            }
+            else if variety.eq(&String::from("insertion")) {
+                end = record.position + 1;
+            }
+            
+            let more = Line {
+                chromosome: String::from_utf8(record.chromosome.to_vec()).unwrap(),
+                start: record.position,
+                end: end,
+                id: id.to_string(),
+                variety: variety,
+                reference: reference.clone(),
+                alts: alts.clone(),
+                group: variant_group,
+                severity: most_severe_csq.to_string(),
+                severity_rank: most_severe_csq_rank
+            };
+            
+            lines.merge(Some(more), &mut out);
         }
     }
     
