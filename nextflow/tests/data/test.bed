@@ -1,7 +1,7 @@
-1 1 10 rs2272756 SNV G A 3 non_coding_transcript_exon_variant
-1 5 11 rs13303065 SNV C T 1 intron_variant
-1 5 11 rs13303065 SNV C G 1 coding_variant
-19 2 4 rs115438739 SNV G A 4 intron_variant
-20 5 5 rs201385366 SNV C T 2 intron_variant
-21 5 9 rs1234 deletion CTATG C 2 intron_variant
-21 5 9 rs1234 deletion CTATG CTA 3 coding_variant
+1 15110141 15110159 rs1356759330 indel TTGTGTATGTGTGTGCATA TTGTGTATGTGTGTGCATATGTGTATGTGTGTGCATA/T 3 intron_variant
+chr1 10108 10114 rs1377973775 deletion CAACCCT C 5 upstream_gene_variant
+chr13 32357725 32357725 rs754065641 SNV G C 2 splice_polypyrimidine_tract_variant
+chr19 60558 60558 rs1260281513 SNV A G/T 5 downstream_gene_variant
+NC_000001.11 10055 10056 rs768019142 indel TA TAA/T 5 upstream_gene_variant
+NC_000001.11 63738 63740 rs869033224 substitution ACT CTA 3 non_coding_transcript_exon_variant
+NC_000001.11 63739 63740 rs12345678 indel CT CTA/GC 3 non_coding_transcript_exon_variant

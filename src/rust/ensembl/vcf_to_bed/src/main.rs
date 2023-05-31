@@ -1,4 +1,4 @@
-use std::{process, io::{BufReader,Write}, fs::File, env, collections::HashMap, collections::HashSet};
+use std::{io::{BufReader,Write}, fs::File, env, collections::HashMap, collections::HashSet};
 use vcf::{VCFError, VCFReader};
 use flate2::read::MultiGzDecoder;
 
