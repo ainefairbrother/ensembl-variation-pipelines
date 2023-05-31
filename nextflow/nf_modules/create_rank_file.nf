@@ -16,7 +16,7 @@ process createRankFile {
     rm !{rank_file}
   fi
   
-  perl !{projectDir}/../../src/perl/ensembl/scripts/generate_consequence_rank.pl \
+  perl !{moduleDir}/../../src/perl/ensembl/scripts/generate_consequence_rank.pl \
     -o !{rank_file}
   '''
 }

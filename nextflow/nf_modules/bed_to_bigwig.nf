@@ -18,9 +18,9 @@ process bedToBigWig {
   output_bw = file(original_vcf).getName().replace(".vcf.gz", ".bw")
   
   '''
-  chrom_sizes=!{projectDir}/../nf_config/chrom_sizes/!{genome}.chrom.sizes
+  chrom_sizes=!{moduleDir}/../nf_config/chrom_sizes/!{genome}.chrom.sizes
   
-  !{projectDir}/../../bin/bed_to_wig \
+  !{moduleDir}/../../bin/bed_to_wig \
     !{bed} \
     !{output_wig}
     

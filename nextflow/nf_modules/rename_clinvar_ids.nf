@@ -22,7 +22,7 @@ process renameClinvarIDs {
     output_file=${input_file/_processed_VEP.vcf.gz/_post_processed_VEP.vcf.gz}
     
     pyenv local variation-eva
-    python3 !{projectDir}/../../src/python/ensembl/scripts/rename_clinvar_ids.py ${input_file} ${output_file}
+    python3 !{moduleDir}/../../src/python/ensembl/scripts/rename_clinvar_ids.py ${input_file} ${output_file}
     
     mv ${output_file} ${input_file}
   fi

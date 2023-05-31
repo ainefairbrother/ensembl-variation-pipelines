@@ -19,7 +19,7 @@ process createConfigs {
   
   '''
   if [[ !{skip_create_config} == 0 ]]; then
-    python !{projectDir}/../../src/python/ensembl/scripts/generate_configs.py \
+    python !{moduleDir}/../../src/python/ensembl/scripts/generate_configs.py \
       -I !{ini_file}  \
       --genome !{genome} \
       --version !{version}

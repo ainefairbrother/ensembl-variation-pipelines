@@ -41,17 +41,17 @@ process createFocusTrack {
     fi
   done
   
-  !{projectDir}/../../bin/merge_bed \
+  !{moduleDir}/../../bin/merge_bed \
     all.bed \
     ${bed_files[@]} \
     
   LC_COLLATE=C sort -S1G -k1,1 -k2,2n all.bed > !{output_bed}
     
-  chrom_sizes=!{projectDir}/../nf_config/chrom_sizes/!{genome}.chrom.sizes
+  chrom_sizes=!{moduleDir}/../nf_config/chrom_sizes/!{genome}.chrom.sizes
   
   bedToBigBed -type=bed3+6 !{output_bed} ${chrom_sizes} !{output_bb}
   
-  !{projectDir}/../../bin/bed_to_wig \
+  !{moduleDir}/../../bin/bed_to_wig \
     !{output_bed} \
     !{output_wig}
     

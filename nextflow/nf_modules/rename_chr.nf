@@ -24,7 +24,7 @@ process renameChr {
   output_file=${output_file/_VEP/}
   output_file=${output_file/.vcf.gz/_renamed_VEP.vcf.gz}
   
-  synonym_file=!{projectDir}/../nf_config/synonyms/!{genome}.txt
+  synonym_file=!{moduleDir}/../nf_config/synonyms/!{genome}.txt
   
   # rename chr synonyms
   bcftools annotate --no-version --force --rename-chrs ${synonym_file} !{input_file} -Oz -o ${output_file}

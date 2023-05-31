@@ -22,6 +22,6 @@ process removeDupIDs {
   output_file=${input_file/_renamed_VEP.vcf.gz/_processed_VEP.vcf.gz}
   
   pyenv local variation-eva
-  python3 !{projectDir}/../../src/python/ensembl/scripts/remove_duplicate_ids.py ${input_file} !{remove_patch}
+  python3 !{moduleDir}/../../src/python/ensembl/scripts/remove_duplicate_ids.py ${input_file} !{remove_patch}
   '''
 }
