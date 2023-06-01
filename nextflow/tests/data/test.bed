@@ -1,7 +1,14 @@
 1 15110141 15110159 rs1356759330 indel TTGTGTATGTGTGTGCATA TTGTGTATGTGTGTGCATATGTGTATGTGTGTGCATA/T 3 intron_variant
 chr1 10108 10114 rs1377973775 deletion CAACCCT C 5 upstream_gene_variant
 chr13 32357725 32357725 rs754065641 SNV G C 2 splice_polypyrimidine_tract_variant
+chr13 57932508 57932509 rs1555257542 insertion T TATATATATACACAC 5 intergenic_variant
+chr13 57932508 57932509 rs1555257544 insertion T TATATATATATACACACACACACAC 5 intergenic_variant
 chr19 60558 60558 rs1260281513 SNV A G/T 5 downstream_gene_variant
-NC_000001.11 10055 10056 rs768019142 indel TA TAA/T 5 upstream_gene_variant
+NC_000001.11 10055 10056 rs768019142 indel TA T/TAA 5 upstream_gene_variant
 NC_000001.11 63738 63740 rs869033224 substitution ACT CTA 3 non_coding_transcript_exon_variant
-NC_000001.11 63739 63740 rs12345678 indel CT CTA/GC 3 non_coding_transcript_exon_variant
+2D 2306440 2306441 2D_2306439 sequence_alteration TT T/TG 5 intergenic_variant
+KI270521.1 1594 1596 rs1556105830 indel ACT AG/AA 5 intergenic_variant
+KI270521.1 1784 1785 rs2088361900 insertion G GTGAT 5 intergenic_variant
+GL000214.1 10122 10123 rs71287572 indel GG GTGAGTTT 5 intergenic_variant
+GL000214.1 17030 17030 rs4023684 SNV C T/G 5 intergenic_variant
+GL000214.1 39434 39435 rs4023573 insertion C CTTT/CTTTTTTTTT 5 intergenic_variant
