@@ -1,5 +1,5 @@
 {
-   "feature_truncation" : "37",
+   "feature_truncation" : "9",
    "incomplete_terminal_codon_variant" : "14",
    "inframe_insertion" : "10",
    "regulatory_region_variant" : "36",
@@ -14,7 +14,7 @@
    "missense_variant" : "12",
    "coding_sequence_variant" : "16",
    "inframe_deletion" : "11",
-   "feature_elongation" : "36",
+   "feature_elongation" : "9",
    "5_prime_UTR_variant" : "18",
    "TF_binding_site_variant" : "30",
    "sequence_variant" : "39",
@@ -37,6 +37,7 @@
    "upstream_gene_variant" : "24",
    "start_retained_variant" : "15",
    "frameshift_variant" : "5",
+   "coding_transcript_variant" : "23",
    "intron_variant" : "21",
    "splice_polypyrimidine_tract_variant" : "13"
 }
