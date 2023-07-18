@@ -146,7 +146,7 @@ workflow {
     readChrVCF(indexVCF.out)
     splitChrVCF(readChrVCF.out.transpose())
     vcfToBed(createConfigs.out.collect(), splitChrVCF.out.transpose())
-    concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3]))
+    concatBed(vcfToBed.out.groupTuple(by: [0, 2, 3, 4]))
 
     // then, we create bigBed and bigWig files from each bed file
     bedToBigBed(concatBed.out)

@@ -7,6 +7,8 @@
 */
 
 process removeDupIDs {
+  label 'bigmem'
+  
   input: 
   tuple val(input_file), val(genome), val(source), val(priority), val(index_type)
   

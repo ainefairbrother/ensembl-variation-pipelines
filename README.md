@@ -1,5 +1,7 @@
 # ensembl-variation-pipelines
 
+This repository holds pipelines that generates and process data required for the new Ensembl website.
+
 ## Pre-requisite
 
 ### Repositories
