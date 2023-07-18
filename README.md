@@ -82,7 +82,7 @@ This is a json configuration file containing the source file information. You ca
 }
 ```
 
-In the above case, GWAS variants will be stacked on top of dbSNP variant. What it means is that, if GWAS and dbSNP both have a variant with name `rs100` only the variant from dbSNP will be kept. Priority is optional and by default it's value is 100. 
+In the above case, GWAS variants will be stacked on top of dbSNP variant. What it means is that, if GWAS and dbSNP both have a variant with name `rs100` only the variant from dbSNP will be kept. Priority is optional and by default its value is 100. 
 
 - `output_dir` : (optional) Give the full path of the dir where the outputs will be generated, default: `/nfs/production/flicek/ensembl/variation/new_website`
 
