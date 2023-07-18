@@ -30,7 +30,7 @@ print("current wd: " + config_dir)
 config = configparser.ConfigParser()
 config.read(ini_file)
 if species == "homo_sapiens" and assembly.lower() == "grch37":
-    if "grch37_database" in config:
+    if not "grch37_database" in config:
         print(f"[ERROR] Could not find 'database' config in ini file - {ini_file}")
         exit(1)
     else:
@@ -185,7 +185,9 @@ def generate_chrom_sizes():
             
     with open(chrom_sizes_file, "w") as file:
         for name in lengths:
-            file.write(f"{name}\t{lengths[name]}\n")
+            # we will keep length + 1 because bedToBigBed fails if it finds variant at boundary
+            length = int(lengths[name]) + 1
+            file.write(f"{name}\t{str(length)}\n")
             
 generate_synonyms()
 generate_chrom_sizes()
