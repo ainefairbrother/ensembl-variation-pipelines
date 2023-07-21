@@ -15,8 +15,6 @@ process splitChrVCF {
 
   output:
   tuple val("${vcf}"), path("split.*.vcf.gz"), val(genome), val(source), val(priority)
-  
-  afterScript 'rm ${chr_file}'
 
   shell:
   '''
@@ -24,5 +22,7 @@ process splitChrVCF {
   chr=$(basename ${chr_file/.chrom/})
   
   bcftools view -Oz -o split.${chr}.vcf.gz !{vcf} "${chr}"
+  
+  rm ${chr_file}
   '''
 }
