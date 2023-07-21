@@ -16,7 +16,7 @@ process renameClinvarIDs {
   
   shell:
   '''
-  if [[ !{rename_clinvar_ids} == 1 && source =~ ClinVar ]]; then
+  if [[ !{rename_clinvar_ids} == 1 && !{source} =~ ClinVar ]]; then
     # format input and output file name
     input_file=!{input_file}
     output_file=${input_file/_processed_VEP.vcf.gz/_post_processed_VEP.vcf.gz}
