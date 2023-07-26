@@ -244,20 +244,18 @@ fn main() -> Result<(), VCFError> {
                 }
             }
 
-            // alts: HashSet::from([alt.to_string()]),
+            // start position in bed is 0-indexed
+            let mut start = record.position - 1;
         
-            // what happens when the variety is "sequence_alteration"
-            let mut end = record.position + ref_len - 1;
-            if variety.eq(&String::from("SNV")) {
-                end = record.position;
-            }
-            else if variety.eq(&String::from("insertion")) {
-                end = record.position + 1;
+            // end in bed is exclusive
+            let mut end = record.position + ref_len;
+            if variety.eq(&String::from("insertion")) {
+                end = start;
             }
             
             let more = Line {
                 chromosome: String::from_utf8(record.chromosome.to_vec()).unwrap(),
-                start: record.position,
+                start: start,
                 end: end,
                 id: id.to_string(),
                 variety: variety,
