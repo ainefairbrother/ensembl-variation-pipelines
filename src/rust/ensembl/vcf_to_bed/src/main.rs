@@ -107,7 +107,7 @@ impl Line {
             write!(out, "{} {} {} {} {} {} {} {} {}\n",
                 self.chromosome, self.start, self.end,
                 self.id, self.variety, self.reference,
-                alts.join("/"), self.group, self.severity
+                alts.join(","), self.group, self.severity
             ).unwrap();
         }
         
