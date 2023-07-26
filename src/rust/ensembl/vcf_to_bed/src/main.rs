@@ -245,10 +245,10 @@ fn main() -> Result<(), VCFError> {
             }
 
             // start position in bed is 0-indexed
-            let mut start = record.position - 1;
+            let start = record.position - 1;
         
             // end in bed is exclusive
-            let mut end = record.position + ref_len;
+            let mut end = start + ref_len;
             if variety.eq(&String::from("insertion")) {
                 end = start;
             }
