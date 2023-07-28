@@ -47,7 +47,7 @@ nextflow_process {
             // vcf file line 11: bi-allelic substitution
             assert lines[7] == "NC_000001.11 63737 63740 rs869033224 substitution ACT CTA 3 non_coding_transcript_exon_variant"
             // vcf file line 14: bi-allelic insertion
-            assert lines[10] == "KI270521.1 1783 1783 rs2088361900 insertion G GTGAT 5 intergenic_variant"
+            assert lines[10] == "KI270521.1 1784 1784 rs2088361900 insertion G GTGAT 5 intergenic_variant"
             // vcf file line 3: bi-allelic deletion
             assert lines[1] == "chr1 10107 10114 rs1377973775 deletion CAACCCT C 5 upstream_gene_variant"
             // vcf file line 15: bi-allelic indel
@@ -60,8 +60,8 @@ nextflow_process {
             )
             // vcf file line 17: multi-allelic insertion
             assert (
-              lines[13] == "GL000214.1 39433 39433 rs4023573 insertion C CTTT,CTTTTTTTTT 5 intergenic_variant" ||
-              lines[13] == "GL000214.1 39433 39433 rs4023573 insertion C CTTTTTTTTT,CTTT 5 intergenic_variant"
+              lines[13] == "GL000214.1 39434 39434 rs4023573 insertion C CTTT,CTTTTTTTTT 5 intergenic_variant" ||
+              lines[13] == "GL000214.1 39434 39434 rs4023573 insertion C CTTTTTTTTT,CTTT 5 intergenic_variant"
             )
             // vcf file line 13: multi-allelic indel
             assert (
@@ -88,8 +88,8 @@ nextflow_process {
             // vcf file line 5: ignored - redundant variant
             
             // vcf file line 6 and 7: not comapatible variant - do not merge
-            assert lines[3] == "chr13 57932507 57932507 rs1555257542 insertion T TATATATATACACAC 5 intergenic_variant"
-            assert lines[4] == "chr13 57932507 57932507 rs1555257544 insertion T TATATATATATACACACACACACAC 5 intergenic_variant"
+            assert lines[3] == "chr13 57932508 57932508 rs1555257542 insertion T TATATATATACACAC 5 intergenic_variant"
+            assert lines[4] == "chr13 57932508 57932508 rs1555257544 insertion T TATATATATATACACACACACACAC 5 intergenic_variant"
             
             // vcf file line 8 and 9: comapatible variant - so merge
             assert (
