@@ -27,18 +27,20 @@ process createFocusTrack {
   # we need to order the bed files with priority
   total_idx=${#priorities[@]}
   let "total_idx--"
-  for idx in $(seq 1 ${total_idx});
+  for i in $(seq 0 ${total_idx});
   do
-    prev_idx=$((idx-1))
-    if [[ ${priorities[${idx}]} < ${priorities[${prev_idx}]} ]]; then
-      temp=${priorities[${idx}]}
-      priorities[${idx}]=${priorities[${prev_idx}]}
-      priorities[${prev_idx}]=${temp}
-      
-      temp=${bed_files[${idx}]}
-      bed_files[${idx}]=${bed_files[${prev_idx}]}
-      bed_files[${prev_idx}]=${temp}
-    fi
+    for j in $(seq $((i+1)) ${total_idx});
+    do
+      if [[ ${priorities[$j]} < ${priorities[$i]} ]]; then
+        temp=${priorities[$j]}
+        priorities[$j]=${priorities[$i]}
+        priorities[$i]=${temp}
+
+        temp=${bed_files[$j]}
+        bed_files[$j]=${bed_files[$i]}
+        bed_files[$i]=${temp}
+      fi
+    done
   done
   
   !{moduleDir}/../../bin/merge_bed \
