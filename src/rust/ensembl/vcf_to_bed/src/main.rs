@@ -224,7 +224,7 @@ fn main() -> Result<(), VCFError> {
                         _ => todo!(),
                     };
                     
-                    // if any of the variant allele is SNV or substitution we will log (because this is not a regualr case)
+                    // if any of the variant allele is SNV or substitution we will log (because this is not a regular case)
                     // and, keep the variety as sequence_alteration
                     if calc_variety.eq(&String::from("SNV")) || calc_variety.eq(&String::from("substitute")) {
                         println!("[WARNING] sequence_alteration variant ({0} {1}:{2}) contain variant allele of type {3}",
