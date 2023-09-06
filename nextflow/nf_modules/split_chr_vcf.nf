@@ -10,6 +10,8 @@ nextflow.enable.dsl=2
 params.cpus = 1
 
 process splitChrVCF {
+  label 'bcftools'
+  
   input:
   tuple path(vcf), path(index_file), path(chr_file), val(genome), val(source), val(priority)
 

@@ -5,6 +5,8 @@
 */
 
 process mergeVCF {
+  label 'bcftools'
+  
   input: 
   tuple val(source), val(vcfFile)
   val genome_dir
