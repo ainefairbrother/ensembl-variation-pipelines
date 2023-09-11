@@ -19,7 +19,7 @@ process RENAME_CHR {
   shell:
   priority = priorities[genome][source]
   output_file = file(input_file).getName().replace("_VEP.vcf.gz", "_renamed_VEP.vcf.gz")
-  synonym_file = "${moduleDir}/../../common_files/synonyms/${genome}.txt"
+  synonym_file = "${projectDir}/assets/synonyms/${genome}.txt"
   
   '''
   # rename chr synonyms

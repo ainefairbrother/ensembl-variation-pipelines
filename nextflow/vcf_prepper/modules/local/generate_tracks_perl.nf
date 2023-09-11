@@ -36,7 +36,7 @@ process GENERATE_TRACKS_PERL {
   out_dir=${PWD}/${source}_out
   mkdir -p ${out_dir}
   
-  config_dir=!{moduleDir}/../../common_files
+  config_dir=!{projectDir}/assets
   
   # run the track generation script
   generate_tracks.pl ${vcf_file} ${out_dir} ${config_dir}

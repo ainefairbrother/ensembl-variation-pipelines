@@ -11,7 +11,7 @@ process BED_TO_BIGBED {
   shell:
   output_dir = params.output_dir
   output_bb = file(original_vcf).getName().replace(".vcf.gz", ".bb")
-  chrom_sizes = "${moduleDir}/../../common_files/chrom_sizes/${genome}.chrom.sizes"
+  chrom_sizes = "${projectDir}/assets/chrom_sizes/${genome}.chrom.sizes"
   
   '''
   bedToBigBed -type=bed3+6 !{bed} !{chrom_sizes} !{output_bb}

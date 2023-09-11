@@ -8,7 +8,7 @@ nextflow_process {
 
         when {
             params {
-                rank_file = "${baseDir}/nf_config/variation_consequnce_rank.json"
+                rank_file = "${baseDir}/assets/variation_consequnce_rank.json"
             }
             process {
                 """

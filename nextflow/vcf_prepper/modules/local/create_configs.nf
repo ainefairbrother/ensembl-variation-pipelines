@@ -15,8 +15,8 @@ process CREATE_CONFIGS {
   shell:
   ini_file = params.ini_file
   version = params.version
-  synonym_file = "${moduleDir}/../../common_files/${genome}.txt"
-  chrom_sizes = "${moduleDir}/../../common_files/${genome}.chrom.sizes"
+  synonym_file = "${projectDir}/assets/${genome}.txt"
+  chrom_sizes = "${projectDir}/assets/${genome}.chrom.sizes"
   skip_create_config = params.skip_create_config
   
   '''

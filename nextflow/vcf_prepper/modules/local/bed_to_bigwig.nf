@@ -16,7 +16,7 @@ process BED_TO_BIGWIG {
   output_dir = params.output_dir
   output_wig = file(original_vcf).getName().replace(".vcf.gz", ".wig")
   output_bw = file(original_vcf).getName().replace(".vcf.gz", ".bw")
-  chrom_sizes = "${moduleDir}/../../common_files/chrom_sizes/${genome}.chrom.sizes"
+  chrom_sizes = "${projectDir}/assets/chrom_sizes/${genome}.chrom.sizes"
   
   '''
   bed_to_wig !{bed} !{output_wig}

@@ -8,7 +8,7 @@ import groovy.json.JsonSlurper
 import java.io.File
 
 // params default
-params.input_config = "${projectDir}/common_files/input_sources.json"
+params.input_config = "${projectDir}/assets/input_sources.json"
 params.output_dir = "/nfs/production/flicek/ensembl/variation/new_website"
 params.singularity_dir = "/hps/nobackup/flicek/ensembl/variation/snhossain/website/singularity-images"
 params.bin_size = 250000
@@ -18,8 +18,8 @@ params.skip_vep = 0
 params.skip_tracks = 0
 params.skip_create_config = 0
 params.rename_clinvar_ids = 1
-params.ini_file = "${projectDir}/common_files/DEFAULT.ini"
-params.rank_file = "${projectDir}/common_files/variation_consequnce_rank.json"
+params.ini_file = "${projectDir}/assets/DEFAULT.ini"
+params.rank_file = "${projectDir}/assets/variation_consequnce_rank.json"
 params.version = 108
 
 // module imports
@@ -89,7 +89,7 @@ workflow {
       }
       
       // vep config file
-      vep_ini = "${projectDir}/common_files/vep_ini/${genome}.ini"
+      vep_ini = "${projectDir}/assets/vep_ini/${genome}.ini"
       
       ch_params['vcf_files'].add(source.file_location)
       ch_params['outdirs'].add(vep_outdir)

@@ -47,7 +47,7 @@ process CREATE_FOCUS_TRACK {
     
   LC_COLLATE=C sort -S1G -k1,1 -k2,2n all.bed > !{output_bed}
     
-  chrom_sizes=!{moduleDir}/../../common_files/chrom_sizes/!{genome}.chrom.sizes
+  chrom_sizes=!{projectDir}/assets/chrom_sizes/!{genome}.chrom.sizes
   
   bedToBigBed -type=bed3+6 !{output_bed} ${chrom_sizes} !{output_bb}
   
