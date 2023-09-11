@@ -4,7 +4,7 @@
 * This script will change the variant id from ClinVar accession to ClinVar variant ids 
 */
 
-process RENAME_CLINVAR_IDS {
+process UPDATE_IDS {
   input: 
   tuple path(input_file), val(genome), val(source), val(priority), val(index_type)
   

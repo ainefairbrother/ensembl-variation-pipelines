@@ -33,7 +33,7 @@ include { vep } from "${repo_dir}/ensembl-vep/nextflow/workflows/run_vep.nf"
 // post
 include { RENAME_CHR } from "./modules/local/rename_chr.nf"
 include { REMOVE_VARIANTS } from "./modules/local/remove_variants.nf"
-include { RENAME_CLINVAR_IDS } from "./modules/local/rename_clinvar_ids.nf"
+include { UPDATE_IDS } from "./modules/local/update_ids.nf"
 include { INDEX_VCF } from "./modules/local/index_vcf.nf"
 // tracks
 include { READ_CHR } from "./modules/local/read_chr.nf"
@@ -140,8 +140,8 @@ workflow {
       )
     }
     REMOVE_VARIANTS(RENAME_CHR.out)
-    RENAME_CLINVAR_IDS(REMOVE_VARIANTS.out)
-    INDEX_VCF(RENAME_CLINVAR_IDS.out)
+    UPDATE_IDS(REMOVE_VARIANTS.out)
+    INDEX_VCF(UPDATE_IDS.out)
     
     // then, we create bed files from the each VEPed VCF file
     READ_CHR(INDEX_VCF.out)
