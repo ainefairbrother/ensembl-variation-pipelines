@@ -5,6 +5,8 @@
 */
 
 process indexVCF {
+  label 'bcftools'
+  
   input:
   tuple val(input_vcf), val(genome), val(source), val(priority), val(index_type)
   

@@ -5,6 +5,8 @@
 */
 
 process renameChr {
+  label 'bcftools'
+  
   input:
   val input_file
   val genome
