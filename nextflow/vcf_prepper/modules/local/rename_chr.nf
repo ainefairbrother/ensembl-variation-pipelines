@@ -1,35 +1,19 @@
 #!/usr/bin/env nextflow
 
-/*
-* This script rename the seq region synonyms in the VCF file
-*/
-
 process RENAME_CHR {
   label 'bcftools'
   
   input:
-  val input_file
-  val genome
-  val source
-  val priorities
+  tuple val(meta), val(vcf)
   
   output:
-  tuple path(output_file), val(genome), val(source), val(priority), env(index_type)
+  tuple val(meta), path(output_file)
   
   shell:
-  priority = priorities[genome][source]
-  output_file = file(input_file).getName().replace("_VEP.vcf.gz", "_renamed_VEP.vcf.gz")
-  synonym_file = "${projectDir}/assets/synonyms/${genome}.txt"
+  output_file =  "RENAMED_" + file(vcf).getName()
+  synonym_file = meta.synonym_file
   
   '''
-  # rename chr synonyms
-  bcftools annotate --no-version --force --rename-chrs !{synonym_file} !{input_file} -Oz -o !{output_file}
-  
-  # for next job create parameters
-  if [[ -f !{input_file}.tbi ]]; then
-    index_type=tbi
-  else
-    index_type=csi
-  fi
+  bcftools annotate --no-version --force --rename-chrs !{synonym_file} !{vcf} -Oz -o !{output_file}
   '''
 }

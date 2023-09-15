@@ -1,9 +1,5 @@
 #!/usr/bin/env nextflow
 
-/*
-* This script combines chromosome separated vcf files together
-*/
-
 process MERGE_VCFS {
   label 'bcftools'
   

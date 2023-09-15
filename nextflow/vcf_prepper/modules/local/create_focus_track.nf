@@ -1,9 +1,5 @@
 #!/usr/bin/env nextflow
 
-/*
-* This script create combined focus track files from multiple sources
-*/
-
 process CREATE_FOCUS_TRACK {
   label 'bigmem'
 

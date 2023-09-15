@@ -1,22 +1,21 @@
 #!/usr/bin/env nextflow
 
-/*
-* This script generate bigWig file from bed file
-*/
-
 process BED_TO_BIGWIG {
   label 'bigmem'
   
   input: 
-  tuple val(original_vcf), path(bed), val(genome), val(source), val(priorities)
+  tuple val(meta), path(bed)
+  
+  output:
+  path "variant-${source}-summary.bw"
   
   afterScript 'rm all.bed'
   
   shell:
-  output_dir = params.output_dir
-  output_wig = file(original_vcf).getName().replace(".vcf.gz", ".wig")
-  output_bw = file(original_vcf).getName().replace(".vcf.gz", ".bw")
-  chrom_sizes = "${projectDir}/assets/chrom_sizes/${genome}.chrom.sizes"
+  source = meta.source
+  output_wig = "variant-${source}-summary.wig"
+  output_bw = "${meta.genome_tracks_outdir}/variant-${source}-summary.bw"
+  chrom_sizes = meta.chrom_sizes
   
   '''
   bed_to_wig !{bed} !{output_wig}
@@ -25,8 +24,7 @@ process BED_TO_BIGWIG {
     !{output_wig} \
     !{chrom_sizes} \
     !{output_bw}
-  
-  mkdir -p !{output_dir}/!{genome}/!{source}/tracks
-  mv !{output_bw} !{output_dir}/!{genome}/!{source}/tracks/
+    
+  ln -sf !{output_bw} "variant-!{source}-summary.bw"
   '''
 }

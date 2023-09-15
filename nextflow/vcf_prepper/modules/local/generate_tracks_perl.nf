@@ -1,9 +1,5 @@
 #!/usr/bin/env nextflow
 
-/*
-* This script generate bigBed and bigwig files from VCF file
-*/
-
 process GENERATE_TRACKS_PERL {
   input: 
   tuple val(source), val(vcfFile)

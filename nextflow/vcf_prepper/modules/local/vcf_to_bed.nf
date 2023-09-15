@@ -1,24 +1,19 @@
 #!/usr/bin/env nextflow
 
-/*
-* This script generate bed file from VCF file
-*/
-
 process VCF_TO_BED {
   input: 
-  val config_done
-  tuple val(original_vcf), path(vcf_file), val(genome), val(source), val(priority)
+  path rank_file
+  tuple val(meta), path(vcf) 
   
   output:
-  tuple val(original_vcf), path(output_filename), val(genome), val(source), val(priority)
+  tuple val(meta), path(output_file)
   
   shell:
-  output_filename = file(original_vcf).getName() + "-" + vcf_file
-  rank_file = params.rank_file
+  output_file = vcf.getName().replace(".vcf.gz", ".bed")
   
   '''
-  vcf_to_bed !{vcf_file} !{output_filename} !{rank_file}
+  vcf_to_bed !{vcf} !{output_file} !{rank_file}
     
-  rm !{vcf_file}
+  rm !{vcf}
   '''
 }

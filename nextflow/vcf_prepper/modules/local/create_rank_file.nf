@@ -1,15 +1,11 @@
 #!/usr/bin/env nextflow
 
-/*
-* This script create variation consequence rank file in json format using the Ensembl Variation API
-*/
-
 process CREATE_RANK_FILE {
   input:
   val rank_file
   
   output: 
-  val "done"
+  val rank_file
   
   shell:
   '''
