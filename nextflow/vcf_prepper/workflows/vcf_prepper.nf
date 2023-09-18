@@ -72,7 +72,7 @@ workflow VCF_PREPPER {
     
     // run vep
     vep = RUN_VEP( REMOVE_VARIANTS.out )
-    
+    vep.view()
     // post-process
     vep
     .map {

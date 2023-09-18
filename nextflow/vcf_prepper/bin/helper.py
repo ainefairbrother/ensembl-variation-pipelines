@@ -31,12 +31,42 @@ def parse_ini(ini_file: str, species: str = "homo_sapiens", assembly: str = "grc
         "user": user
     }
 
-def get_db_name(server: dict, version: str, species: str = "homo_sapiens") -> str:
-    query = f"SHOW DATABASES LIKE \"{species}_core%{version}%\";"
+def get_db_name(server: dict, version: str, species: str = "homo_sapiens", type: str = "core") -> str:
+    query = f"SHOW DATABASES LIKE '{species}_{type}%{version}%';"
     process = subprocess.run(["mysql",
             "--host", server["host"],
             "--port", server["port"],
             "--user", server["user"],
+            "-N",
+            "--execute", query
+        ],
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE
+    )
+    return process.stdout.decode().strip()
+
+def get_division(server: dict, core_db: str) -> str:
+    query = "SELECT meta_value FROM meta WHERE meta_key = 'species.division';"
+    process = subprocess.run(["mysql",
+            "--host", server["host"],
+            "--port", server["port"],
+            "--user", server["user"],
+            "--database", core_db,
+            "-N",
+            "--execute", query
+        ],
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE
+    )
+    return process.stdout.decode().strip()
+
+def get_species_url_name(server: dict, core_db: str) -> str:
+    query = "SELECT meta_value FROM meta WHERE meta_key = 'species.url';"
+    process = subprocess.run(["mysql",
+            "--host", server["host"],
+            "--port", server["port"],
+            "--user", server["user"],
+            "--database", core_db,
             "-N",
             "--execute", query
         ],

@@ -12,14 +12,14 @@ def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
     parser.add_argument(dest="genome", type=str, help="genome string with format <species>_<assembly>")
-    parser.add_argument(dest="version", type=str, help="Ensembl release version")
+    parser.add_argument(dest="version", type=int, help="Ensembl release version")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
     parser.add_argument('--chrom_sizes', dest="chrom_sizes", type=str, required = False, help="file with chromomsome sizes, default - <genome>.chrom.sizes in the same directory.")
     parser.add_argument('--force', dest="force", action="store_true", help="forcefully create config even if already exists")
     
     return parser.parse_args(args)
 
-def generate_chrom_sizes(server: dict, db_name: str, chrom_sizes: str, assembly: str = "grch38", force: bool = False) -> None:
+def generate_chrom_sizes(server: dict, core_db: str, chrom_sizes: str, assembly: str = "grch38", force: bool = False) -> None:
     if os.path.exists(chrom_sizes) and not force:
         print(f"[INFO] {chrom_sizes} file already exists, skipping ...")
         return
@@ -29,7 +29,7 @@ def generate_chrom_sizes(server: dict, db_name: str, chrom_sizes: str, assembly:
             "--host", server["host"],
             "--port", server["port"],
             "--user", server["user"],
-            "--database", db_name,
+            "--database", core_db,
             "-N",
             "--execute", query
         ],
@@ -43,7 +43,7 @@ def generate_chrom_sizes(server: dict, db_name: str, chrom_sizes: str, assembly:
             "--host", server["host"],
             "--port", server["port"],
             "--user", server["user"],
-            "--database", db_name,
+            "--database", core_db,
             "-N",
             "--execute", query
         ],
@@ -59,7 +59,7 @@ def generate_chrom_sizes(server: dict, db_name: str, chrom_sizes: str, assembly:
             "--host", server["host"],
             "--port", server["port"],
             "--user", server["user"],
-            "--database", db_name,
+            "--database", core_db,
             "-N",
             "--execute", query
         ],
@@ -92,11 +92,10 @@ def main(args = None):
     chrom_sizes = args.chrom_sizes or f"{args.genome}.chrom.sizes"
     assembly = args.genome.split("_")[-1]
     species = args.genome.replace(f"_{assembly}", "")
-
     db_server = parse_ini(args.ini_file, assembly)
-    db_name = get_db_name(db_server, args.version, species)
+    core_db = get_db_name(db_server, args.version, species, type = "core")
     
-    generate_chrom_sizes(db_server, db_name, chrom_sizes, assembly, args.force)
+    generate_chrom_sizes(db_server, core_db, chrom_sizes, assembly, args.force)
     
 if __name__ == "__main__":
     sys.exit(main())

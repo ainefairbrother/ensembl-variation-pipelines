@@ -15,17 +15,20 @@ process GENERATE_VEP_CONFIG {
   version = params.version
   ini_file = params.ini_file
   vep_config = meta.vep_config
-  example_vep_config = "${projectDir}/assets/example_vep_config.ini"
+  cache_dir = params.cache_dir
+  fasta = meta.fasta
+  repo_dir = params.repo_dir
   
   '''
   if [[ ! -e !{vep_config} || !{force_create_config} == 1 ]]; then
-    cp !{example_vep_config} !{vep_config}
-    
-    #generate_vep_config.py \
-    #  !{genome} \
-    #  !{version} \
-    #  --ini_file !{ini_file} \
-    #  --vep_config !{vep_config}
+    generate_vep_config.py \
+      !{genome} \
+      !{version} \
+      --ini_file !{ini_file} \
+      --vep_config !{vep_config} \
+      --cache_dir !{cache_dir} \
+      --fasta !{fasta} \
+      --repo_dir !{repo_dir}
   fi
   '''
 }

@@ -5,89 +5,332 @@ import configparser
 import argparse
 import subprocess
 import os
+import json
 
-from helper import parse_ini, get_db_name
+from helper import parse_ini, get_db_name, get_division, get_species_url_name
+
+CACHE_DIR = "/nfs/production/flicek/ensembl/variation/data/VEP/tabixconverted"
+FASTA_DIR = "/nfs/production/flicek/ensembl/variation/data/VEP/fasta"
+REPO_DIR = os.path.join("/hps/software/users/ensembl/repositories", os.environ.get("USER"))
+PLUGIN_DATA_DIR = "/nfs/production/flicek/ensembl/variation/enseweb-data_tools/grch38/VERSION/vep/plugin_data"
+CONSERVATION_DATA_DIR = "/nfs/production/flicek/ensembl/variation/data/Conservation"
+SIFT_SPECIES = [
+    "homo_sapiens",
+    "felis_catus",
+    "gallus_gallus",
+    "bos_taurus",
+    "canis_lupus_familiaris",
+    "capra_hircus",
+    "equus_caballus",
+    "mus_musculus",
+    "sus_scrofa",
+    "rattus_norvegicus",
+    "ovis_aries",
+    "ovis_aries_rambouillet",
+    "danio_rerio",
+]
+POLYPHEN_SPECIES = [
+    "homo_sapiens"
+]
+PLUGINS = [
+    "CADD",
+    "REVEL",
+    "SpliceAI",
+    "Phenotypes",
+    "IntAct",
+    "AncestralAllele",
+    "Conservation"
+]
+FREQUENCIES = {
+    "1000genomes": "af_1kg 1",
+    "gnomAD_exomes": {
+        "GRCh38": {
+            "version": "2.1.1",
+            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v2.1.1/grch38/exomes",
+            "file_pattern": "gnomad.exomes.r2.1.1.sites.##CHR##.liftover_grch38_no_VEP.vcf.gz"
+        },
+        "GRCh37": {
+            "version": "2.1",
+            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v2.1/grch37/exomes",
+            "file_pattern": "gnomad.exomes.r2.1.sites.chr##CHR##_noVEP.vcf.gz"
+        }
+    },
+    "gnomAD_genomes": {
+        "GRCh38": {
+            "version": "3.1.2",
+            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v3.1.2/grch38/genomes",
+            "file_pattern": "gnomad.genomes.v3.1.2.sites.chr##CHR##_trimmed_info.vcf.bgz"
+        }
+    }
+}
 
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
     parser.add_argument(dest="genome", type=str, help="genome string with format <species>_<assembly>")
-    parser.add_argument(dest="version", type=str, help="Ensembl release version")
+    parser.add_argument(dest="version", type=int, help="Ensembl release version")
+    parser.add_argument('--division', dest="division", type=str, required = False, help="Ensembl division the species belongs to")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
     parser.add_argument('--vep_config', dest="vep_config", type=str, required = False, help="vep configuration file, default - <genome>.ini in the same directory.")
+    parser.add_argument('--cache_dir', dest="cache_dir", type=str, required = False, help="vap cache directory, must be indexed")
+    parser.add_argument('--fasta', dest="fasta", type=str, required = False, help="toplevel FASTA")
+    parser.add_argument('--repo_dir', dest="repo_dir", type=str, required = False, help="Ensembl repositories directory")
     parser.add_argument('--force', dest="force", action="store_true", help="forcefully create config even if already exists")
     
     return parser.parse_args(args)
 
-def generate_vep_config(server: dict, db_name: str, vep_config: str, force: bool = False) -> None:
-    if os.path.exists(synonym_file) and not force:
-        print(f"[INFO] {synonym_file} file already exists, skipping ...")
-        return
+def format_gnomad_args(source: str, metadata: dict) -> str:
+    chromosomes = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X', 'Y']
+    
+    gnomAD_custom_args = []
+    for chromosome in chromosomes:
+        file = os.path.join(metadata["directory"], metadata["file_pattern"].replace("##CHR##", chromosome))
+        if not os.path.isfile(file):
+            print(f"[ERROR] Frequency file does not exist - {file}. Exiting ...")
+            exit(1)
         
-    query = f"SELECT ss.synonym, sr.name FROM seq_region AS sr, seq_region_synonym AS ss WHERE sr.seq_region_id = ss.seq_region_id;"
-    process = subprocess.run(["mysql",
-            "--host", server["host"],
-            "--port", server["port"],
-            "--user", server["user"],
-            "--database", db_name,
-            "-N",
-            "--execute", query
-        ],
+        gnomAD_custom_args.append(f"custom file={file},short_name={source},format=vcf,type=exact,coords=0," + \
+            "fields=AF%AC%AN" + \
+            "%AF_afr%AC_afr%AN_afr" + \
+            "%AF_amr%AC_amr%AN_amr" + \
+            "%AF_asj%AC_asj%AN_asj" + \
+            "%AF_eas%AC_eas%AN_eas" + \
+            "%AF_fin%AC_fin%AN_fin" + \
+            "%AF_nfe%AC_nfe%AN_nfe" + \
+            "%AF_oth%AC_oth%AN_oth" + \
+            "%AF_sas%AC_sas%AN_sas")
+    
+    return "\n".join(gnomAD_custom_args)
+    
+def get_frequency_args(assembly: str) -> str:
+    frequencies = []
+    for source in FREQUENCIES:
+        if source.startswith("gnomAD"):
+            if assembly in FREQUENCIES[source]:
+                frequencies.append(format_gnomad_args(source, FREQUENCIES[source][assembly]))
+        else:
+            frequencies.append(FREQUENCIES[source])
+    
+    return frequencies
+    
+def check_plugin_files(plugin: str, files: list) -> bool:
+    for file in files:
+        if not os.path.isfile(file):
+            print(f"[ERROR] Cannot get {plugin} data file - {file}. Exiting ...")
+            exit(1)
+    
+def get_plugin_args(plugin: str, version: int, species: str, assembly: str) -> str:
+    plugin_data_dir = PLUGIN_DATA_DIR.replace("VERSION", "e" + str(version))
+    if assembly == "GRCh37":
+        plugin_data_dir = plugin_data_dir.replace("grch38", "grch37")
+        
+    if plugin == "CADD":
+        snv = os.path.join(plugin_data_dir, f"CADD_{assembly}_1.6_whole_genome_SNVs.tsv.gz")
+        indels = os.path.join(plugin_data_dir, f"CADD_{assembly}_1.6_InDels.tsv.gz")
+        
+        check_plugin_files(plugin, [snv, indels])
+        
+        return f"CADD,{snv},{indels}"
+    
+    if plugin == "REVEL":
+        data_file = f"/nfs/production/flicek/ensembl/variation/data/REVEL/2021-may/new_tabbed_revel_{assembly.lower()}.tsv.gz"
+        
+        check_plugin_files(plugin, [data_file])
+            
+        return f"REVEL,{data_file}"
+        
+    if plugin == "SpliceAI":
+        ucsc_assembly = "hg38" if assembly == "GRCh38" else "hg19"
+        snv = os.path.join(plugin_data_dir, f"spliceai_scores.masked.snv.{ucsc_assembly}.vcf.gz")
+        indels = os.path.join(plugin_data_dir, f"spliceai_scores.masked.indel.{ucsc_assembly}.vcf.gz")
+        
+        check_plugin_files(plugin, [snv, indels])
+            
+        return f"SpliceAI,snv={snv},indel={indels}"
+        
+    if plugin == "Phenotypes":
+        pl_assembly = f"_{assembly}" if species == "homo_sapiens" else ""
+        file = os.path.join(plugin_data_dir, f"Phenotypes_data_files/Phenotypes.pm_{species}_{version}{pl_assembly}.gvf.gz")
+        
+        check_plugin_files(plugin, [file])
+            
+        return f"Phenotypes,file={file},phenotype_feature=1"
+        
+    if plugin == "IntAct":
+        mutation_file = os.path.join(plugin_data_dir, "mutations.tsv")
+        mapping_file = os.path.join(plugin_data_dir, "mutation_gc_map.txt.gz")
+        
+        check_plugin_files(plugin, [mutation_file, mapping_file])
+            
+        return f"IntAct,mutation_file={mutation_file},mapping_file={mapping_file},pmid=1"
+        
+    if plugin == "AncestralAllele":
+        # temp - needs to check issues with 110
+        pl_version = "109" if assembly == "GRCh38" else "e75"
+        file = os.path.join(plugin_data_dir, f"homo_sapiens_ancestor_{assembly}_{pl_version}.fa.gz")
+        
+        check_plugin_files(plugin, [file])
+            
+        return f"AncestralAllele,{file}"
+        
+    if plugin == "Conservation":
+        file = os.path.join(CONSERVATION_DATA_DIR, f"gerp_conservation_scores.{species}.{assembly}.bw")
+        
+        if not os.path.isfile(file):
+            print(f"[INFO] Cannot get Conservation data file - {file}. Skipping ...")
+            return None
+            
+        return f"Conservation,{file}"
+        
+    print(f"[ERROR] Unknown plugin argument requested - {plugin}. Exiting ...")
+    exit(1)
+    
+def get_plugin_species(plugin: str, repo_dir: str) -> list:
+    plugin_config_file = f"{repo_dir}/VEP_plugins/plugin_config.txt"
+    
+    if not os.path.isfile(plugin_config_file):
+        print(f"[ERROR] Plugin config file does not exist - {plugin_config_file}. Exiting ...")
+        exit(1)
+    
+    cmd_generate_plugin_config_json = "use JSON;"
+    cmd_generate_plugin_config_json += f"open IN, '{plugin_config_file}';"
+    cmd_generate_plugin_config_json += "my @content = <IN>;"
+    cmd_generate_plugin_config_json += "close IN;"
+    cmd_generate_plugin_config_json += "my $VEP_PLUGIN_CONFIG = eval join('', @content);"
+    cmd_generate_plugin_config_json += "print encode_json($VEP_PLUGIN_CONFIG);"
+
+    process = subprocess.run(["perl", "-e", cmd_generate_plugin_config_json],
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE
     )
-    
-    with open(synonym_file, "w") as file: 
-        file.write(process.stdout.decode().strip())
-    
-    # remove duplicates and change seq region name that are longer than 31 character    
-    with open(synonym_file, "r") as file: 
-        lines = file.readlines()
+    if process.returncode != 0:
+        print(f"[ERROR] Cannot read plugin config file - {plugin_config_file}\n{process.stderr.decode()}\nExiting ...")
+        exit(1)
         
-    names = {}
-    for line in lines:
-        synonym, name = [col.strip() for col in line.split("\t")]  
-        if synonym not in names or len(names[synonym]) > len(name): 
-            names[synonym] = name
+    plugin_config_json = json.loads(process.stdout)
+    for plugin_config in plugin_config_json["plugins"]:
+        if plugin_config["key"] == plugin:
+            return plugin_config["species"] if "species" in plugin_config else [] 
     
-    # if name is longer than 31 character we try to take a synonym
-    new_names = {}
-    for synonym in names:
-        name = names[synonym]
-        if len(name) > 31:
-            # if the current synonym is less than 31 character we do not need to have it in the file
-            if len(synonym) <= 31:
-                pass
-            # if the current synonym is longer than 31 character we look for other synonym of the name
-            else:
-                change_name = synonym
-                for alt_synonym in names:
-                    if names[alt_synonym] == synonym and len(alt_synonym) < 31:
-                        change_name = alt_synonym
-                        
-                if len(change_name) > 31:
-                    print(f"[WARNING] cannot resolve {name} to a synonym which is under 31 character")
-                            
-                new_names[synonym] = change_name        
-        else:
-            new_names[synonym] = name
+    return []
     
+def get_plugins(species: str, version:int, assembly: str, repo_dir: str = REPO_DIR) -> list:
+    plugins = []
     
-    with open(synonym_file, "w") as file:
-        for synonym in new_names:
-            file.write(f"{synonym}\t{new_names[synonym]}\n")
+    for plugin in PLUGINS:
+        plugin_species = get_plugin_species(plugin, repo_dir)
+        if len(plugin_species) == 0 or species in plugin_species:
+            plugin_args = get_plugin_args(plugin, version, species, assembly)
+            if plugin_args is not None:
+                plugins.append(plugin_args)
+            
+    return plugins
+        
+def generate_vep_config(
+    vep_config: str,
+    species: str,
+    assembly: str,
+    version: str,
+    cache_dir: str,
+    fasta: str,
+    sift: bool = False,
+    polyphen: bool = False,
+    frequencies: list = None,
+    plugins: dict = None,
+    repo_dir: str = REPO_DIR,
+    fork: int = 2,
+    force: bool = False) -> None:
+    if os.path.exists(vep_config) and not force:
+        print(f"[INFO] {vep_config} file already exists, skipping ...")
+        return
+    
+    with open(vep_config, "w") as file:
+        file.write("force_overwrite 1\n")
+        file.write(f"fork {fork}\n")
+        file.write(f"species {species}\n")
+        file.write(f"assembly {assembly}\n")
+        file.write(f"cache_version {version}\n")
+        file.write(f"cache {cache_dir}\n")
+        file.write(f"fasta {fasta}\n")
+        file.write("offline 1\n")
+        file.write("vcf 1\n")
+        file.write("spdi 1\n")
+        file.write("regulatory 1\n")
+        file.write("pubmed 1\n")
+        file.write("var_synonyms 1\n")
+        file.write("variant_class 1\n")
+        
+        if sift:
+            file.write(f"sift b\n")
+        if polyphen:
+            file.write(f"polyphen b\n")
+        if frequencies:
+            for frequency in frequencies:
+                file.write(f"{frequency}\n")
+            
+        if plugins:
+            file.write(f"dir_plugins {repo_dir}/VEP_plugins\n")
+            
+            for plugin in plugins:
+                file.write(f"plugin {plugin}\n")
+    
     
 def main(args = None):
     args = parse_args(args)
     
-    vep_config = args.vep_config or f"{args.genome}.txt"
+    vep_config = args.vep_config or f"{args.genome}.ini"
+    version = args.version
+    repo_dir = args.repo_dir or REPO_DIR
     assembly = args.genome.split("_")[-1]
     species = args.genome.replace(f"_{assembly}", "")
-
     db_server = parse_ini(args.ini_file, assembly)
-    db_name = get_db_name(db_server, args.version, species)
+    core_db = get_db_name(db_server, args.version, species, type = "core")
+    division = args.division or get_division(db_server, core_db)
+    species_url_name = get_species_url_name(db_server, core_db)
     
-    generate_vep_config(db_server, db_name, vep_config, args.force)
+    cache_dir = args.cache_dir or CACHE_DIR
+    cache_version = (version - 53) if division != "EnsemblVertebrates" else version
+    genome_cache_dir = os.path.join(cache_dir, species, f"{cache_version}_{assembly}")         
+    if not os.path.exists(genome_cache_dir):
+        print(f"[ERROR] {genome_cache_dir} directory does not exists, cannot run VEP. Exiting ...")
+        exit(1)
+        
+    fasta = args.fasta
+    if fasta is None or not os.path.isfile(fasta):
+        fasta = os.path.join(FASTA_DIR, f"{species_url_name}.{assembly}.dna.primary_assembly.fa.gz")
+    if not os.path.isfile(fasta):
+        fasta = os.path.join(FASTA_DIR, f"{species_url_name}.{assembly}.dna.toplevel.fa.gz")
+    if not os.path.isfile(fasta):
+        print(f"[ERROR] No valid fasta file found, cannot run VEP. Exiting ...")
+        exit(1)
+
+    sift = False
+    if species in SIFT_SPECIES:
+        sift = True
+        
+    polyphen = False
+    if species in POLYPHEN_SPECIES:
+        polyphen = True
+    
+    if species == "homo_sapiens":
+        frequencies = get_frequency_args(assembly)
+        
+    plugins = get_plugins(species, version, assembly, repo_dir)
+    
+    generate_vep_config(
+        vep_config = vep_config,
+        species = species,
+        assembly = assembly,
+        version = cache_version,
+        cache_dir = cache_dir,
+        fasta = fasta,
+        sift = sift,
+        polyphen = polyphen,
+        frequencies = frequencies,
+        plugins = plugins,
+        repo_dir = repo_dir,
+        force = args.force
+    )
     
 if __name__ == "__main__":
     sys.exit(main())
