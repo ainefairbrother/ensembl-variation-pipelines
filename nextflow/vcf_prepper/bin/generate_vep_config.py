@@ -7,7 +7,7 @@ import subprocess
 import os
 import json
 
-from helper import parse_ini, get_db_name, get_division, get_species_url_name
+from helper import parse_ini, get_db_name, get_division, get_species_url_name, get_relative_version
 
 CACHE_DIR = "/nfs/production/flicek/ensembl/variation/data/VEP/tabixconverted"
 FASTA_DIR = "/nfs/production/flicek/ensembl/variation/data/VEP/fasta"
@@ -71,8 +71,8 @@ def parse_args(args = None):
     parser.add_argument(dest="version", type=int, help="Ensembl release version")
     parser.add_argument('--division', dest="division", type=str, required = False, help="Ensembl division the species belongs to")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
-    parser.add_argument('--vep_config', dest="vep_config", type=str, required = False, help="vep configuration file, default - <genome>.ini in the same directory.")
-    parser.add_argument('--cache_dir', dest="cache_dir", type=str, required = False, help="vap cache directory, must be indexed")
+    parser.add_argument('--vep_config', dest="vep_config", type=str, required = False, help="VEP configuration file, default - <genome>.ini in the same directory.")
+    parser.add_argument('--cache_dir', dest="cache_dir", type=str, required = False, help="VEP cache directory, must be indexed")
     parser.add_argument('--fasta', dest="fasta", type=str, required = False, help="toplevel FASTA")
     parser.add_argument('--repo_dir', dest="repo_dir", type=str, required = False, help="Ensembl repositories directory")
     parser.add_argument('--force', dest="force", action="store_true", help="forcefully create config even if already exists")
@@ -289,16 +289,14 @@ def main(args = None):
     species_url_name = get_species_url_name(db_server, core_db)
     
     cache_dir = args.cache_dir or CACHE_DIR
-    cache_version = (version - 53) if division != "EnsemblVertebrates" else version
+    cache_version = get_relative_version(version, division)
     genome_cache_dir = os.path.join(cache_dir, species, f"{cache_version}_{assembly}")         
     if not os.path.exists(genome_cache_dir):
         print(f"[ERROR] {genome_cache_dir} directory does not exists, cannot run VEP. Exiting ...")
         exit(1)
         
-    fasta = args.fasta
+    fasta = args.fasta 
     if fasta is None or not os.path.isfile(fasta):
-        fasta = os.path.join(FASTA_DIR, f"{species_url_name}.{assembly}.dna.primary_assembly.fa.gz")
-    if not os.path.isfile(fasta):
         fasta = os.path.join(FASTA_DIR, f"{species_url_name}.{assembly}.dna.toplevel.fa.gz")
     if not os.path.isfile(fasta):
         print(f"[ERROR] No valid fasta file found, cannot run VEP. Exiting ...")

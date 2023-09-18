@@ -5,6 +5,9 @@
 include { GENERATE_CHROM_SIZES } from "../../modules/local/generate_chrom_sizes.nf"
 include { GENERATE_VEP_CONFIG } from "../../modules/local/generate_vep_config.nf"
 include { GENERATE_SYNONYM_FILE } from "../../modules/local/generate_synonym_file.nf"
+include { PROCESS_CACHE } from "../../modules/local/process_cache.nf"
+include { PROCESS_FASTA } from "../../modules/local/process_fasta.nf"
+include { PROCESS_CONSERVATION_DATA } from "../../modules/local/process_conservation_data.nf"
 
 workflow PREPARE_GENOME {
   take:
@@ -41,6 +44,9 @@ workflow PREPARE_GENOME {
     ch_vep_config_done = GENERATE_VEP_CONFIG( ch_prepare_genome.map { meta, vcf -> meta } )
     ch_synonym_file_done = GENERATE_SYNONYM_FILE( ch_prepare_genome.map { meta, vcf -> meta } )
     ch_chrom_sizes_done = GENERATE_CHROM_SIZES( ch_prepare_genome.map { meta, vcf -> meta } )
+    ch_chrom_sizes_done = PROCESS_CACHE( ch_prepare_genome.map { meta, vcf -> meta } )
+    ch_chrom_sizes_done = PROCESS_FASTA( ch_prepare_genome.map { meta, vcf -> meta } )
+    ch_chrom_sizes_done = PROCESS_CONSERVATION_DATA( ch_prepare_genome.map { meta, vcf -> meta } )
     
     // we join channels to only create DAG edges
     ch_prepare_genome
