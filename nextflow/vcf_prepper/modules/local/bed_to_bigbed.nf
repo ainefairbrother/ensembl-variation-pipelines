@@ -15,5 +15,9 @@ process BED_TO_BIGBED {
   '''
   bedToBigBed -type=bed3+6 !{bed} !{chrom_sizes} !{output_bb}
   ln -sf !{output_bb} "variant-!{source}-details.bb"
+  
+  # temp: for one source we create symlink for focus
+  cd !{meta.genome_tracks_outdir}
+  ln -sf variant-!{source}-details.bb variant-details.bb
   '''
 }

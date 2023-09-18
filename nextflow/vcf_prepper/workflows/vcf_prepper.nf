@@ -98,9 +98,8 @@ workflow VCF_PREPPER {
     CONCAT_BEDS( VCF_TO_BED.out.groupTuple() )
 
     // create source tracks
+    // TODO: remove symlink creation for focus track when we have multiple source
     BED_TO_BIGBED( CONCAT_BEDS.out )
     BED_TO_BIGWIG( CONCAT_BEDS.out )
-    
-    // create focus track
   }
 }
