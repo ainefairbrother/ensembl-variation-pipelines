@@ -16,8 +16,6 @@ process PROCESS_CACHE {
   cache_dir = params.cache_dir
   
   '''
-  become ensvar
-  
   process_cache.py \
     !{genome} \
     !{version} \

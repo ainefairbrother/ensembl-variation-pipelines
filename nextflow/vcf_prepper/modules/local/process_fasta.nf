@@ -16,8 +16,6 @@ process PROCESS_FASTA {
   fasta_dir = params.fasta_dir
   
   '''
-  become ensvar
-  
   process_fasta.py \
     !{genome} \
     !{version} \

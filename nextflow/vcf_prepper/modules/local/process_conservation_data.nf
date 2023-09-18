@@ -13,15 +13,13 @@ process PROCESS_CONSERVATION_DATA {
   genome = meta.genome
   version = params.version
   ini_file = params.ini_file
-  fasta_dir = params.fasta_dir
+  conservation_data_dir = params.conservation_data_dir
   
   '''
-  become ensvar
-  
-  process_fasta.py \
+  process_conservation_data.py \
     !{genome} \
     !{version} \
     --ini_file !{ini_file} \
-    --fasta_dir !{fasta_dir}
+    --conservation_data_dir !{conservation_data_dir}
   '''
 }
