@@ -44,9 +44,9 @@ workflow PREPARE_GENOME {
     ch_vep_config_done = GENERATE_VEP_CONFIG( ch_prepare_genome.map { meta, vcf -> meta } )
     ch_synonym_file_done = GENERATE_SYNONYM_FILE( ch_prepare_genome.map { meta, vcf -> meta } )
     ch_chrom_sizes_done = GENERATE_CHROM_SIZES( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_chrom_sizes_done = PROCESS_CACHE( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_chrom_sizes_done = PROCESS_FASTA( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_chrom_sizes_done = PROCESS_CONSERVATION_DATA( ch_prepare_genome.map { meta, vcf -> meta } )
+    ch_processed_cache = PROCESS_CACHE( ch_prepare_genome.map { meta, vcf -> meta } )
+    ch_processed_fasta = PROCESS_FASTA( ch_prepare_genome.map { meta, vcf -> meta } )
+    ch_processed_conservation = PROCESS_CONSERVATION_DATA( ch_prepare_genome.map { meta, vcf -> meta } )
     
     // we join channels to only create DAG edges
     ch_prepare_genome
@@ -60,6 +60,9 @@ workflow PREPARE_GENOME {
     .join ( ch_vep_config_done )
     .join ( ch_synonym_file_done )
     .join ( ch_chrom_sizes_done )
+    .join ( ch_processed_cache )
+    .join ( ch_processed_fasta )
+    .join ( ch_processed_conservation )
     .map {
       tag, meta, vcf ->
         [meta, vcf]
