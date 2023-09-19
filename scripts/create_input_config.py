@@ -6,6 +6,11 @@ import argparse
 import os
 import json
 import subprocess
+import requests
+
+# IMPORTANT: currently this script only supports EVA - we should update the output to have Ensembl data manually; human will be manual as well
+
+EVA_REST_ENDPOINT = "https://www.ebi.ac.uk/eva/webservices/release/v1"
 
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
@@ -64,12 +69,11 @@ def get_assembly_name(server: dict, core_db: str) -> str:
     )
     return process.stdout.decode().strip()
 
-# TBD
-def get_source() -> None:
-    return None
+# TBD: currently this scripts only support EVA
+def get_source() -> str:
+    return "EVA"
 
-# TBD
-def get_genome_uuid(server: dict, meta_db: str, species, assembly) -> None:
+def get_genome_uuid(server: dict, meta_db: str, species, assembly) -> str:
     query = f"SELECT genome_uuid FROM genome AS g, organism AS o, assembly AS a WHERE g.assembly_id = a.assembly_id and g.organism_id = o.organism_id and a.accession = '{assembly}' and o.ensembl_name = '{species}';"
     process = subprocess.run(["mysql",
             "--host", server["host"],
@@ -85,13 +89,23 @@ def get_genome_uuid(server: dict, meta_db: str, species, assembly) -> None:
     
     return process.stdout.decode().strip()
     
-# TBD
-def get_taxonomy_id() -> None:
-    return None
-    
-# TBD
-def get_eva_release() -> None:
-    return None
+def get_latest_eva_version() -> int:
+    url = EVA_REST_ENDPOINT + "/info/latest"
+    headers = {"Accept": "application/json"}
+
+    response = requests.get(url, headers = headers)
+
+    if response.status_code != 200:
+        print(f"[WARNING] REST API call for retrieving EVA latest version failed with status - {response.status_code}")
+
+    try:
+        content = response.json()
+        release_version = content["releaseVersion"]
+    except:
+        print(f"[WARNING] Could not get EVA latest version; default version ({EVA_DEFAULT_VERSION}) may be used")
+        release_version = None
+
+    return release_version
     
 def main(args = None):
     args = parse_args(args)
@@ -108,7 +122,8 @@ def main(args = None):
     input_set = {}
     for candidate in release_candidates:
         for assembly in release_candidates[candidate]["assembly"]:
-            species_production_name = release_candidates[candidate]["assembly"][assembly]["sp_production_name"]
+            genome_data = release_candidates[candidate]["assembly"][assembly]
+            species_production_name = genome_data["sp_production_name"]
             
             file_type = "remote"
             if species_production_name.startswith("homo_sapiens"):
@@ -116,8 +131,8 @@ def main(args = None):
             
             file_location = "TBD"
             if file_type == "remote":
-                taxonomy_id = get_taxonomy_id() or "TBD"
-                eva_release = get_eva_release() or "TBD"
+                eva_release = get_latest_eva_version() or "TBD"
+                taxonomy_id = f"{genome_data['taxonomy_id']}_" if eva_release == 5 else ""
                 file_location = f"https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_{eva_release}/by_species/{species_production_name}/{assembly}/{taxonomy_id}_{assembly}_current_ids.vcf.gz"
                 
             core_db = get_db_name(coredb_server, version, species_production_name)
