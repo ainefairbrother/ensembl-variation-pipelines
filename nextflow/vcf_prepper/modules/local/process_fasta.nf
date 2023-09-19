@@ -15,7 +15,7 @@ process PROCESS_FASTA {
   assembly = meta.assembly
   version = params.version
   ini_file = params.ini_file
-  fasta_dir = params.fasta_dir
+  fasta_dir = meta.fasta_dir
   
   '''
   process_fasta.py \

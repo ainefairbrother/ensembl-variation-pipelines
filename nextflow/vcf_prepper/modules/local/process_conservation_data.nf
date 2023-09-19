@@ -15,7 +15,7 @@ process PROCESS_CONSERVATION_DATA {
   assembly = meta.assembly
   version = params.version
   ini_file = params.ini_file
-  conservation_data_dir = params.conservation_data_dir
+  conservation_data_dir = meta.conservation_data_dir
   
   '''
   process_conservation_data.py \

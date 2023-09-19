@@ -15,7 +15,7 @@ process PROCESS_CACHE {
   assembly = meta.assembly
   version = params.version
   ini_file = params.ini_file
-  cache_dir = params.cache_dir
+  cache_dir = meta.cache_dir
   
   '''
   process_cache.py \
