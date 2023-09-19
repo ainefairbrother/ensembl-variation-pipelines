@@ -96,9 +96,16 @@ def get_ftp_path(
         mode: str = "local",
         species_url_name: str = None
     ) -> str:
+    
     version = str(version)
     
-    base = "/nfs/production/flicek/ensembl/production/ensemblftp" if mode == "local" else "ftp.ensembl.org/pub"
+    if mode == "local":
+        base = "/nfs/production/flicek/ensembl/production/ensemblftp"
+    if mode == "remote" and division = "EnsemblVertebrates":
+        base = "ftp.ensembl.org/pub"
+    else:
+        base = "https://ftp.ebi.ac.uk/ensemblgenomes/pub"
+        
     release_segment = f"release-{version}"
     
     division_segment = ""
