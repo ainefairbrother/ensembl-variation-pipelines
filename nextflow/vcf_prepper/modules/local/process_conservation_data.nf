@@ -11,13 +11,16 @@ process PROCESS_CONSERVATION_DATA {
   
   shell:
   genome = meta.genome
+  species = meta.species
+  assembly = meta.assembly
   version = params.version
   ini_file = params.ini_file
   conservation_data_dir = params.conservation_data_dir
   
   '''
   process_conservation_data.py \
-    !{genome} \
+    !{species} \
+    !{assembly} \
     !{version} \
     --ini_file !{ini_file} \
     --conservation_data_dir !{conservation_data_dir}

@@ -11,10 +11,11 @@ from helper import parse_ini, get_db_name
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument(dest="genome", type=str, help="genome string with format <species>_<assembly>")
+    parser.add_argument(dest="species", type=str, help="species production name")
+    parser.add_argument(dest="assembly", type=str, help="assembly default")
     parser.add_argument(dest="version", type=int, help="Ensembl release version")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
-    parser.add_argument('--synonym_file', dest="synonym_file", type=str, required = False, help="file with chromomsome synonyms, default - <genome>.synonyms in the same directory.")
+    parser.add_argument('--synonym_file', dest="synonym_file", type=str, required = False, help="file with chromomsome synonyms, default - <species>_<assembly>.synonyms in the same directory.")
     parser.add_argument('--force', dest="force", action="store_true", help="forcefully create config even if already exists")
     
     return parser.parse_args(args)
@@ -80,10 +81,11 @@ def generate_synonym_file(server: dict, core_db: str, synonym_file: str, force: 
 def main(args = None):
     args = parse_args(args)
     
-    synonym_file = args.synonym_file or f"{args.genome}.synonyms"
-    assembly = args.genome.split("_")[-1]
-    species = args.genome.replace(f"_{assembly}", "")
-    db_server = parse_ini(args.ini_file, assembly)
+    species = args.species
+    assembly = args.assembly
+    synonym_file = args.synonym_file or f"{species}_{assembly}.synonyms"
+    ini_file = args.ini_file or "DEFAULT.ini"
+    db_server = parse_ini(ini_file, assembly)
     core_db = get_db_name(db_server, args.version, species, type = "core")
     
     generate_synonym_file(db_server, core_db, synonym_file, args.force)

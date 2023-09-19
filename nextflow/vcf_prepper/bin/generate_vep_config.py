@@ -67,11 +67,12 @@ FREQUENCIES = {
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument(dest="genome", type=str, help="genome string with format <species>_<assembly>")
+    parser.add_argument(dest="species", type=str, help="species production name")
+    parser.add_argument(dest="assembly", type=str, help="assembly default")
     parser.add_argument(dest="version", type=int, help="Ensembl release version")
     parser.add_argument('--division', dest="division", type=str, required = False, help="Ensembl division the species belongs to")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
-    parser.add_argument('--vep_config', dest="vep_config", type=str, required = False, help="VEP configuration file, default - <genome>.ini in the same directory.")
+    parser.add_argument('--vep_config', dest="vep_config", type=str, required = False, help="VEP configuration file, default - <species>_<assembly>.ini in the same directory.")
     parser.add_argument('--cache_dir', dest="cache_dir", type=str, required = False, help="VEP cache directory, must be indexed")
     parser.add_argument('--fasta', dest="fasta", type=str, required = False, help="toplevel FASTA")
     parser.add_argument('--repo_dir', dest="repo_dir", type=str, required = False, help="Ensembl repositories directory")
@@ -278,12 +279,13 @@ def generate_vep_config(
 def main(args = None):
     args = parse_args(args)
     
-    vep_config = args.vep_config or f"{args.genome}.ini"
+    species = args.species
+    assembly = args.assembly
     version = args.version
+    vep_config = args.vep_config or f"{species}_{assembly}.ini"
+    ini_file = args.ini_file or "DEFAULT.ini"
     repo_dir = args.repo_dir or REPO_DIR
-    assembly = args.genome.split("_")[-1]
-    species = args.genome.replace(f"_{assembly}", "")
-    db_server = parse_ini(args.ini_file, assembly)
+    db_server = parse_ini(ini_file, assembly)
     core_db = get_db_name(db_server, args.version, species, type = "core")
     division = args.division or get_division(db_server, core_db)
     species_url_name = get_species_url_name(db_server, core_db)

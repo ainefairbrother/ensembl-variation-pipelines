@@ -11,13 +11,16 @@ process PROCESS_FASTA {
   
   shell:
   genome = meta.genome
+  species = meta.species
+  assembly = meta.assembly
   version = params.version
   ini_file = params.ini_file
   fasta_dir = params.fasta_dir
   
   '''
   process_fasta.py \
-    !{genome} \
+    !{species} \
+    !{assembly} \
     !{version} \
     --ini_file !{ini_file} \
     --fasta_dir !{fasta_dir}

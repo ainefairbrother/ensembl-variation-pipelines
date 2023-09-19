@@ -8,6 +8,7 @@ include { GENERATE_SYNONYM_FILE } from "../../modules/local/generate_synonym_fil
 include { PROCESS_CACHE } from "../../modules/local/process_cache.nf"
 include { PROCESS_FASTA } from "../../modules/local/process_fasta.nf"
 include { PROCESS_CONSERVATION_DATA } from "../../modules/local/process_conservation_data.nf"
+include { DOWNLOAD_SOURCE } from "../../modules/local/download_source.nf"
 
 workflow PREPARE_GENOME {
   take:
@@ -17,16 +18,16 @@ workflow PREPARE_GENOME {
     input
     .map {
       meta, vcf ->
-        genome_temp_dir = "${params.temp_dir}/${meta.genome}"
+        genome_temp_dir = "${params.temp_dir}/${meta.genome_uuid}"
         file(genome_temp_dir).mkdirs()
         
         synonym_file = "${genome_temp_dir}/${meta.genome}.synonyms"
         vep_config = "${genome_temp_dir}/${meta.genome}.ini"
         chrom_sizes = "${genome_temp_dir}/${meta.genome}.chrom.sizes"
         
-        genome_api_outdir = "${params.output_dir}/api/${meta.genome}"
+        genome_api_outdir = "${params.output_dir}/api/${meta.genome_uuid}"
         file(genome_api_outdir).mkdirs()
-        genome_tracks_outdir = "${params.output_dir}/tracks/${meta.genome}"
+        genome_tracks_outdir = "${params.output_dir}/tracks/${meta.genome_uuid}"
         file(genome_tracks_outdir).mkdirs()
         
         [ meta + [
@@ -67,8 +68,10 @@ workflow PREPARE_GENOME {
       tag, meta, vcf ->
         [meta, vcf]
     }
-    .set { ch_post_prepare_genome }
+    .set { ch_prepare_source }
+    
+    DOWNLOAD_SOURCE( ch_prepare_input )
     
     emit:
-      ch_post_prepare_genome
+      DOWNLOAD_SOURCE.out
 }

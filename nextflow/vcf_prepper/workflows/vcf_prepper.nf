@@ -29,6 +29,7 @@ def parse_config (config) {
     for (source_data in params.config.get(genome)) {
       vcf = source_data.file_location
       
+      // TODO: for remote file it gives inconsistent result
       if (file(source_data.file_location + ".tbi").exists()) {
         index_type = "tbi"
       } else if (file(source_data.file_location + ".csi").exists()) {
@@ -40,9 +41,12 @@ def parse_config (config) {
       
       meta = [:]
       meta.genome = genome
+      meta.genome_uuid = source_data.genome_uuid
+      meta.species = source_data.species
+      meta.assembly = source_data.assembly
       meta.source = source_data.source_name.replace(" ", "_")
+      meta.file_type = source_data.file_type
       meta.index_type = index_type
-      meta.priority = source_data.priority ? source_data.priority : 100
       
       input_set.add([meta, vcf])
     }  

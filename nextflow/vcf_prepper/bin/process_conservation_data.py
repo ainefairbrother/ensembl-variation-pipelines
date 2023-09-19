@@ -16,7 +16,8 @@ CONSERVATION_DATA_DIR = "/nfs/production/flicek/ensembl/variation/data/Conservat
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument(dest="genome", type=str, help="genome string with format <species>_<assembly>")
+    parser.add_argument(dest="species", type=str, help="species production name")
+    parser.add_argument(dest="assembly", type=str, help="assembly default")
     parser.add_argument(dest="version", type=int, help="Ensembl release version")
     parser.add_argument('--division', dest="division", type=str, required = False, help="Ensembl division the species belongs to")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
@@ -27,10 +28,11 @@ def parse_args(args = None):
 def main(args = None):
     args = parse_args(args)
     
+    species = args.species
+    assembly = args.assembly
     version = args.version
-    assembly = args.genome.split("_")[-1]
-    species = args.genome.replace(f"_{assembly}", "")
-    db_server = parse_ini(args.ini_file, assembly)
+    ini_file = args.ini_file or "DEFAULT.ini"
+    db_server = parse_ini(ini_file, assembly)
     core_db = get_db_name(db_server, args.version, species, type = "core")
     division = args.division or get_division(db_server, core_db)
     

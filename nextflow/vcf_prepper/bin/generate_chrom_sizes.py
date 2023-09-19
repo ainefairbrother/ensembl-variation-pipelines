@@ -11,10 +11,11 @@ from helper import parse_ini, get_db_name
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument(dest="genome", type=str, help="genome string with format <species>_<assembly>")
+    parser.add_argument(dest="species", type=str, help="species production name")
+    parser.add_argument(dest="assembly", type=str, help="assembly default")
     parser.add_argument(dest="version", type=int, help="Ensembl release version")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
-    parser.add_argument('--chrom_sizes', dest="chrom_sizes", type=str, required = False, help="file with chromomsome sizes, default - <genome>.chrom.sizes in the same directory.")
+    parser.add_argument('--chrom_sizes', dest="chrom_sizes", type=str, required = False, help="file with chromomsome sizes, default - <species>_<assembly>.chrom.sizes in the same directory.")
     parser.add_argument('--force', dest="force", action="store_true", help="forcefully create config even if already exists")
     
     return parser.parse_args(args)
@@ -89,10 +90,11 @@ def generate_chrom_sizes(server: dict, core_db: str, chrom_sizes: str, assembly:
 def main(args = None):
     args = parse_args(args)
     
-    chrom_sizes = args.chrom_sizes or f"{args.genome}.chrom.sizes"
-    assembly = args.genome.split("_")[-1]
-    species = args.genome.replace(f"_{assembly}", "")
-    db_server = parse_ini(args.ini_file, assembly)
+    species = args.species
+    assembly = args.assembly
+    chrom_sizes = args.chrom_sizes or f"{species}_{assembly}.chrom.sizes"
+    ini_file = args.ini_file or "DEFAULT.ini"
+    db_server = parse_ini(ini_file, assembly)
     core_db = get_db_name(db_server, args.version, species, type = "core")
     
     generate_chrom_sizes(db_server, core_db, chrom_sizes, assembly, args.force)

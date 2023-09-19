@@ -11,13 +11,16 @@ process PROCESS_CACHE {
   
   shell:
   genome = meta.genome
+  species = meta.species
+  assembly = meta.assembly
   version = params.version
   ini_file = params.ini_file
   cache_dir = params.cache_dir
   
   '''
   process_cache.py \
-    !{genome} \
+    !{species} \
+    !{assembly} \
     !{version} \
     --ini_file !{ini_file} \
     --cache_dir !{cache_dir}

@@ -12,6 +12,8 @@ process GENERATE_VEP_CONFIG {
   shell:
   force_create_config = params.force_create_config
   genome = meta.genome
+  species = meta.species
+  assembly = meta.assembly
   version = params.version
   ini_file = params.ini_file
   vep_config = meta.vep_config
@@ -22,7 +24,8 @@ process GENERATE_VEP_CONFIG {
   '''
   if [[ ! -e !{vep_config} || !{force_create_config} == 1 ]]; then
     generate_vep_config.py \
-      !{genome} \
+      !{species} \
+      !{assembly} \
       !{version} \
       --ini_file !{ini_file} \
       --vep_config !{vep_config} \
