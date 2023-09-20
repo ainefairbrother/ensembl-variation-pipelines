@@ -285,10 +285,10 @@ def main(args = None):
     vep_config = args.vep_config or f"{species}_{assembly}.ini"
     ini_file = args.ini_file or "DEFAULT.ini"
     repo_dir = args.repo_dir or REPO_DIR
-    db_server = parse_ini(ini_file, assembly)
-    core_db = get_db_name(db_server, args.version, species, type = "core")
-    division = args.division or get_division(db_server, core_db)
-    species_url_name = get_species_url_name(db_server, core_db)
+    core_server = parse_ini(ini_file, "core")
+    core_db = get_db_name(core_server, args.version, species, type = "core")
+    division = args.division or get_division(core_server, core_db)
+    species_url_name = get_species_url_name(core_server, core_db)
     
     cache_dir = args.cache_dir or CACHE_DIR
     cache_version = get_relative_version(version, division)

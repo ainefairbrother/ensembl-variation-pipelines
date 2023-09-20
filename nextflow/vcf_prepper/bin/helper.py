@@ -5,27 +5,18 @@ import configparser
 import os
 import pwd
 
-def parse_ini(ini_file: str, species: str = "homo_sapiens", assembly: str = "grch38") -> dict:
+def parse_ini(ini_file: str, section: str = "database") -> dict:
     config = configparser.ConfigParser()
     config.read(ini_file)
     
-    if species == "homo_sapiens" and assembly.lower() == "grch37":
-        if not "grch37_database" in config:
-            print(f"[ERROR] Could not find 'database' config in ini file - {ini_file}")
-            exit(1)
-        else:
-            host = config["grch37_database"]["host"]
-            port = config["grch37_database"]["port"]
-            user = config["grch37_database"]["user"]
+    if not section in config:
+        print(f"[ERROR] Could not find {section} config in ini file - {ini_file}")
+        exit(1)
     else:
-        if not "database" in config:
-            print(f"[ERROR] Could not find 'database' config in ini file - {ini_file}")
-            exit(1)
-        else:
-            host = config["database"]["host"]
-            port = config["database"]["port"]
-            user = config["database"]["user"]
-    
+        host = config[section]["host"]
+        port = config[section]["port"]
+        user = config[section]["user"]
+
     return {
         "host": host, 
         "port": port, 

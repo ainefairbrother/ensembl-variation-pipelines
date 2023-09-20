@@ -85,10 +85,10 @@ def main(args = None):
     assembly = args.assembly
     synonym_file = args.synonym_file or f"{species}_{assembly}.synonyms"
     ini_file = args.ini_file or "DEFAULT.ini"
-    db_server = parse_ini(ini_file, assembly)
-    core_db = get_db_name(db_server, args.version, species, type = "core")
+    core_server = parse_ini(ini_file, "core")
+    core_db = get_db_name(core_server, args.version, species, type = "core")
     
-    generate_synonym_file(db_server, core_db, synonym_file, args.force)
+    generate_synonym_file(core_server, core_db, synonym_file, args.force)
     
 if __name__ == "__main__":
     sys.exit(main())

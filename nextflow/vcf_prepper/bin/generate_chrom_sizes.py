@@ -94,10 +94,10 @@ def main(args = None):
     assembly = args.assembly
     chrom_sizes = args.chrom_sizes or f"{species}_{assembly}.chrom.sizes"
     ini_file = args.ini_file or "DEFAULT.ini"
-    db_server = parse_ini(ini_file, assembly)
-    core_db = get_db_name(db_server, args.version, species, type = "core")
+    core_server = parse_ini(ini_file, "core")
+    core_db = get_db_name(core_server, args.version, species, type = "core")
     
-    generate_chrom_sizes(db_server, core_db, chrom_sizes, assembly, args.force)
+    generate_chrom_sizes(core_server, core_db, chrom_sizes, assembly, args.force)
     
 if __name__ == "__main__":
     sys.exit(main())

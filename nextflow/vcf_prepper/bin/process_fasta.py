@@ -61,10 +61,10 @@ def main(args = None):
     assembly = args.assembly
     version = args.version
     ini_file = args.ini_file or "DEFAULT.ini"
-    db_server = parse_ini(ini_file, assembly)
-    core_db = get_db_name(db_server, args.version, species, type = "core")
-    division = args.division or get_division(db_server, core_db)
-    species_url_name = get_species_url_name(db_server, core_db)
+    core_server = parse_ini(ini_file, "core")
+    core_db = get_db_name(core_server, args.version, species, type = "core")
+    division = args.division or get_division(core_db, core_db)
+    species_url_name = get_species_url_name(core_db, core_db)
     
     fasta_dir = args.fasta_dir or FASTA_DIR
     fasta_glob = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.*.fa.gz")
