@@ -101,7 +101,7 @@ def get_ftp_path(
     
     if mode == "local":
         base = "/nfs/production/flicek/ensembl/production/ensemblftp"
-    if mode == "remote" and division = "EnsemblVertebrates":
+    if mode == "remote" and division == "EnsemblVertebrates":
         base = "ftp.ensembl.org/pub"
     else:
         base = "https://ftp.ebi.ac.uk/ensemblgenomes/pub"

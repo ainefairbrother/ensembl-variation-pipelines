@@ -30,13 +30,11 @@ def parse_config (config) {
       vcf = source_data.file_location
       
       // TODO: for remote file it gives inconsistent result
+      // TODO: we only need index file for the index_type - maybe we can do it in the pipeline itself (contig having position > 512Mbp)
       if (file(source_data.file_location + ".tbi").exists()) {
         index_type = "tbi"
-      } else if (file(source_data.file_location + ".csi").exists()) {
-        index_type = "csi"
       } else {
-        // TODO: we only need index file for the index_type - maybe we can do it in the pipeline itself (contig having position > 512Mbp)
-        exit 1, "index file does not exist for - " + source.file_location
+        index_type = "csi"
       }
       
       meta = [:]

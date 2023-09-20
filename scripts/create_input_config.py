@@ -133,7 +133,7 @@ def main(args = None):
             if file_type == "remote":
                 eva_release = get_latest_eva_version() or "TBD"
                 taxonomy_id = f"{genome_data['taxonomy_id']}_" if eva_release == 5 else ""
-                file_location = f"https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_{eva_release}/by_species/{species_production_name}/{assembly}/{taxonomy_id}_{assembly}_current_ids.vcf.gz"
+                file_location = f"https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_{eva_release}/by_species/{species_production_name}/{assembly}/{taxonomy_id}{assembly}_current_ids.vcf.gz"
                 
             core_db = get_db_name(coredb_server, version, species_production_name)
             assembly_name = get_assembly_name(coredb_server, core_db) or "TBD"
@@ -148,8 +148,8 @@ def main(args = None):
             input_set[genome].append({
                 "genome_uuid": genome_uuid,
                 "species": species_production_name,
-                "assembly": assembly,
-                "source": source,
+                "assembly": assembly_name,
+                "source_name": source,
                 "file_type": file_type,
                 "file_location": file_location
             })
