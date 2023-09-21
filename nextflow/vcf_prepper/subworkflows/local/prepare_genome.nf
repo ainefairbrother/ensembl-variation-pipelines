@@ -47,15 +47,58 @@ workflow PREPARE_GENOME {
           ], vcf
         ]
     }.set { ch_prepare_genome }
+
+    // post prepare steps only need meta
+    ch_prepare_genome
+    .map {
+      meta, vcf -> meta
+    }
+    .set { ch_prepare_genome_meta }
+
+    // if we skip we only need a channel with tag value
+    ch_prepare_genome_meta
+    .map { 
+      meta -> 
+        meta.genome 
+    }
+    .set { ch_skip }
     
-    // TODO: run this only once per genome - currently they run for all sources in a genome
-    ch_vep_config_done = GENERATE_VEP_CONFIG( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_synonym_file_done = GENERATE_SYNONYM_FILE( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_chrom_sizes_done = GENERATE_CHROM_SIZES( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_processed_cache = PROCESS_CACHE( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_processed_fasta = PROCESS_FASTA( ch_prepare_genome.map { meta, vcf -> meta } )
-    ch_processed_conservation = PROCESS_CONSERVATION_DATA( ch_prepare_genome.map { meta, vcf -> meta } )
+    // TODO: run this only once per genome when we have multiple source (not DOWNLOAD_SOURCE)
+    // prepare for api files
+    if (!params.skip_vep) {
+      ch_synonym_file_done = GENERATE_SYNONYM_FILE( ch_prepare_genome_meta )
     
+      ch_processed_cache = PROCESS_CACHE( ch_prepare_genome_meta )
+      ch_processed_fasta = PROCESS_FASTA( ch_prepare_genome_meta )
+      ch_processed_conservation = PROCESS_CONSERVATION_DATA( ch_prepare_genome_meta )
+      
+      ch_prepare_genome_meta
+      .map {
+        meta -> 
+          [meta.genome, meta]
+      }
+      .join( ch_processed_cache )
+      .join( ch_processed_fasta )
+      .join( ch_processed_conservation )
+      .map {
+        genome, meta ->
+          meta
+      }
+      .set { ch_generate_vep_config }
+      
+      ch_vep_config_done = GENERATE_VEP_CONFIG( ch_generate_vep_config )
+
+      ch_synonym_file_done
+      .join( ch_vep_config_done )
+      .set { ch_prepared_api }
+    }
+    else {
+      ch_prepared_api = ch_skip
+    }
+
+    // prepare for tracks files
+    ch_prepared_track = params.skip_tracks ? ch_skip : GENERATE_CHROM_SIZES( ch_prepare_genome_meta )
+
     // we join channels to only create DAG edges
     ch_prepare_genome
     .map {
@@ -65,12 +108,8 @@ workflow PREPARE_GENOME {
           
         [tag, meta, vcf]
     }
-    .join ( ch_vep_config_done )
-    .join ( ch_synonym_file_done )
-    .join ( ch_chrom_sizes_done )
-    .join ( ch_processed_cache )
-    .join ( ch_processed_fasta )
-    .join ( ch_processed_conservation )
+    .join ( ch_prepared_api )
+    .join ( ch_prepared_track )
     .map {
       tag, meta, vcf ->
         [meta, vcf]

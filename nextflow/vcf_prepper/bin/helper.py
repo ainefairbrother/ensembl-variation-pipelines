@@ -92,10 +92,10 @@ def get_ftp_path(
     
     if mode == "local":
         base = "/nfs/production/flicek/ensembl/production/ensemblftp"
-    if mode == "remote" and division == "EnsemblVertebrates":
+    elif mode == "remote" and division == "EnsemblVertebrates":
         base = "ftp.ensembl.org/pub"
     else:
-        base = "https://ftp.ebi.ac.uk/ensemblgenomes/pub"
+        base = "ftp.ebi.ac.uk/ensemblgenomes/pub"
         
     release_segment = f"release-{version}"
     
@@ -124,7 +124,6 @@ def get_ftp_path(
     elif mode == "remote":
         return f"https://{full_path}"
     
-    print(full_path)
     return None
     
 def copyto(src_file: str, dest_file: str) -> int:

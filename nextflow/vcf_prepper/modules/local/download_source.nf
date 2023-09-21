@@ -7,14 +7,14 @@ process DOWNLOAD_SOURCE {
   tuple val(meta), val(vcf)
 
   output:
-  tuple val(genome), path(output_vcf)
+  tuple val(meta), val(output_vcf)
   
   shell:
   file_type = meta.file_type
   output_vcf = file_type == "remote" ? meta.genome_temp_dir + "/" + file(vcf).getName() : vcf
   
   '''
-  if [[ !{file_type} eq "remote" ]]; then
+  if [[ !{file_type} == "remote" ]]; then
     wget !{vcf} -O !{output_vcf}
   fi
   '''

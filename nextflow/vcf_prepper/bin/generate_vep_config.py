@@ -74,7 +74,8 @@ def parse_args(args = None):
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
     parser.add_argument('--vep_config', dest="vep_config", type=str, required = False, help="VEP configuration file, default - <species>_<assembly>.ini in the same directory.")
     parser.add_argument('--cache_dir', dest="cache_dir", type=str, required = False, help="VEP cache directory, must be indexed")
-    parser.add_argument('--fasta', dest="fasta", type=str, required = False, help="toplevel FASTA")
+    parser.add_argument('--fasta_dir', dest="fasta_dir", type=str, required = False, help="Directory containing toplevel FASTA ")
+    parser.add_argument('--conservation_data_dir', dest="conservation_data_dir", type=str, required = False, help="Conservation plugin data dir")
     parser.add_argument('--repo_dir', dest="repo_dir", type=str, required = False, help="Ensembl repositories directory")
     parser.add_argument('--force', dest="force", action="store_true", help="forcefully create config even if already exists")
     
@@ -117,10 +118,17 @@ def get_frequency_args(assembly: str) -> str:
 def check_plugin_files(plugin: str, files: list) -> bool:
     for file in files:
         if not os.path.isfile(file):
-            print(f"[ERROR] Cannot get {plugin} data file - {file}. Exiting ...")
+            print(f"[INFO] Cannot get {plugin} data file - {file}. Exiting ...")
             exit(1)
     
-def get_plugin_args(plugin: str, version: int, species: str, assembly: str) -> str:
+def get_plugin_args(
+        plugin: str, 
+        version: int, 
+        species: str, 
+        assembly: str, 
+        conservation_data_dir: str = CONSERVATION_DATA_DIR
+    ) -> str:
+
     plugin_data_dir = PLUGIN_DATA_DIR.replace("VERSION", "e" + str(version))
     if assembly == "GRCh37":
         plugin_data_dir = plugin_data_dir.replace("grch38", "grch37")
@@ -153,7 +161,9 @@ def get_plugin_args(plugin: str, version: int, species: str, assembly: str) -> s
         pl_assembly = f"_{assembly}" if species == "homo_sapiens" else ""
         file = os.path.join(plugin_data_dir, f"Phenotypes_data_files/Phenotypes.pm_{species}_{version}{pl_assembly}.gvf.gz")
         
-        check_plugin_files(plugin, [file])
+        if not os.path.isfile(file):
+            print(f"[INFO] Cannot get Phenotype data file - {file}. Skipping ...")
+            return None
             
         return f"Phenotypes,file={file},phenotype_feature=1"
         
@@ -175,7 +185,7 @@ def get_plugin_args(plugin: str, version: int, species: str, assembly: str) -> s
         return f"AncestralAllele,{file}"
         
     if plugin == "Conservation":
-        file = os.path.join(CONSERVATION_DATA_DIR, f"gerp_conservation_scores.{species}.{assembly}.bw")
+        file = os.path.join(conservation_data_dir, f"gerp_conservation_scores.{species}.{assembly}.bw")
         
         if not os.path.isfile(file):
             print(f"[INFO] Cannot get Conservation data file - {file}. Skipping ...")
@@ -215,13 +225,20 @@ def get_plugin_species(plugin: str, repo_dir: str) -> list:
     
     return []
     
-def get_plugins(species: str, version:int, assembly: str, repo_dir: str = REPO_DIR) -> list:
+def get_plugins(
+        species: str, 
+        version:int, 
+        assembly: str, 
+        repo_dir: str = REPO_DIR,
+        conservation_data_dir: str = CONSERVATION_DATA_DIR,
+    ) -> list:
+
     plugins = []
     
     for plugin in PLUGINS:
         plugin_species = get_plugin_species(plugin, repo_dir)
         if len(plugin_species) == 0 or species in plugin_species:
-            plugin_args = get_plugin_args(plugin, version, species, assembly)
+            plugin_args = get_plugin_args(plugin, version, species, assembly, conservation_data_dir)
             if plugin_args is not None:
                 plugins.append(plugin_args)
             
@@ -297,12 +314,13 @@ def main(args = None):
         print(f"[ERROR] {genome_cache_dir} directory does not exists, cannot run VEP. Exiting ...")
         exit(1)
         
-    fasta = args.fasta 
-    if fasta is None or not os.path.isfile(fasta):
-        fasta = os.path.join(FASTA_DIR, f"{species_url_name}.{assembly}.dna.toplevel.fa.gz")
+    fasta_dir = args.fasta_dir or FASTA_DIR
+    fasta = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.toplevel.fa.gz")
     if not os.path.isfile(fasta):
         print(f"[ERROR] No valid fasta file found, cannot run VEP. Exiting ...")
         exit(1)
+
+    conservation_data_dir = args.conservation_data_dir or CONSERVATION_DATA_DIR
 
     sift = False
     if species in SIFT_SPECIES:
@@ -312,10 +330,11 @@ def main(args = None):
     if species in POLYPHEN_SPECIES:
         polyphen = True
     
+    frequencies = []
     if species == "homo_sapiens":
         frequencies = get_frequency_args(assembly)
         
-    plugins = get_plugins(species, version, assembly, repo_dir)
+    plugins = get_plugins(species, version, assembly, repo_dir, conservation_data_dir)
     
     generate_vep_config(
         vep_config = vep_config,

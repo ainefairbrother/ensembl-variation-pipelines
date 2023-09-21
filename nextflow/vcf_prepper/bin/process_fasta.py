@@ -29,7 +29,7 @@ def ungzip_fasta(fasta_dir: str, compressed_fasta: str) -> str:
         print(f"[ERROR] Fasta file {fasta_dir} in wrong directory; should be in - {fasta_dir}")
         exit(1)
         
-    process = subprocess.run(["gzip", "-d", compressed_fasta],
+    process = subprocess.run(["gzip", "-df", compressed_fasta],
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE
     )
@@ -45,7 +45,7 @@ def bgzip_fasta(fasta_dir: str, unzipped_fasta: str) -> None:
         print(f"[ERROR] Fasta file {fasta_dir} in wrong directory; should be in - {fasta_dir}")
         exit(1)
         
-    process = subprocess.run(["bgzip", unzipped_fasta],
+    process = subprocess.run(["bgzip", "-f", unzipped_fasta],
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE
     )
