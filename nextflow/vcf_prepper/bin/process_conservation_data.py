@@ -34,7 +34,7 @@ def main(args = None):
     ini_file = args.ini_file or "DEFAULT.ini"
     core_server = parse_ini(ini_file, "core")
     core_db = get_db_name(core_server, args.version, species, type = "core")
-    division = args.division or get_division(core_db, core_db)
+    division = args.division or get_division(core_server, core_db)
     
     conservation_data_dir = args.conservation_data_dir or CONSERVATION_DATA_DIR
     conservation_bw = os.path.join(conservation_data_dir, f"gerp_conservation_scores.{species}.{assembly}.bw")
