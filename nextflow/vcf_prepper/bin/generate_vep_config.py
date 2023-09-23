@@ -315,7 +315,9 @@ def main(args = None):
         exit(1)
         
     fasta_dir = args.fasta_dir or FASTA_DIR
-    fasta = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.toplevel.fa.gz")
+    fasta = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.primary_assembly.fa.gz")
+    if not os.path.isfile(fasta):
+        fasta = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.toplevel.fa.gz")
     if not os.path.isfile(fasta):
         print(f"[ERROR] No valid fasta file found, cannot run VEP. Exiting ...")
         exit(1)
