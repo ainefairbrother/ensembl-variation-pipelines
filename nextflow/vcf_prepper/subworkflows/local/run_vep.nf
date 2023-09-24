@@ -16,34 +16,36 @@ workflow RUN_VEP {
   input
   .map {
     meta, vcf ->
-      vcf_fullpath = vcf.toString()
-      [meta, vcf_fullpath]
+      // vcf_fullpath = vcf.toString()
+      [meta, vcf]
   }
   .set { ch_index_vcf }
   INDEX_VCF( ch_index_vcf )
   
   INDEX_VCF.out
-  .multiMap {
+  .map {
     meta, vcf, vcf_index ->
-      inputs:
-        // set vcf file name as <genome>-<source> so that we can track meta later on
-        new_vcf = file(vcf).getParent() + "/${meta.genome}-${meta.source}.vcf.gz"
-        new_vcf_index = "${new_vcf}.${meta.index_type}"
-        
-        // moveTo instead of renameTo because in -resume dest file may already exists in work dir
-        file(vcf).moveTo(new_vcf)
-        file(vcf_index).moveTo(new_vcf_index)
-        
-        // TODO: for -resume abitlity create symlink
-        //file(new_vcf).mklink(vcf.toString())
-        //file(new_vcf_index).mklink(vcf_index.toString())
-        
-        [new_vcf, meta.vep_config] 
-      output_dir: meta.genome_api_outdir
-      one_to_many: 0
+      // set vcf file name as <genome>-<source> so that we can track meta later on
+      new_vcf = file(vcf).getParent() + "/${meta.genome}-${meta.source}.vcf.gz"
+      new_vcf_index = "${new_vcf}.${meta.index_type}"
+      
+      // moveTo instead of renameTo because in -resume dest file may already exists in work dir
+      file(vcf).moveTo(new_vcf)
+      file(vcf_index).moveTo(new_vcf_index)
+      
+      // TODO: for -resume abitlity create symlink
+      //file(new_vcf).mklink(vcf.toString())
+      //file(new_vcf_index).mklink(vcf_index.toString())
+      
+      vep_meta = [:]
+      vep_meta.output_dir = meta.genome_api_outdir
+      vep_meta.one_to_many = 0
+      vep_meta.index_type = meta.index_type
+
+      [vep_meta, new_vcf, new_vcf_index, meta.vep_config]
   }
   .set { ch_vep }
-  vep( ch_vep.inputs, ch_vep.output_dir, ch_vep.one_to_many )
+  vep( ch_vep )
   
   input
   .map {
