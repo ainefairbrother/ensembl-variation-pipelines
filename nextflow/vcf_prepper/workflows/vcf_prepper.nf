@@ -11,8 +11,7 @@ params.config = slurper.parse(new File(params.input_config))
 
 include { CREATE_RANK_FILE } from "../modules/local/create_rank_file.nf"
 include { PREPARE_GENOME } from "../subworkflows/local/prepare_genome.nf"
-include { RENAME_CHR } from "../modules/local/rename_chr.nf"
-include { UPDATE_IDS } from "../modules/local/update_ids.nf"
+include { UPDATE_FIELDS } from "../modules/local/update_fields.nf"
 include { REMOVE_VARIANTS } from "../modules/local/remove_variants.nf"
 include { RUN_VEP } from "../subworkflows/local/run_vep.nf"
 include { SPLIT_VCF } from "../subworkflows/local/split_vcf.nf"
@@ -59,9 +58,8 @@ workflow VCF_PREPPER {
   // api files
   if (!params.skip_vep) {
     // pre-process
-    RENAME_CHR( PREPARE_GENOME.out )
-    UPDATE_IDS( RENAME_CHR.out )
-    REMOVE_VARIANTS( UPDATE_IDS.out )
+    UPDATE_FIELDS( PREPARE_GENOME.out )
+    REMOVE_VARIANTS( UPDATE_FIELDS.out )
     
     // run vep
     vep = RUN_VEP( REMOVE_VARIANTS.out )
