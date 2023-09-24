@@ -8,7 +8,7 @@ include { GENERATE_SYNONYM_FILE } from "../../modules/local/generate_synonym_fil
 include { PROCESS_CACHE } from "../../modules/local/process_cache.nf"
 include { PROCESS_FASTA } from "../../modules/local/process_fasta.nf"
 include { PROCESS_CONSERVATION_DATA } from "../../modules/local/process_conservation_data.nf"
-include { DOWNLOAD_SOURCE } from "../../modules/local/download_source.nf"
+include { PROCESS_INPUT } from "../../modules/local/process_input.nf"
 
 workflow PREPARE_GENOME {
   take:
@@ -116,8 +116,8 @@ workflow PREPARE_GENOME {
     }
     .set { ch_prepare_source }
     
-    DOWNLOAD_SOURCE( ch_prepare_source )
+    PROCESS_INPUT( ch_prepare_source )
     
     emit:
-      DOWNLOAD_SOURCE.out
+      PROCESS_INPUT.out
 }

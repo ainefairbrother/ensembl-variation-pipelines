@@ -29,14 +29,6 @@ def parse_config (config) {
     for (source_data in params.config.get(genome)) {
       vcf = source_data.file_location
       
-      // TODO: for remote file it gives inconsistent result
-      // TODO: we only need index file for the index_type - maybe we can do it in the pipeline itself (contig having position > 512Mbp)
-      if (file(source_data.file_location + ".tbi").exists()) {
-        index_type = "tbi"
-      } else {
-        index_type = "csi"
-      }
-      
       meta = [:]
       meta.genome = genome
       meta.genome_uuid = source_data.genome_uuid
@@ -44,7 +36,6 @@ def parse_config (config) {
       meta.assembly = source_data.assembly
       meta.source = source_data.source_name.replace(" ", "_")
       meta.file_type = source_data.file_type
-      meta.index_type = index_type
       
       input_set.add([meta, vcf])
     }  
@@ -89,6 +80,9 @@ workflow VCF_PREPPER {
         
         [meta, new_vcf, new_vcf_index]
     }.set { ch_tracks }
+  }
+  else {
+    ch_tracks = PREPARE_GENOME.out
   }
   
   // track files

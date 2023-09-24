@@ -4,7 +4,7 @@ process RENAME_CHR {
   label 'bcftools'
   
   input:
-  tuple val(meta), val(vcf)
+  tuple val(meta), val(vcf), val(vcf_index)
   
   output:
   tuple val(meta), path(output_file)
