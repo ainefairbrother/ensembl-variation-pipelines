@@ -155,8 +155,6 @@ fn main() -> Result<(), VCFError> {
     while reader.next_record(&mut record)? {
         let reference = String::from_utf8(record.reference.clone()).unwrap();
         let ref_len = reference.len() as u64;
-        // for now - we ignore ref with more than 31 char name becaus of bedToBigBed failure
-        if ref_len > 31 { continue; }
         
         let mut multiple_ids = false;
         let ids = record.id.iter().map(|b| {
