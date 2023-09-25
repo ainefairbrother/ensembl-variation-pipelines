@@ -4,10 +4,11 @@ import sys
 from cyvcf2 import VCF, Writer
 import argparse
 
-HEADER = """##fileformat=VCFv4.2
+META = """##fileformat=VCFv4.2
 ##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of the variation data">
-#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
 """
+HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
+
 
 def parse_args(args = None, description: bool = None):
     parser = argparse.ArgumentParser(description = description)
@@ -16,6 +17,7 @@ def parse_args(args = None, description: bool = None):
     parser.add_argument(dest="source", type=str, help="input VCF file source")
     parser.add_argument(dest="synonym_file", type=str, help="text file with chrmosome synonyms")
     parser.add_argument('--rename_clinvar_ids', dest="rename_clinvar_ids", action="store_true")
+    parser.add_argument('--chromosomes', dest="chromosomes", type=str, help="comma separated list of chromosomes to put in header")
     parser.add_argument('-O', '--output_file', dest="output_file", type=str)
     
     return parser.parse_args(args)
@@ -27,12 +29,21 @@ def format_clinvar_id(id: str) -> str:
 
     return id
 
+def format_meta(chromosomes: str = None) -> str:
+    if chromosomes is None:
+        return META
+
+    for chrmosome in chromosomes.split(","):
+        META += f"\n##contig=<ID={chrmosome}>"
+    return META
+
 def main(args = None):
     args = parse_args(args)
 
     input_file = args.input_file
     source = args.source
     synonym_file = args.synonym_file
+    chromosomes = args.chromosomes or None
     output_file = args.output_file or input_file.replace(".vcf.gz", "_renamed.vcf.gz")
 
     synonyms = {}
@@ -48,7 +59,10 @@ def main(args = None):
     else:
         format_id = lambda x : x
     
+    meta = format_meta(chromosomes)
+
     with open(output_file, "w") as o_file:
+        o_file.write(meta)
         o_file.write(HEADER)
 
         input_vcf = VCF(input_file)

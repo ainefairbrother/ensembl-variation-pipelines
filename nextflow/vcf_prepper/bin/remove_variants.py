@@ -24,7 +24,7 @@ def get_id(variant: Variant) -> str:
 
 def get_positioned_id(variant: Variant) -> str:
     'Get variant positioned id'
-        
+
     id = variant.ID or "unknown"
     return variant.CHROM + ":" + str(variant.POS) + ":" + id
 
@@ -54,8 +54,8 @@ def main(args = None):
     args = parse_args(args, description)
     
     input_file = args.input_file
-    remove_nonunique_ids = args.remove_nonunique_ids or False
-    remove_patch_regions = args.remove_patch_regions or True
+    remove_nonunique_ids = args.remove_nonunique_ids
+    remove_patch_regions = args.remove_patch_regions
     output_file = args.output_file or input_file.replace("renamed", "processed")
     
     if remove_nonunique_ids:

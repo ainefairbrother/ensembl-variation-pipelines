@@ -15,15 +15,10 @@ process UPDATE_FIELDS {
   
   shell:
   '''
-  #if [[ !{rename_clinvar_ids} == 1 && !{source} =~ ClinVar ]]; then
-  #  pyenv local variation-eva
-  #  rename_clinvar_ids.py !{vcf} -O !{output_file}
-  #else
-  #  # file must exist as we are using 'path'
-  #  mv !{vcf} !{output_file}
-  #fi
+  chrs=$(tabix !{vcf} -l | xargs | tr ' ' ',')
   update_fields.py !{vcf} !{source} !{synonym_file} \
     !{rename_clinvar_ids} \
     -O !{output_file}
+    --chromosomes ${chrs}
   '''
 }
