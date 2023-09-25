@@ -105,7 +105,6 @@ workflow PREPARE_GENOME {
       meta, vcf ->
         // tag here is the genome
         tag = meta.genome 
-          
         [tag, meta, vcf]
     }
     .join ( ch_prepared_api )

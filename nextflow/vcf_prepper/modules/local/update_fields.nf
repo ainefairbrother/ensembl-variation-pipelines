@@ -2,7 +2,7 @@
 
 process UPDATE_FIELDS {
   input: 
-  tuple val(meta), val(vcf), val(vcf_index)
+  tuple val(meta), path(vcf), path(vcf_index)
   
   output:
   tuple val(meta), path(output_file)
