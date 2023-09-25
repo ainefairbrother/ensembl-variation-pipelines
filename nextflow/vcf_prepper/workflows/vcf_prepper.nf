@@ -72,10 +72,12 @@ workflow VCF_PREPPER {
         new_vcf = "${meta.genome_api_outdir}/variation.vcf.gz"
         new_vcf_index = "${meta.genome_api_outdir}/variation.vcf.gz.${meta.index_type}"
         
-        // moveTo instead of renameTo because in -resume dest file may already exists
-        file(vcf).moveTo(new_vcf)
-        file(vcf_index).moveTo(new_vcf_index)
-        
+        // in -resume vcf and vcf_index may not exists as already renamed
+        // moveTo instead of renameTo - in -resume dest file may exists from previous run
+        if ( file(vcf).exists() && file(vcf_index).exists() ) {
+          file(vcf).moveTo(new_vcf)
+          file(vcf_index).moveTo(new_vcf_index)
+        }
         [meta, new_vcf, new_vcf_index]
     }.set { ch_tracks }
   }

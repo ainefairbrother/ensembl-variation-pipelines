@@ -7,14 +7,16 @@ process INDEX_VCF {
   tuple val(meta), path(vcf)
   
   output:
-  tuple val(meta), path(vcf), path(vcf_index)
+  tuple val(meta), path(new_vcf), path(vcf_index)
   
   shell:
   index_type = meta.index_type
   flag_index = (index_type == "tbi" ? "-t" : "-c")
-  vcf_index = vcf + ".${index_type}"
+  new_vcf = "${meta.genome}-${meta.source}.vcf.gz"
+  vcf_index = new_vcf + ".${index_type}"
   
   '''
-  bcftools index !{flag_index} !{vcf}
+  ln -sf !{vcf} !{new_vcf}
+  bcftools index !{flag_index} !{new_vcf}
   '''
 }
