@@ -13,7 +13,7 @@ nextflow_process {
             process {
                 """
                 input[0] = params.rank_file
-                input[1] = tuple("NONE", file("$baseDir/tests/data/test.vcf.gz"))
+                input[1] = tuple("NONE", file("$baseDir/tests/data/test_vcftobed.vcf.gz"))
                 """
             }
         }
@@ -28,7 +28,7 @@ nextflow_process {
                 // output is a tuple which gives unordered list of ordered list. So we have to delve with two nested loop
                 with (get(0)) {
                   assert get(0) == "NONE"
-                  assert get(1) ==~ ".*/test.bed"
+                  assert get(1) ==~ ".*/test_vcftobed.bed"
                 }
             }  
             

@@ -13,7 +13,7 @@ nextflow_process {
             }
             process {
                 """
-                input[0] = tuple("NONE", file("$baseDir/tests/data/test_dup.vcf.gz"))
+                input[0] = tuple("NONE", file("$baseDir/tests/data/test_removevariants.vcf.gz"))
                 """
             }
         }
@@ -37,7 +37,7 @@ nextflow_process {
             }
             process {
                 """
-                input[0] = tuple("NONE", file("$baseDir/tests/data/test_dup.vcf.gz"))
+                input[0] = tuple("NONE", file("$baseDir/tests/data/test_removevariants.vcf.gz"))
                 """
             }
         }
@@ -62,7 +62,7 @@ nextflow_process {
             }
             process {
                 """
-                input[0] = tuple("NONE", file("$baseDir/tests/data/test_dup.vcf.gz"))
+                input[0] = tuple("NONE", file("$baseDir/tests/data/test_removevariants.vcf.gz"))
                 """
             }
         }
@@ -87,7 +87,7 @@ nextflow_process {
             }
             process {
                 """
-                input[0] = tuple("NONE", file("$baseDir/tests/data/test_dup.vcf.gz"))
+                input[0] = tuple("NONE", file("$baseDir/tests/data/test_removevariants.vcf.gz"))
                 """
             }
         }
