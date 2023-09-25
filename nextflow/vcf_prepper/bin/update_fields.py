@@ -7,7 +7,8 @@ import argparse
 META = """##fileformat=VCFv4.2
 ##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of the variation data">
 """
-HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
+HEADER="""#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
+"""
 
 
 def parse_args(args = None, description: bool = None):
@@ -29,13 +30,14 @@ def format_clinvar_id(id: str) -> str:
 
     return id
 
-def format_meta(chromosomes: str = None) -> str:
+def format_meta(meta: str, chromosomes: str = None, synonyms: list = None) -> str:
     if chromosomes is None:
-        return META
+        return meta
 
-    for chrmosome in chromosomes.split(","):
-        META += f"\n##contig=<ID={chrmosome}>"
-    return META
+    for chromosome in chromosomes.split(","):
+        chr_syn = synonyms[chromosome] if chromosome in synonyms else chromosome
+        meta += f"##contig=<ID={chr_syn}>\n"
+    return meta
 
 def main(args = None):
     args = parse_args(args)
@@ -59,7 +61,7 @@ def main(args = None):
     else:
         format_id = lambda x : x
     
-    meta = format_meta(chromosomes)
+    meta = format_meta(META, chromosomes, synonyms)
 
     with open(output_file, "w") as o_file:
         o_file.write(meta)

@@ -18,7 +18,7 @@ process UPDATE_FIELDS {
   chrs=$(tabix !{vcf} -l | xargs | tr ' ' ',')
   update_fields.py !{vcf} !{source} !{synonym_file} \
     !{rename_clinvar_ids} \
-    -O !{output_file}
+    -O !{output_file} \
     --chromosomes ${chrs}
   '''
 }
