@@ -12,8 +12,8 @@ nextflow_process {
             }
             process {
                 """
-                input[0] = "done"
-                input[1] = tuple("original.vcf.gz", file("$baseDir/tests/data/test.vcf.gz"), "test_genome", "test_source", 1)
+                input[0] = params.rank_file
+                input[1] = tuple("NONE", file("$baseDir/tests/data/test.vcf.gz"))
                 """
             }
         }
@@ -27,11 +27,8 @@ nextflow_process {
             with (process.out.get(0)) {
                 // output is a tuple which gives unordered list of ordered list. So we have to delve with two nested loop
                 with (get(0)) {
-                  assert get(0) == "original.vcf.gz"
-                  assert get(1) ==~ ".*original.vcf.gz-test.vcf.gz"
-                  assert get(2) == "test_genome"
-                  assert get(3) == "test_source"
-                  assert get(4) == 1
+                  assert get(0) == "NONE"
+                  assert get(1) ==~ ".*/test.bed"
                 }
             }  
             
