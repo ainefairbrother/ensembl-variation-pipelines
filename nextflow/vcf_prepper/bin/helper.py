@@ -52,20 +52,8 @@ def get_division(server: dict, core_db: str) -> str:
     )
     return process.stdout.decode().strip()
 
-def get_species_url_name(server: dict, core_db: str) -> str:
-    query = "SELECT meta_value FROM meta WHERE meta_key = 'species.url';"
-    process = subprocess.run(["mysql",
-            "--host", server["host"],
-            "--port", server["port"],
-            "--user", server["user"],
-            "--database", core_db,
-            "-N",
-            "--execute", query
-        ],
-        stdout = subprocess.PIPE,
-        stderr = subprocess.PIPE
-    )
-    return process.stdout.decode().strip()
+def get_fasta_species_name(species_production_name: str) -> str:
+    return species_production_name[0].upper() + species_production_name[1:]
     
 def get_relative_version(version: int, division: str = "EnsemblVertebrates") -> int:
     return (version - 53) if division != "EnsemblVertebrates" else version

@@ -7,7 +7,7 @@ import subprocess
 import os
 import json
 
-from helper import parse_ini, get_db_name, get_division, get_species_url_name, get_relative_version
+from helper import parse_ini, get_db_name, get_division, get_fasta_species_name, get_relative_version
 
 CACHE_DIR = "/nfs/production/flicek/ensembl/variation/data/VEP/tabixconverted"
 FASTA_DIR = "/nfs/production/flicek/ensembl/variation/data/VEP/fasta"
@@ -305,7 +305,7 @@ def main(args = None):
     core_server = parse_ini(ini_file, "core")
     core_db = get_db_name(core_server, args.version, species, type = "core")
     division = args.division or get_division(core_server, core_db)
-    species_url_name = get_species_url_name(core_server, core_db)
+    fasta_species_name = get_fasta_species_name(species)
     
     cache_dir = args.cache_dir or CACHE_DIR
     cache_version = get_relative_version(version, division)
@@ -315,9 +315,9 @@ def main(args = None):
         exit(1)
         
     fasta_dir = args.fasta_dir or FASTA_DIR
-    fasta = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.primary_assembly.fa.gz")
+    fasta = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.primary_assembly.fa.gz")
     if not os.path.isfile(fasta):
-        fasta = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.toplevel.fa.gz")
+        fasta = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.toplevel.fa.gz")
     if not os.path.isfile(fasta):
         print(f"[ERROR] No valid fasta file found, cannot run VEP. Exiting ...")
         exit(1)

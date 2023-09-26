@@ -64,15 +64,15 @@ def main(args = None):
     core_server = parse_ini(ini_file, "core")
     core_db = get_db_name(core_server, args.version, species, type = "core")
     division = args.division or get_division(core_server, core_db)
-    species_url_name = get_species_url_name(core_server, core_db)
+    fasta_species_name = get_fasta_species_name(species)
     
     fasta_dir = args.fasta_dir or FASTA_DIR
-    fasta_glob = os.path.join(fasta_dir, f"{species_url_name}.{assembly}.dna.*.fa.gz")
+    fasta_glob = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.*.fa.gz")
     if not glob.glob(fasta_glob):
         print(f"[INFO] {fasta_glob} does not exists. Creating ...")
         
         rl_version = get_relative_version(version, division)
-        src_compressed_fasta = get_ftp_path(species, assembly, division, rl_version, "fasta", "local", species_url_name)
+        src_compressed_fasta = get_ftp_path(species, assembly, division, rl_version, "fasta", "local", fasta_species_name)
         
         if src_compressed_fasta is not None:
             compressed_fasta = os.path.join(fasta_dir, os.path.basename(src_compressed_fasta))
@@ -81,7 +81,7 @@ def main(args = None):
         if src_compressed_fasta is None or returncode != 0:
             print(f"[INFO] Failed to copy fasta file - {src_compressed_fasta}, will retry using remote FTP")
             
-            compressed_fasta_url = get_ftp_path(species, assembly, division, rl_version, "fasta", "remote", species_url_name)
+            compressed_fasta_url = get_ftp_path(species, assembly, division, rl_version, "fasta", "remote", fasta_species_name)
             
             compressed_fasta = os.path.join(fasta_dir, compressed_fasta_url.split('/')[-1])
             returncode = download_file(compressed_fasta, compressed_fasta_url)
