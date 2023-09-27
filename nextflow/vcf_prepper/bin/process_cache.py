@@ -6,6 +6,7 @@ import argparse
 import subprocess
 import os
 import requests
+import shutil
 
 from helper import *
 
@@ -20,6 +21,7 @@ def parse_args(args = None):
     parser.add_argument('--division', dest="division", type=str, required = False, help="Ensembl division the species belongs to")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
     parser.add_argument('--cache_dir', dest="cache_dir", type=str, required = False, help="VEP cache directory")
+    parser.add_argument('--force', dest="force", action="store_true")
     
     return parser.parse_args(args)
     
@@ -47,23 +49,33 @@ def main(args = None):
     cache_dir = args.cache_dir or CACHE_DIR
     rl_version = get_relative_version(version, division)
     genome_cache_dir = os.path.join(cache_dir, species, f"{rl_version}_{assembly}")         
-    if not os.path.exists(genome_cache_dir):
-        print(f"[INFO] {genome_cache_dir} directory does not exists. Creating ...")
-        
-        compressed_cache = get_ftp_path(species, assembly, division, rl_version, "cache")
-        
-        if compressed_cache is None:
-            print(f"[INFO] Could not find cache in local ftp directory, will retry using remote FTP")
-            
-            compressed_cache_url = get_ftp_path(species, assembly, division, rl_version, "cache", "remote")
-            
-            compressed_cache = os.path.join(cache_dir, compressed_cache_url.split('/')[-1])
-            returncode = download_file(compressed_cache, compressed_cache_url)
-            if returncode != 0:
-                print(f"[ERROR] Could not download cache file - {compressed_cache_url}")
+    if os.path.exists(genome_cache_dir):
+        if not args.force:
+            print(f"[INFO] {genome_cache_dir} directory exists. Skipping ...")
+            exit(0)
+        else:
+            # for human we check and delete cache dir manually if needed - DO NOT OVERWRITE
+            if species.startswith("homo_sapiens"):
+                print(f"[ERROR] {genome_cache_dir} directory exists for human. Won't be overwritten ...")
                 exit(1)
+
+            print(f"[INFO] {genome_cache_dir} directory exists. Will be overwritten ...")
+            shutil.rmtree(genome_cache_dir)
         
-        uncompress_cache(cache_dir, compressed_cache)   
+    compressed_cache = get_ftp_path(species, assembly, division, rl_version, "cache")
+    
+    if compressed_cache is None:
+        print(f"[INFO] Could not find cache in local ftp directory, will retry using remote FTP")
+        
+        compressed_cache_url = get_ftp_path(species, assembly, division, rl_version, "cache", "remote")
+        
+        compressed_cache = os.path.join(cache_dir, compressed_cache_url.split('/')[-1])
+        returncode = download_file(compressed_cache, compressed_cache_url)
+        if returncode != 0:
+            print(f"[ERROR] Could not download cache file - {compressed_cache_url}")
+            exit(1)
+    
+    uncompress_cache(cache_dir, compressed_cache)   
     
 if __name__ == "__main__":
     sys.exit(main())

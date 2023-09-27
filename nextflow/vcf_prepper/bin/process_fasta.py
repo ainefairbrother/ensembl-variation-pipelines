@@ -21,6 +21,7 @@ def parse_args(args = None):
     parser.add_argument('--division', dest="division", type=str, required = False, help="Ensembl division the species belongs to")
     parser.add_argument('-I', '--ini_file', dest="ini_file", type=str, required = False, help="full path database configuration file, default - DEFAULT.ini in the same directory.")
     parser.add_argument('--fasta_dir', dest="fasta_dir", type=str, required = False, help="FASTA directory")
+    parser.add_argument('--force', dest="force", action="store_true")
     
     return parser.parse_args(args)
     
@@ -40,7 +41,7 @@ def ungzip_fasta(fasta_dir: str, compressed_fasta: str) -> str:
         
     return compressed_fasta[:-3]
     
-def bgzip_fasta(fasta_dir: str, unzipped_fasta: str) -> None:
+def bgzip_fasta(fasta_dir: str, unzipped_fasta: str) -> str:
     if os.path.dirname(unzipped_fasta) != fasta_dir:
         print(f"[ERROR] Fasta file {fasta_dir} in wrong directory; should be in - {fasta_dir}")
         exit(1)
@@ -52,6 +53,32 @@ def bgzip_fasta(fasta_dir: str, unzipped_fasta: str) -> None:
     
     if process.returncode != 0:
         print(f"[ERROR] Could not bgzip fasta file - {unzipped_fasta}")
+        exit(1)
+
+    return unzipped_fasta + ".gz"
+
+def index_fasta(zipped_fasta: str) -> None:
+    if not os.path.isfile(zipped_fasta):
+        print(f"[ERROR] Cannot index fasta - {fasta} - does not exist. Exiting ...")
+        exit(1)
+
+    if os.path.isfile(zipped_fasta + ".fai"):
+        print(f"[INFO] {zipped_fasta + '.fai'} exist. Deleting ...")
+        os.remove(zipped_fasta + ".fai")
+    
+    if os.path.isfile(zipped_fasta + ".gzi"):
+        print(f"[INFO] {zipped_fasta + '.gzi'} exist. Deleting ...")
+        os.remove(zipped_fasta + ".gzi")
+    
+    cmd_index_fasta = "use Bio::DB::HTS::Faidx;"
+    cmd_index_fasta += f"Bio::DB::HTS::Faidx->new('{zipped_fasta}');"
+    
+    process = subprocess.run(["perl", "-e", cmd_index_fasta],
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE
+    )
+    if process.returncode != 0:
+        print(f"[ERROR] Cannot index fasta file - {zipped_fasta}\n{process.stderr.decode()}\nExiting ...")
         exit(1)
     
 def main(args = None):
@@ -68,29 +95,41 @@ def main(args = None):
     
     fasta_dir = args.fasta_dir or FASTA_DIR
     fasta_glob = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.*.fa.gz")
-    if not glob.glob(fasta_glob):
-        print(f"[INFO] {fasta_glob} does not exists. Creating ...")
-        
-        rl_version = get_relative_version(version, division)
-        src_compressed_fasta = get_ftp_path(species, assembly, division, rl_version, "fasta", "local", fasta_species_name)
-        
-        if src_compressed_fasta is not None:
-            compressed_fasta = os.path.join(fasta_dir, os.path.basename(src_compressed_fasta))
-            returncode = copyto(src_compressed_fasta, compressed_fasta)
-        
-        if src_compressed_fasta is None or returncode != 0:
-            print(f"[INFO] Failed to copy fasta file - {src_compressed_fasta}, will retry using remote FTP")
-            
-            compressed_fasta_url = get_ftp_path(species, assembly, division, rl_version, "fasta", "remote", fasta_species_name)
-            
-            compressed_fasta = os.path.join(fasta_dir, compressed_fasta_url.split('/')[-1])
-            returncode = download_file(compressed_fasta, compressed_fasta_url)
-            if returncode != 0:
-                print(f"[ERROR] Could not download fasta file - {compressed_fasta_url}")
+    if glob.glob(fasta_glob):
+        if not args.force:
+            print(f"[INFO] {fasta_glob} exists. Skipping ...")
+            exit(0)
+        else:
+            # for human we check and delete fasta manually if needed 
+            if species.startswith("homo_sapiens"):
+                print(f"[ERROR] {fasta_glob} exists for human. Won't be overwritten ...")
                 exit(1)
+
+            print(f"[INFO] {fasta_glob} exists. Will be oerwritten ...")
+            for f in glob.glob(fasta_glob):
+                os.remove(f)
         
-        unzipped_fasta = ungzip_fasta(fasta_dir, compressed_fasta)
-        bgzip_fasta(fasta_dir, unzipped_fasta)
+    rl_version = get_relative_version(version, division)
+    src_compressed_fasta = get_ftp_path(species, assembly, division, rl_version, "fasta", "local", fasta_species_name)
+    
+    if src_compressed_fasta is not None:
+        compressed_fasta = os.path.join(fasta_dir, os.path.basename(src_compressed_fasta))
+        returncode = copyto(src_compressed_fasta, compressed_fasta)
+    
+    if src_compressed_fasta is None or returncode != 0:
+        print(f"[INFO] Failed to copy fasta file - {src_compressed_fasta}, will retry using remote FTP")
+        
+        compressed_fasta_url = get_ftp_path(species, assembly, division, rl_version, "fasta", "remote", fasta_species_name)
+        
+        compressed_fasta = os.path.join(fasta_dir, compressed_fasta_url.split('/')[-1])
+        returncode = download_file(compressed_fasta, compressed_fasta_url)
+        if returncode != 0:
+            print(f"[ERROR] Could not download fasta file - {compressed_fasta_url}")
+            exit(1)
+    
+    unzipped_fasta = ungzip_fasta(fasta_dir, compressed_fasta)
+    zipped_fasta = bgzip_fasta(fasta_dir, unzipped_fasta)
+    index_fasta(zipped_fasta)
         
 if __name__ == "__main__":
     sys.exit(main())

@@ -77,7 +77,6 @@ def parse_args(args = None):
     parser.add_argument('--fasta_dir', dest="fasta_dir", type=str, required = False, help="Directory containing toplevel FASTA ")
     parser.add_argument('--conservation_data_dir', dest="conservation_data_dir", type=str, required = False, help="Conservation plugin data dir")
     parser.add_argument('--repo_dir', dest="repo_dir", type=str, required = False, help="Ensembl repositories directory")
-    parser.add_argument('--force', dest="force", action="store_true", help="forcefully create config even if already exists")
     
     return parser.parse_args(args)
 
@@ -349,8 +348,7 @@ def main(args = None):
         polyphen = polyphen,
         frequencies = frequencies,
         plugins = plugins,
-        repo_dir = repo_dir,
-        force = args.force
+        repo_dir = repo_dir
     )
     
 if __name__ == "__main__":

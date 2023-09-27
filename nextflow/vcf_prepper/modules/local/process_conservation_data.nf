@@ -16,6 +16,7 @@ process PROCESS_CONSERVATION_DATA {
   version = params.version
   ini_file = params.ini_file
   conservation_data_dir = meta.conservation_data_dir
+  force_create_config = params.force_create_config ? "--force" : ""
   
   '''
   process_conservation_data.py \
@@ -23,6 +24,7 @@ process PROCESS_CONSERVATION_DATA {
     !{assembly} \
     !{version} \
     --ini_file !{ini_file} \
-    --conservation_data_dir !{conservation_data_dir}
+    --conservation_data_dir !{conservation_data_dir} \
+    !{force_create_config}
   '''
 }

@@ -16,6 +16,7 @@ process PROCESS_CACHE {
   version = params.version
   ini_file = params.ini_file
   cache_dir = meta.cache_dir
+  force_create_config = params.force_create_config ? "--force" : ""
   
   '''
   process_cache.py \
@@ -23,6 +24,7 @@ process PROCESS_CACHE {
     !{assembly} \
     !{version} \
     --ini_file !{ini_file} \
-    --cache_dir !{cache_dir}
+    --cache_dir !{cache_dir} \
+    !{force_create_config}
   '''
 }

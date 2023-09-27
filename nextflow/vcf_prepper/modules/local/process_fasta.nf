@@ -16,6 +16,7 @@ process PROCESS_FASTA {
   version = params.version
   ini_file = params.ini_file
   fasta_dir = meta.fasta_dir
+  force_create_config = params.force_create_config ? "--force" : ""
   
   '''
   process_fasta.py \
@@ -23,6 +24,7 @@ process PROCESS_FASTA {
     !{assembly} \
     !{version} \
     --ini_file !{ini_file} \
-    --fasta_dir !{fasta_dir}
+    --fasta_dir !{fasta_dir} \
+    !{force_create_config}
   '''
 }
