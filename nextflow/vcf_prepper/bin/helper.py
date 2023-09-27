@@ -66,6 +66,9 @@ def download_file(local_filename: str, url: str) -> int:
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE
     )
+
+    if process.returncode != 0 and os.path.isfile(local_filename):
+        os.remove(local_filename)
         
     return process.returncode 
     
