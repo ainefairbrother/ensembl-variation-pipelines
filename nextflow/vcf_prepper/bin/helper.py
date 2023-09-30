@@ -38,7 +38,7 @@ def get_db_name(server: dict, version: str, species: str = "homo_sapiens", type:
     return process.stdout.decode().strip()
 
 def get_division(server: dict, core_db: str) -> str:
-    # TODO: this is only temp as ensemblgenome FTP had problem in 110
+    # TMP: this is only temp as ensemblgenome FTP had problem in 110
     if core_db.startswith("drosophila_melanogaster"):
         return "EnsemblVertebrates"
     query = "SELECT meta_value FROM meta WHERE meta_key = 'species.division';"

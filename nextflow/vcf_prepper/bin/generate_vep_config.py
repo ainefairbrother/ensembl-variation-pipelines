@@ -16,6 +16,7 @@ PLUGIN_DATA_DIR = "/nfs/production/flicek/ensembl/variation/enseweb-data_tools/g
 CONSERVATION_DATA_DIR = "/nfs/production/flicek/ensembl/variation/data/Conservation"
 SIFT_SPECIES = [
     "homo_sapiens",
+    "homo_sapiens_37",
     "felis_catus",
     "gallus_gallus",
     "bos_taurus",
@@ -30,7 +31,8 @@ SIFT_SPECIES = [
     "danio_rerio",
 ]
 POLYPHEN_SPECIES = [
-    "homo_sapiens"
+    "homo_sapiens",
+    "homo_sapiens_37",
 ]
 PLUGINS = [
     "CADD",
@@ -175,7 +177,7 @@ def get_plugin_args(
         return f"IntAct,mutation_file={mutation_file},mapping_file={mapping_file},pmid=1"
         
     if plugin == "AncestralAllele":
-        # temp - needs to check issues with 110
+        # TMP - 110 datafile has 109 in the file name
         pl_version = "109" if assembly == "GRCh38" else "e75"
         file = os.path.join(plugin_data_dir, f"homo_sapiens_ancestor_{assembly}_{pl_version}.fa.gz")
         
@@ -304,15 +306,18 @@ def main(args = None):
     core_server = parse_ini(ini_file, "core")
     core_db = get_db_name(core_server, args.version, species, type = "core")
     division = args.division or get_division(core_server, core_db)
-    fasta_species_name = get_fasta_species_name(species)
+    
+    # TMP - until we use fasta from new website infra
+    species = "homo_sapiens" if species == "homo_sapiens_37"
     
     cache_dir = args.cache_dir or CACHE_DIR
     cache_version = get_relative_version(version, division)
-    genome_cache_dir = os.path.join(cache_dir, species, f"{cache_version}_{assembly}")         
+    genome_cache_dir = os.path.join(cache_dir, cachedir_species_name, f"{cache_version}_{assembly}")         
     if not os.path.exists(genome_cache_dir):
         print(f"[ERROR] {genome_cache_dir} directory does not exists, cannot run VEP. Exiting ...")
         exit(1)
-        
+
+    fasta_species_name = get_fasta_species_name(species)
     fasta_dir = args.fasta_dir or FASTA_DIR
     fasta = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.primary_assembly.fa.gz")
     if not os.path.isfile(fasta):

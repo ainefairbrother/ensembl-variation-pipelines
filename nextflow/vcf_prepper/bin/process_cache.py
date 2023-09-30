@@ -46,9 +46,12 @@ def main(args = None):
     core_db = get_db_name(core_server, args.version, species, type = "core")
     division = args.division or get_division(core_server, core_db)
     
+    # TMP - until we use fasta from new website infra
+    cachedir_species_name = "homo_sapiens" if species == "homo_sapiens_37" else species
+    
     cache_dir = args.cache_dir or CACHE_DIR
     rl_version = get_relative_version(version, division)
-    genome_cache_dir = os.path.join(cache_dir, species, f"{rl_version}_{assembly}")         
+    genome_cache_dir = os.path.join(cache_dir, cachedir_species_name, f"{rl_version}_{assembly}")         
     if os.path.exists(genome_cache_dir):
         if not args.force:
             print(f"[INFO] {genome_cache_dir} directory exists. Skipping ...")

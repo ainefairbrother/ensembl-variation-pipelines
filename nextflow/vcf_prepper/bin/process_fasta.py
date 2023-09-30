@@ -92,6 +92,10 @@ def main(args = None):
     core_db = get_db_name(core_server, args.version, species, type = "core")
     division = args.division or get_division(core_server, core_db)
     fasta_species_name = get_fasta_species_name(species)
+
+    # TMP - until we use fasta from new website infra
+    if species == "homo_sapiens_37":
+        fasta_species_name = "Homo_sapiens"
     
     fasta_dir = args.fasta_dir or FASTA_DIR
     fasta_glob = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.*.fa.gz")
