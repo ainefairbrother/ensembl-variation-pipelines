@@ -2,6 +2,7 @@
 
 import sys
 from cyvcf2 import VCF, Writer
+from Bio import bgzf
 import argparse
 
 META = """##fileformat=VCFv4.2
@@ -63,7 +64,7 @@ def main(args = None):
     
     meta = format_meta(META, chromosomes, synonyms)
 
-    with open(output_file, "w") as o_file:
+    with bgzf.open(output_file, "wt") as o_file:
         o_file.write(meta)
         o_file.write(HEADER)
 
