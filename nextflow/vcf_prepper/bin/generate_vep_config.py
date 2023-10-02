@@ -308,11 +308,11 @@ def main(args = None):
     division = args.division or get_division(core_server, core_db)
     
     # TMP - until we use fasta from new website infra
-    species = "homo_sapiens" if species == "homo_sapiens_37"
+    species = "homo_sapiens" if species == "homo_sapiens_37" else species
     
     cache_dir = args.cache_dir or CACHE_DIR
     cache_version = get_relative_version(version, division)
-    genome_cache_dir = os.path.join(cache_dir, cachedir_species_name, f"{cache_version}_{assembly}")         
+    genome_cache_dir = os.path.join(cache_dir, species, f"{cache_version}_{assembly}")         
     if not os.path.exists(genome_cache_dir):
         print(f"[ERROR] {genome_cache_dir} directory does not exists, cannot run VEP. Exiting ...")
         exit(1)
