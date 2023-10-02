@@ -82,8 +82,6 @@ def main(args = None):
                 ]) + "\n"
             )
         input_vcf.close()
-        
-    o_file.close()
     
 if __name__ == "__main__":
     sys.exit(main())
