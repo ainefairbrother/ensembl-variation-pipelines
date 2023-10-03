@@ -13,8 +13,9 @@ ENDPOINT = "https://services.test.ensembl-production.ebi.ac.uk/api/genome_metada
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument(dest="api_outdir", type=str, help="path to a vcf prepper api output directory")
+    parser.add_argument("--api_outdir", dest="api_outdir", type=str, help="path to a vcf prepper api output directory")
     parser.add_argument("--endpoint", dest="endpoint", type=str, help="metadata api url")
+    parser.add_argument("--debug", dest="debug", action="store_true")
     
     return parser.parse_args(args)
     
@@ -37,8 +38,9 @@ def submit_payload(endpoint: str, payload: str) -> str:
 def main(args = None):
     args = parse_args(args)
     
-    api_outdir = args.api_outdir
+    api_outdir = args.api_outdir or os.getcwd()
     endpoint = args.endpoint or ENDPOINT
+    debug = args.debug
 
     for genome_uuid in os.listdir(api_outdir):
         api_vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
@@ -67,7 +69,10 @@ def main(args = None):
             dataset_attribute["value"] = variant_count
             payload["dataset_attribute"] = dataset_attribute
             
-            # submit_payload(endpoint, payload)
+            if not debug:
+                submit_payload(endpoint, payload)
+            else:
+                print(json.dumps(payload, indent = 4))
     
 if __name__ == "__main__":
     sys.exit(main())
