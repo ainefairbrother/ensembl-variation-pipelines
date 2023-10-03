@@ -69,12 +69,14 @@ workflow VCF_PREPPER {
     .map {
       meta, vcf, vcf_index ->
         empty = True
-        file.eachLine {
-          line ->
+        file.withReader {
+	  String line
+	  while ( line = it.readLine() ){
             if (line[0] != '#') {
               empty = False
               break
-            } 
+            }
+	  }
         }
 
         if (! empty) {
