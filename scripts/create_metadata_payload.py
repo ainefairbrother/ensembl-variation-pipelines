@@ -7,6 +7,7 @@ import os
 import json
 import subprocess
 import requests
+from uuid import UUID
 
 ENDPOINT = "https://services.test.ensembl-production.ebi.ac.uk/api/genome_metadata/datasets/"
 
@@ -18,7 +19,14 @@ def parse_args(args = None):
     parser.add_argument("--debug", dest="debug", action="store_true")
     
     return parser.parse_args(args)
-    
+
+def is_valid_uuid(uuid: str):
+    try:
+        uuid_obj = UUID(uuid)
+    except ValueError:
+        return False
+    return str(uuid_obj) == uuid
+
 def get_variant_count(file: str) -> str:
     process = subprocess.run(["bcftools", "index", "--nrecords", file],
         stdout = subprocess.PIPE,
@@ -42,9 +50,15 @@ def main(args = None):
     endpoint = args.endpoint or ENDPOINT
     debug = args.debug
 
+    print(f"[INFO] checking directory - {api_outdir} for genome uuids")
     for genome_uuid in os.listdir(api_outdir):
+        if not is_valid_uuid(genome_uuid):
+            print(f"[WARN] {genome_uuid} is not a valid uuid")
+            continue
+
         api_vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
         if not os.path.isfile(api_vcf):
+            print(f"[WARN] file not foun - {api_vcf}")
             continue
 
         variant_count = get_variant_count(api_vcf)
