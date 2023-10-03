@@ -68,17 +68,31 @@ workflow VCF_PREPPER {
     vep
     .map {
       meta, vcf, vcf_index ->
-        // TODO: when we have multiple source per genome we need to delete source specific files
-        new_vcf = "${meta.genome_api_outdir}/variation.vcf.gz"
-        new_vcf_index = "${meta.genome_api_outdir}/variation.vcf.gz.${meta.index_type}"
-        
-        // in -resume vcf and vcf_index may not exists as already renamed
-        // moveTo instead of renameTo - in -resume dest file may exists from previous run
-        if ( file(vcf).exists() && file(vcf_index).exists() ) {
-          file(vcf).moveTo(new_vcf)
-          file(vcf_index).moveTo(new_vcf_index)
+        empty = True
+        file.eachLine {
+          line ->
+            if (line[0] != '#') {
+              empty = False
+              break
+            } 
         }
-        [meta, new_vcf, new_vcf_index]
+
+        if (! empty) {
+          // TODO: when we have multiple source per genome we need to delete source specific files
+          new_vcf = "${meta.genome_api_outdir}/variation.vcf.gz"
+          new_vcf_index = "${meta.genome_api_outdir}/variation.vcf.gz.${meta.index_type}"
+          
+          // in -resume vcf and vcf_index may not exists as already renamed
+          // moveTo instead of renameTo - in -resume dest file may exists from previous run
+          if ( file(vcf).exists() && file(vcf_index).exists() ) {
+            file(vcf).moveTo(new_vcf)
+            file(vcf_index).moveTo(new_vcf_index)
+          }
+          [meta, new_vcf, new_vcf_index]
+        }
+        else {
+          []
+        }
     }.set { ch_tracks }
   }
   else {
