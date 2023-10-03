@@ -9,8 +9,6 @@ import subprocess
 import requests
 from uuid import UUID
 
-ENDPOINT = "https://services.test.ensembl-production.ebi.ac.uk/api/genome_metadata/datasets/"
-
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
@@ -47,8 +45,12 @@ def main(args = None):
     args = parse_args(args)
     
     api_outdir = args.api_outdir or os.getcwd()
-    endpoint = args.endpoint or ENDPOINT
+    endpoint = args.endpoint or None
     debug = args.debug
+
+    if not debug and endpoint is None:
+        print("[ERROR] please provide an endpoint using --endpoint if not using debug mode")
+        exit(1)
 
     print(f"[INFO] checking directory - {api_outdir} for genome uuids")
     for genome_uuid in os.listdir(api_outdir):
