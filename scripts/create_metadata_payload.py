@@ -60,7 +60,7 @@ def main(args = None):
 
         api_vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
         if not os.path.isfile(api_vcf):
-            print(f"[WARN] file not foun - {api_vcf}")
+            print(f"[WARN] file not found - {api_vcf}")
             continue
 
         variant_count = get_variant_count(api_vcf)
@@ -69,9 +69,9 @@ def main(args = None):
             payload = {}
             payload["user"] = "nakib"
             payload["name"] = "variation"
-            payload["description"] = "A test variation dataset",
-            payload["label"] = "Manual Add",
-            payload["dataset_type"] = "variation", 
+            payload["description"] = "Dataset with short variant data for TBD" # add species name when thoas is up 
+            payload["label"] = "TBD"        # add assembly accession when thoas is up
+            payload["dataset_type"] = "variation"
             
             dataset_source = {}
             dataset_source["name"] = api_vcf
