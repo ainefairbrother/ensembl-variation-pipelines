@@ -14,6 +14,7 @@ include { PREPARE_GENOME } from "../subworkflows/local/prepare_genome.nf"
 include { UPDATE_FIELDS } from "../modules/local/update_fields.nf"
 include { REMOVE_VARIANTS } from "../modules/local/remove_variants.nf"
 include { RUN_VEP } from "../subworkflows/local/run_vep.nf"
+include { COUNT_VCF_VARIANT } from "../modules/local/count_vcf_variant.nf"
 include { SPLIT_VCF } from "../subworkflows/local/split_vcf.nf"
 include { VCF_TO_BED } from "../modules/local/vcf_to_bed.nf"
 include { CONCAT_BEDS } from "../modules/local/concat_beds.nf"
@@ -65,21 +66,19 @@ workflow VCF_PREPPER {
     vep = RUN_VEP( REMOVE_VARIANTS.out )
 
     // post-process
-    vep
-    .map {
-      meta, vcf, vcf_index ->
-        empty = True
-        file.withReader {
-	  String line
-	  while ( line = it.readLine() ){
-            if (line[0] != '#') {
-              empty = False
-              break
-            }
-	  }
-        }
+    COUNT_VCF_VARIANT( vep )
 
-        if (! empty) {
+    COUNT_VCF_VARIANT.out
+    .map {
+      meta, vcf, vcf_index, variant_count ->
+        // if vcf has no variant - remove output directories and filter channel 
+        if ( variant_count.equals("0") ) {
+          file(meta.genome_api_outdir).delete()
+          file(meta.genome_tracks_outdir).delete()
+
+          "NO_VARIANT"
+        }
+        else {
           // TODO: when we have multiple source per genome we need to delete source specific files
           new_vcf = "${meta.genome_api_outdir}/variation.vcf.gz"
           new_vcf_index = "${meta.genome_api_outdir}/variation.vcf.gz.${meta.index_type}"
@@ -90,17 +89,17 @@ workflow VCF_PREPPER {
             file(vcf).moveTo(new_vcf)
             file(vcf_index).moveTo(new_vcf_index)
           }
+
           [meta, new_vcf, new_vcf_index]
         }
-        else {
-          []
-        }
-    }.set { ch_tracks }
+    }
+    .filter { ! it.equals("NO_VARIANT") }
+    .set { ch_tracks }
   }
   else {
     ch_tracks = PREPARE_GENOME.out
   }
-  
+
   // track files
   if (!params.skip_tracks) {
     // create bed from VCF
