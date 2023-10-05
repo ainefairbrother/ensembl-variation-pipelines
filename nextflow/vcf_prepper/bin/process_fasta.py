@@ -106,19 +106,18 @@ def main(args = None):
     
     fasta_dir = args.fasta_dir or FASTA_DIR
     fasta_glob = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.*.fa.gz")
-    
-    if len(glob.glob(fasta_glob)) > 1:
-        print(f"[ERROR] multiple fasta file found. Check {fasta_glob}")
-        exit(1)
 
     fasta = None
-    if glob.glob(fasta_glob) and not args.force:
+    # for human --force won't work; we check and delete fasta manually if needed 
+    if glob.glob(fasta_glob) and (not args.force or species.startswith("homo_sapiens")):
         print(f"[INFO] {fasta_glob} exists. Skipping ...")
-        fasta = glob.glob(fasta_glob)[0]
-    elif glob.glob(fasta_glob) and species.startswith("homo_sapiens"):
-        # for human we check and delete fasta manually if needed 
-        print(f"[WARN] {fasta_glob} exists for human. Won't be overwritten ...")
-        fasta = glob.glob(fasta_glob)[0]
+        
+        fasta = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.primary_assembly.fa.gz")
+        if not os.path.isfile(fasta):
+            fasta = os.path.join(fasta_dir, f"{fasta_species_name}.{assembly}.dna.toplevel.fa.gz")
+        if not os.path.isfile(fasta):
+            print(f"[ERROR] No valid fasta file found, cannot run VEP. Exiting ...")
+            exit(1)
     else:
         if glob.glob(fasta_glob):
             print(f"[INFO] {fasta_glob} exists. Will be oerwritten ...")
