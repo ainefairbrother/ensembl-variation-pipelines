@@ -37,7 +37,9 @@ def generate_chrom_sizes(server: dict, core_db: str, chrom_sizes: str, assembly:
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE
     )
-    coord_ids = tuple([int(id) for id in process.stdout.decode().strip().split("\n")])
+    coord_ids = "(" + ",".join(
+            [id for id in process.stdout.decode().strip().split("\n")]
+        ) + ")"
     
     query = f"SELECT name, length FROM seq_region WHERE coord_system_id IN {coord_ids};"
     process = subprocess.run(["mysql",
