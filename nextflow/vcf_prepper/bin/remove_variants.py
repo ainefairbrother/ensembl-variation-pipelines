@@ -67,7 +67,7 @@ def main(args = None):
     
     # Remove variant based on removal status
     input_vcf = VCF(input_file)
-    output_vcf_writer = Writer(output_file, input_vcf)
+    output_vcf_writer = Writer(output_file, input_vcf, mode="wz")
     for variant in input_vcf:
         
         variant_identifier = get_identifier(variant)
