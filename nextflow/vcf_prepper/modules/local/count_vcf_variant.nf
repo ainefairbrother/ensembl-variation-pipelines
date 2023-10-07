@@ -4,10 +4,10 @@ process COUNT_VCF_VARIANT {
     label 'bcftools'
 
     input:
-    tuple val(meta), path(vcf), path(vcf_index)
+    tuple val(meta), val(vcf), val(vcf_index)
 
     output:
-    tuple val(meta), path(vcf), path(vcf_index), env(count)
+    tuple val(meta), val(vcf), val(vcf_index), env(count)
 
     shell:
     '''
