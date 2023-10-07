@@ -12,7 +12,7 @@ process BED_TO_BIGWIG {
   afterScript 'rm all.bed'
   
   shell:
-  source = meta.source
+  source = meta.source.toLowerCase()
   output_wig = "variant-${source}-summary.wig"
   output_bw = "${meta.genome_tracks_outdir}/variant-${source}-summary.bw"
   chrom_sizes = meta.chrom_sizes

@@ -8,7 +8,7 @@ process BED_TO_BIGBED {
   path "variant-${source}-details.bb"
   
   shell:
-  source = meta.source
+  source = meta.source.toLowerCase()
   output_bb = "${meta.genome_tracks_outdir}/variant-${source}-details.bb"
   chrom_sizes = meta.chrom_sizes
   
