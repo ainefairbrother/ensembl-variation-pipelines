@@ -11,6 +11,7 @@ def parse_args(args = None, description: bool = None):
     parser = argparse.ArgumentParser(description = description, formatter_class=RawTextHelpFormatter)
     
     parser.add_argument(dest="input_file", type=str, help="input VCF file")
+    parser.add_argument('--chrom_sizes', dest="chrom_sizes", type=str, help="file with chromomsome sizes")
     parser.add_argument('--remove_nonunique_ids', dest="remove_nonunique_ids", action="store_true", help="remove variants with same ids")
     parser.add_argument('--remove_patch_regions', dest="remove_patch_regions", action="store_true", help="remove variant in patch region")
     parser.add_argument('-O', '--output_file', dest="output_file", type=str)
@@ -44,6 +45,17 @@ def generate_removal_status(vcf_file: str, get_identifier: Callable, remove_patc
     
     return removal_status
 
+def parse_chrom_sizes(chrom_sizes: str) -> list:
+    'Parse chrom_sizes file to get list of valid chromosomes'
+
+    valid_chroms = []
+    with open(chrom_sizes, "r") as file:
+        for line in file:
+            chrom = line.split("\t")[0].strip()
+            valid_chroms.append(chrom)
+
+    return valid_chroms
+
 def main(args = None):
     description = '''
     Removes variant based on uniqueness and sequence region. 
@@ -54,6 +66,7 @@ def main(args = None):
     args = parse_args(args, description)
     
     input_file = args.input_file
+    chrom_sizes = args.chrom_sizes or "None"
     remove_nonunique_ids = args.remove_nonunique_ids
     remove_patch_regions = args.remove_patch_regions
     output_file = args.output_file or input_file.replace("renamed", "processed")
@@ -65,6 +78,14 @@ def main(args = None):
         
     removal_status = generate_removal_status(input_file, get_identifier, remove_patch_regions)
     
+    check_chrom = False
+    if chrom_sizes is not None or not os.path.isfile(chrom_sizes):
+        valid_chroms = parse_chrom_sizes(chrom_sizes)
+        check_chrom = True
+
+    if len(valid_chroms) == 0:
+        print(f"[WARN] {chrom_sizes} do not have any chromsome length, should be checked.")
+
     # Remove variant based on removal status
     input_vcf = VCF(input_file)
     output_vcf_writer = Writer(output_file, input_vcf, mode="wz")
@@ -72,7 +93,10 @@ def main(args = None):
         
         variant_identifier = get_identifier(variant)
         if removal_status[variant_identifier]:
-                continue
+            continue
+
+        if check_chrom and variant.CHROM not in valid_chroms:
+            continue
                 
         output_vcf_writer.write_record(variant)
     output_vcf_writer.close()
