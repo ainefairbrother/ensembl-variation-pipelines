@@ -6,6 +6,7 @@ from cyvcf2.cyvcf2 import Variant
 import argparse
 from argparse import RawTextHelpFormatter
 from typing import Callable
+import os
 
 def parse_args(args = None, description: bool = None):
     parser = argparse.ArgumentParser(description = description, formatter_class=RawTextHelpFormatter)
@@ -66,7 +67,7 @@ def main(args = None):
     args = parse_args(args, description)
     
     input_file = args.input_file
-    chrom_sizes = args.chrom_sizes or "None"
+    chrom_sizes = args.chrom_sizes or None
     remove_nonunique_ids = args.remove_nonunique_ids
     remove_patch_regions = args.remove_patch_regions
     output_file = args.output_file or input_file.replace("renamed", "processed")
@@ -79,13 +80,12 @@ def main(args = None):
     removal_status = generate_removal_status(input_file, get_identifier, remove_patch_regions)
     
     check_chrom = False
-    if chrom_sizes is not None or not os.path.isfile(chrom_sizes):
+    if chrom_sizes is not None and not os.path.isfile(chrom_sizes):
         valid_chroms = parse_chrom_sizes(chrom_sizes)
+        if len(valid_chroms) == 0:
+            print(f"[WARN] {chrom_sizes} do not have any chromsome length, should be checked.")
         check_chrom = True
-
-    if len(valid_chroms) == 0:
-        print(f"[WARN] {chrom_sizes} do not have any chromsome length, should be checked.")
-
+        
     # Remove variant based on removal status
     input_vcf = VCF(input_file)
     output_vcf_writer = Writer(output_file, input_vcf, mode="wz")

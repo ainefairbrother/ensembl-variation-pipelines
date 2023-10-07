@@ -11,6 +11,7 @@ process REMOVE_VARIANTS {
   
   shell:
   output_file =  "REMOVED_" + file(vcf).getName()
+  chrom_sizes = meta.chrom_sizes
   remove_nonunique_ids = params.remove_nonunique_ids ? "--remove_nonunique_ids" : ""
   remove_patch_regions = params.remove_patch_regions ? "--remove_patch_regions" : ""
   
@@ -18,6 +19,7 @@ process REMOVE_VARIANTS {
   pyenv local variation-eva
   remove_variants.py \
     !{vcf} \
+    --chrom_sizes !{chrom_sizes} \
     !{remove_nonunique_ids} \
     !{remove_patch_regions} \
     -O !{output_file}
