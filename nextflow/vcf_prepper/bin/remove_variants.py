@@ -80,7 +80,7 @@ def main(args = None):
     removal_status = generate_removal_status(input_file, get_identifier, remove_patch_regions)
     
     check_chrom = False
-    if chrom_sizes is not None and not os.path.isfile(chrom_sizes):
+    if chrom_sizes is not None and os.path.isfile(chrom_sizes):
         valid_chroms = parse_chrom_sizes(chrom_sizes)
         if len(valid_chroms) == 0:
             print(f"[WARN] {chrom_sizes} do not have any chromsome length, should be checked.")
