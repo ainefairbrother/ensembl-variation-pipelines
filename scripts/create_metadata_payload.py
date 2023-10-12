@@ -8,6 +8,7 @@ import json
 import subprocess
 import requests
 from uuid import UUID
+from cyvcf2 import VCF
 
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
@@ -38,6 +39,46 @@ def get_variant_count(file: str) -> str:
         print(f"""Could not get count from {file}
         {e}""")
         return None
+
+def get_csq_field_index(csq: str, field: str ="Consequence") -> int:
+    csq_list = csq.split("Format: ")[1].split("|")
+    for index, value in enumerate(csq_list):
+        if value == field:
+            return index
+
+def get_variant_example(file: str, species: str) -> str:
+    vcf = VCF(file)
+    
+    csq_info_description = vcf.get_header_type("CSQ")["Description"]
+    consequence_idx = get_csq_field_index(csq_info_description, "Consequence")
+
+    # if human, try to find rs699 in 20kbp range
+    if species.startswith("homo_sapiens"):
+        for variant in vcf('1:230700048-230720048'):
+            if variant.ID == "rs699":
+                chrom = variant.CHROM
+                pos = variant.POS
+                id = variant.ID
+                return f"{chrom}:{pos}:{id}"
+
+    # find a missense_variant
+    for variant in vcf:
+        csqs = variant.INFO["CSQ"]
+        for csq in csqs.split(","):
+            consequence = csq.split("|")[consequence_idx]
+
+            if consequence == "missense_variant":
+                chrom = variant.CHROM
+                pos = variant.POS
+                id = variant.ID
+                return f"{chrom}:{pos}:{id}"
+
+    # get some random variant if no missense_variant found
+    for variant in vcf(f"{vcf.seqnames[0]}:1000"):
+        chrom = variant.CHROM
+        pos = variant.POS
+        id = variant.ID
+        return f"{chrom}:{pos}:{id}"
 
 def parse_input_config(input_config: str) -> dict:
     if not os.path.isfile(input_config):
@@ -94,7 +135,9 @@ def main(args = None):
         # TBD: get this data from thoas if input_config not given
         species = species_metadata[genome_uuid]["species"]
         assembly = species_metadata[genome_uuid]["assembly"]
+
         variant_count = get_variant_count(api_vcf)
+        variant_example = get_variant_example(api_vcf, species)
         
         if variant_count is not None:
             payload = {}
@@ -114,6 +157,8 @@ def main(args = None):
             dataset_attribute = {}
             dataset_attribute["name"] = "variation.short_variants"
             dataset_attribute["value"] = variant_count
+            dataset_attribute["name"] = "sample.variantion_param"
+            dataset_attribute["value"] = variant_example
             payload["dataset_attribute"] = dataset_attribute
             
             if not debug:
