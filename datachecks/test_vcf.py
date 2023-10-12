@@ -9,11 +9,6 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-@pytest.fixture()
-def vcf_reader(vcf):
-    vcf_reader = VCF(vcf)
-    return vcf_reader
-
 class TestFile:
 
     def test_exist(self, vcf):
