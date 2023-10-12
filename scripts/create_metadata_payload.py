@@ -13,6 +13,7 @@ def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--api_outdir", dest="api_outdir", type=str, help="path to a vcf prepper api output directory")
+    parser.add_argument("--input_config", dest="input_config", type=str, help="input_config json file used in vcf_prepper")
     parser.add_argument("--endpoint", dest="endpoint", type=str, help="metadata api url")
     parser.add_argument("--debug", dest="debug", action="store_true")
     
@@ -38,6 +39,25 @@ def get_variant_count(file: str) -> str:
         {e}""")
         return None
 
+def parse_input_config(input_config: str) -> dict:
+    if not os.path.isfile(input_config):
+        return []
+
+    with open(input_config, "r") as file:
+        input_config_json = json.load(file)
+
+    species_metadata = {}
+    for species in input_config_json:
+        for genome in input_config_json[species]:
+            genome_uuid = genome["genome_uuid"]
+            if genome_uuid not in species_metadata:
+                species_metadata[genome_uuid] = {}
+
+            species_metadata[genome_uuid]["species"] = genome["species"]
+            species_metadata[genome_uuid]["assembly"] = genome["assembly"]
+
+    return species_metadata
+
 def submit_payload(endpoint: str, payload: str) -> str:
     requests.put(endpoint, payload)
     
@@ -45,6 +65,7 @@ def main(args = None):
     args = parse_args(args)
     
     api_outdir = args.api_outdir or os.getcwd()
+    input_config = args.input_config or None
     endpoint = args.endpoint or None
     debug = args.debug
 
@@ -52,8 +73,15 @@ def main(args = None):
         print("[ERROR] please provide an endpoint using --endpoint if not using debug mode")
         exit(1)
 
+    species_metadata = {}
+    if input_config is not None:
+        species_metadata = parse_input_config(input_config)
+
     print(f"[INFO] checking directory - {api_outdir} for genome uuids")
     for genome_uuid in os.listdir(api_outdir):
+        if species_metadata and genome_uuid not in species_metadata:
+            continue
+
         if not is_valid_uuid(genome_uuid):
             print(f"[WARN] {genome_uuid} is not a valid uuid")
             continue
@@ -63,14 +91,17 @@ def main(args = None):
             print(f"[WARN] file not found - {api_vcf}")
             continue
 
+        # TBD: get this data from thoas if input_config not given
+        species = species_metadata[genome_uuid]["species"]
+        assembly = species_metadata[genome_uuid]["assembly"]
         variant_count = get_variant_count(api_vcf)
         
         if variant_count is not None:
             payload = {}
             payload["user"] = "nakib"
             payload["name"] = "variation"
-            payload["description"] = "Dataset with short variant data for TBD" # add species name when thoas is up 
-            payload["label"] = "TBD"        # add assembly accession when thoas is up
+            payload["description"] = f"Short variant data for {species}"
+            payload["label"] = assembly
             payload["dataset_type"] = "variation"
             
             dataset_source = {}
