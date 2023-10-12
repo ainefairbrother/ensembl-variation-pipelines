@@ -66,13 +66,13 @@ def main(args = None):
     if vcf:
         return pytest.main(["--vcf", f"{vcf}", "test_vcf/"])
 
-
     species_metadata = {}
     if input_config is not None:
         species_metadata = get_species_metadata(input_config)
 
     vcf_files = []
     api_outdir = os.path.join(dir, "api")
+    track_outdir = os.path.join(dir, "tracks")
     for genome_uuid in os.listdir(api_outdir):
         if species_metadata and genome_uuid not in species_metadata:
             continue
@@ -81,23 +81,39 @@ def main(args = None):
             logger.warning(f"{genome_uuid} is not a valid uuid")
             continue
 
-        api_vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
-        if not os.path.isfile(api_vcf):
-            logger.warning(f"file not found - {api_vcf}")
+        vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
+        source_vcf = species_metadata[genome_uuid]["file_location"]
+        bigbed = os.path.join(track_outdir, genome_uuid, "variant-details.bb")
+
+        # if os.path.isfile(vcf):
+        #     retcode = pytest.main(
+        #         [
+        #             "--source_vcf", f"{source_vcf}", 
+        #             "--vcf", f"{vcf}",
+        #             "test_vcf/"
+        #         ]
+        #     )
+        #     if retcode != 0:
+        #         return 1
+        # else:
+        #     logger.warning(f"file not found - {vcf}")
+        #     continue
+        
+        if os.path.isfile(bigbed):
+            retcode = pytest.main(
+                [
+                    "--source_vcf", f"{source_vcf}",
+                    "--bigbed", f"{bigbed}",
+                    "--vcf", f"{vcf}", 
+                    "./"
+                ]
+            )
+            if retcode != 0:
+                return 1
+        else:
+            logger.warning(f"file not found - {bigbed}")
             continue
 
-        source_api_vcf = species_metadata[genome_uuid]["file_location"]
-
-        retcode = pytest.main(
-            [
-                "--source_vcf", f"{source_api_vcf}", 
-                "--vcf", f"{api_vcf}",
-                "test_vcf/"
-            ]
-        )
-
-        if retcode != 0:
-            return 1
 
 if __name__ == "__main__":
     sys.exit(main())
