@@ -37,6 +37,7 @@ def get_species_metadata(input_config: str = None) -> dict:
 
             species_metadata[genome_uuid]["species"] = genome["species"]
             species_metadata[genome_uuid]["assembly"] = genome["assembly"]
+            species_metadata[genome_uuid]["file_location"] = genome["file_location"]
 
     return species_metadata
 
@@ -47,7 +48,29 @@ def is_valid_uuid(uuid: str):
         return False
     return str(uuid_obj) == uuid
 
-def get_vcf_files(dir: str, species_metadata: dict) -> list:
+def main(args = None):
+    args = parse_args(args)
+
+    vcf = args.vcf or None
+    input_config = args.input_config or None
+    dir = args.dir
+
+    if vcf is None and dir is None and input_config is None:
+        logger.error("Need either --vcf or --input_config or --dir to run test")
+        return 1
+
+    if vcf is not None and (dir is not None or input_config is not None):
+        logger.error("Both --vcf and --input_config/--dir given, cannot work with both")
+        return 1
+
+    if vcf:
+        return pytest.main(["--vcf", f"{vcf}", "test_vcf/"])
+
+
+    species_metadata = {}
+    if input_config is not None:
+        species_metadata = get_species_metadata(input_config)
+
     vcf_files = []
     api_outdir = os.path.join(dir, "api")
     for genome_uuid in os.listdir(api_outdir):
@@ -63,31 +86,16 @@ def get_vcf_files(dir: str, species_metadata: dict) -> list:
             logger.warning(f"file not found - {api_vcf}")
             continue
 
-        vcf_files.append(api_vcf)
-    
-    return vcf_files
+        source_api_vcf = species_metadata[genome_uuid]["file_location"]
 
-def main(args = None):
-    args = parse_args(args)
+        retcode = pytest.main(
+            [
+                "--source_vcf", f"{source_api_vcf}", 
+                "--vcf", f"{api_vcf}",
+                "test_vcf/"
+            ]
+        )
 
-    vcf = args.vcf or None
-    input_config = args.input_config or None
-    dir = args.dir
-
-    if vcf is None and dir is None and input_config is None:
-        logger.error("Need either --vcf or --input_config or --dir to run test")
-
-    if vcf is None:
-        species_metadata = {}
-        if input_config is not None:
-            species_metadata = get_species_metadata(input_config)
-
-            vcf_files = get_vcf_files(dir, species_metadata)
-    else:
-        vcf_files = [vcf]
-
-    for vcf in vcf_files:
-        retcode = pytest.main(["--vcf", f"{vcf}", "test_vcf/"])
         if retcode != 0:
             return 1
 

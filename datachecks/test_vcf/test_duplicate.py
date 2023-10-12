@@ -36,3 +36,6 @@ class TestDuplicate:
 
     def test_duplicate_positioned_id(self, vcf_reader):
         assert no_duplicated_identifier(vcf_reader, get_positioned_id)
+
+    def test_duplicate_id(self, vcf_reader):
+        assert no_duplicated_identifier(vcf_reader, get_id)
