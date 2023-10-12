@@ -81,7 +81,7 @@ def main(args = None):
             payload["genome_uuid"] = genome_uuid
 
             dataset_attribute = {}
-            dataset_attribute["name"] = "short_variants"
+            dataset_attribute["name"] = "variation.short_variants"
             dataset_attribute["value"] = variant_count
             payload["dataset_attribute"] = dataset_attribute
             
