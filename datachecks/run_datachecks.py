@@ -85,35 +85,16 @@ def main(args = None):
         source_vcf = species_metadata[genome_uuid]["file_location"]
         bigbed = os.path.join(track_outdir, genome_uuid, "variant-details.bb")
 
-        # if os.path.isfile(vcf):
-        #     retcode = pytest.main(
-        #         [
-        #             "--source_vcf", f"{source_vcf}", 
-        #             "--vcf", f"{vcf}",
-        #             "test_vcf/"
-        #         ]
-        #     )
-        #     if retcode != 0:
-        #         return 1
-        # else:
-        #     logger.warning(f"file not found - {vcf}")
-        #     continue
-        
-        if os.path.isfile(bigbed):
-            retcode = pytest.main(
-                [
-                    "--source_vcf", f"{source_vcf}",
-                    "--bigbed", f"{bigbed}",
-                    "--vcf", f"{vcf}", 
-                    "./"
-                ]
-            )
-            if retcode != 0:
-                return 1
-        else:
-            logger.warning(f"file not found - {bigbed}")
-            continue
-
+        retcode = pytest.main(
+            [
+                "--source_vcf", f"{source_vcf}",
+                "--bigbed", f"{bigbed}",
+                "--vcf", f"{vcf}", 
+                "./"
+            ]
+        )
+        if retcode != 0:
+            return 1
 
 if __name__ == "__main__":
     sys.exit(main())
