@@ -2,3 +2,5 @@
 **/DEFAULT.ini
 **/.nextflow
 **/.nf-test
+**/__pycache__
+**/.python-version
