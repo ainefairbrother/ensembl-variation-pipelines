@@ -157,7 +157,7 @@ def main(args = None):
             dataset_attribute = {}
             dataset_attribute["name"] = "variation.short_variants"
             dataset_attribute["value"] = variant_count
-            dataset_attribute["name"] = "sample.variantion_param"
+            dataset_attribute["name"] = "variation.sample_variant"
             dataset_attribute["value"] = variant_example
             payload["dataset_attribute"] = dataset_attribute
             
