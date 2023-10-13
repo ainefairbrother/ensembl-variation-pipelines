@@ -39,8 +39,17 @@ def parse_input_config(input_config: str) -> dict:
                 species_metadata[genome_uuid] = {}
 
             species_metadata[genome_uuid]["source_name"] = genome["source_name"]
+            species_metadata[genome_uuid]["species"] = genome["species"]
 
     return species_metadata
+
+def get_source_info(source: str) -> str:
+    if source == "dbSNP":
+        return "dbSNP - build 156"
+    elif source == "EVA":
+        return "European Variation Archive (EVA) - release 5"
+    elif source == "Ensembl":
+        return "Ensembl - e110"
 
 def get_source_url(source: str) -> str:
     if source == "dbSNP":
@@ -66,6 +75,10 @@ def main(args = None):
             continue
 
         source = species_metadata[genome_uuid]["source_name"]
+        species = species_metadata[genome_uuid]["species"]
+
+        source_info = get_source_info(source)
+        source_url = get_source_url(source)
 
         metadata[genome_uuid] = {}
         metadata[genome_uuid]["label"] = f"{source} short variants"
@@ -74,11 +87,11 @@ def main(args = None):
         metadata[genome_uuid]["datafiles"]["details"] = f"variant-{source.lower()}-details.bb"
         metadata[genome_uuid]["datafiles"]["summary"] = f"variant-{source.lower()}-summary.bw"
 
-        metadata[genome_uuid]["description"] = f"All short variants (SNPs and indels) data from {source}"
+        metadata[genome_uuid]["description"] = f"All short variants (SNPs and indel) data from {source_info}"
         
         metadata[genome_uuid]["source"] = {}
         metadata[genome_uuid]["source"]["name"] = source
-        metadata[genome_uuid]["source"]["url"] = get_source_url(source) 
+        metadata[genome_uuid]["source"]["url"] = source_url 
             
     print(json.dumps(metadata, indent = 4))
     

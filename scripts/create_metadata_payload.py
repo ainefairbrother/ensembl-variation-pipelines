@@ -117,7 +117,7 @@ def main(args = None):
     species_metadata = {}
     if input_config is not None:
         species_metadata = parse_input_config(input_config)
-
+    
     print(f"[INFO] checking directory - {api_outdir} for genome uuids")
     for genome_uuid in os.listdir(api_outdir):
         if species_metadata and genome_uuid not in species_metadata:
@@ -154,11 +154,17 @@ def main(args = None):
             
             payload["genome_uuid"] = genome_uuid
 
-            dataset_attribute = {}
-            dataset_attribute["name"] = "variation.short_variants"
-            dataset_attribute["value"] = variant_count
-            dataset_attribute["name"] = "variation.sample_variant"
-            dataset_attribute["value"] = variant_example
+            dataset_attribute = []
+            
+            attribute = {}
+            attribute["name"] = "variation.short_variants"
+            attribute["value"] = str(variant_count)
+            dataset_attribute.append(attribute)
+            attribute = {}
+            attribute["name"] = "variation.sample_variant"
+            attribute["value"] = variant_example
+            dataset_attribute.append(attribute)
+
             payload["dataset_attribute"] = dataset_attribute
             
             if not debug:
