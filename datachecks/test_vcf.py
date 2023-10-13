@@ -66,7 +66,7 @@ class TestDuplicate:
     def test_duplicate_id(self, vcf_reader):
         assert self.no_duplicated_identifier(vcf_reader, self.get_id)
 
-class TestCount:
+class TestSrcCount:
 
     def get_total_variant_count_from_vcf(self, vcf: str) -> int:
         if vcf is None:
