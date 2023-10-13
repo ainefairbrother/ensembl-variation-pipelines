@@ -7,6 +7,7 @@ import json
 from uuid import UUID
 import argparse
 import configparser
+import subprocess
 import logging
 
 logger = logging.getLogger(__name__)
@@ -81,22 +82,26 @@ def main(args = None):
             logger.warning(f"{genome_uuid} is not a valid uuid")
             continue
 
+        species = species_metadata[genome_uuid]["species"]
+
         vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
         source_vcf = species_metadata[genome_uuid]["file_location"]
         bigbed = os.path.join(track_outdir, genome_uuid, "variant-details.bb")
         bigwig = os.path.join(track_outdir, genome_uuid, "variant-details.bw")
 
-        retcode = pytest.main(
-            [
-                "--source_vcf", f"{source_vcf}",
-                "--bigbed", f"{bigbed}",
-                "--bigwig", f"{bigwig}",
-                "--vcf", f"{vcf}", 
-                "./test_bigwig.py"
-            ]
+        output_file = open(f"{species}_dc.txt", "w")
+        subprocess.run([
+                "bsub", "-J", f"pytest_{species}",
+                f"pytest " + \
+                f"--source_vcf {source_vcf} " + \
+                f"--bigbed {bigbed} " + \
+                f"--bigwig {bigwig} " + \
+                f"--vcf {vcf} " + \
+                "./"
+            ],
+            stdout = output_file,
+            stderr = subprocess.PIPE
         )
-        if retcode != 0:
-            return 1
 
 if __name__ == "__main__":
     sys.exit(main())
