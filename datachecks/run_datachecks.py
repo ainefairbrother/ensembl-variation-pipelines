@@ -85,7 +85,6 @@ def main(args = None):
             continue
 
         species = species_metadata[genome_uuid]["species"]
-
         vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
         source_vcf = species_metadata[genome_uuid]["file_location"]
         bigbed = os.path.join(track_outdir, genome_uuid, "variant-details.bb")
@@ -101,6 +100,7 @@ def main(args = None):
                 f"--bigbed {bigbed} " + \
                 f"--bigwig {bigwig} " + \
                 f"--vcf {vcf} " + \
+                f"--species {species} " + \
                 "./"
             ]
         )

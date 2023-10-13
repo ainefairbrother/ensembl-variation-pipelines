@@ -11,6 +11,7 @@ def pytest_addoption(parser):
     parser.addoption("--bigbed", type=str, default=None)
     parser.addoption("--bigwig", type=str, default=None)
     parser.addoption("--source_vcf", type=str, default=None)
+    parser.addoption("--species", type=str, default=None)
 
 def pytest_generate_tests(metafunc):
     if "vcf" in metafunc.fixturenames:
@@ -21,6 +22,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("bigwig", [metafunc.config.getoption("bigwig")])
     if "source_vcf" in metafunc.fixturenames:
         metafunc.parametrize("source_vcf", [metafunc.config.getoption("source_vcf")])
+    if "species" in metafunc.fixturenames:
+        metafunc.parametrize("species", [metafunc.config.getoption("species")])
 
 @pytest.fixture()
 def vcf_reader(vcf):
