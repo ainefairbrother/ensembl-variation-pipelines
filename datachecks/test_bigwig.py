@@ -30,16 +30,16 @@ class TestSrcCount:
         return int(process.stdout.decode().strip())
 
 
-    def get_total_variant_count_from_bb(self, bw_reader) -> int:
+    def get_total_variant_count_from_bw(self, bw_reader) -> int:
         variant_counts = 0
         for chr in bw_reader.chroms():
-            non_zero_vals = [val for val in bw_reader.values(chr, 0, bb_reader.chroms(chr)) if val > 0.0]
+            non_zero_vals = [val for val in bw_reader.values(chr, 0, bw_reader.chroms(chr)) if val > 0.0]
             variant_counts += len(non_zero_vals)
         return variant_counts
 
     def test_compare_count_with_source(self, vcf, bw_reader):
         variant_count_vcf = self.get_total_variant_count_from_vcf(vcf)
-        variant_count_bw = self.get_total_variant_count_from_bb(bw_reader)
+        variant_count_bw = self.get_total_variant_count_from_bw(bw_reader)
 
         assert variant_count_bw > variant_count_vcf * 0.95
 
@@ -62,8 +62,8 @@ class TestSrcExistance:
 
         for variant in variants:
             chr = variant.CHROM
-            start = int(variant.POS)
-            end = start + 1 # for insertion
+            start = int(variant.POS) - 1
+            end = start + 2
 
-            bw_state = bw_reader.stats(chr, start, end)
+            bw_state = bw_reader.stats(chr, start, end)[0]
             assert bw_state > 0.0
