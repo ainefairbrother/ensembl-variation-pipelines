@@ -16,9 +16,10 @@ logger.setLevel(logging.INFO)
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--vcf", type=str)
-    parser.add_argument("--dir", type=str, default = os.getcwd())
-    parser.add_argument("--input_config", type=str)
+    parser.add_argument("--vcf", dest="vcf", type=str, )
+    parser.add_argument("--dir", dest="dir", type=str, default = os.getcwd())
+    parser.add_argument("--input_config", dest="input_config", type=str)
+    parser.add_argument("-O", "--output_dir", dest="output_dir", type=str, default = os.getcwd())
     
     return parser.parse_args(args)
 
@@ -55,6 +56,7 @@ def main(args = None):
     vcf = args.vcf or None
     input_config = args.input_config or None
     dir = args.dir
+    output_dir = args.output_dir
 
     if vcf is None and dir is None and input_config is None:
         logger.error("Need either --vcf or --input_config or --dir to run test")
@@ -89,18 +91,18 @@ def main(args = None):
         bigbed = os.path.join(track_outdir, genome_uuid, "variant-details.bb")
         bigwig = os.path.join(track_outdir, genome_uuid, "variant-details.bw")
 
-        output_file = open(f"{species}_dc.txt", "w")
         subprocess.run([
-                "bsub", "-J", f"pytest_{species}",
+                "bsub",
+                "-J", f"dc_{species}",
+                "-oo", f"{output_dir}/dc_{species}.out",
+                "-eo", f"{output_dir}/dc_{species}.err",
                 f"pytest " + \
                 f"--source_vcf {source_vcf} " + \
                 f"--bigbed {bigbed} " + \
                 f"--bigwig {bigwig} " + \
                 f"--vcf {vcf} " + \
-                "./"
-            ],
-            stdout = output_file,
-            stderr = subprocess.PIPE
+                "./test_bigbed.py"
+            ]
         )
 
 if __name__ == "__main__":
