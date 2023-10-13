@@ -29,6 +29,6 @@ process BED_TO_BIGWIG {
   
   # temp: for one source we create symlink for focus
   cd !{meta.genome_tracks_outdir}
-  ln -sf variant-!{source}-details.bw variant-details.bw
+  ln -sf variant-!{source}-summary.bw variant-summary.bw
   '''
 }
