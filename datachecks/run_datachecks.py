@@ -16,7 +16,6 @@ logger.setLevel(logging.INFO)
 def parse_args(args = None):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--vcf", dest="vcf", type=str, )
     parser.add_argument("--dir", dest="dir", type=str, default = os.getcwd())
     parser.add_argument("--input_config", dest="input_config", type=str)
     parser.add_argument("-O", "--output_dir", dest="output_dir", type=str, default = os.getcwd())
@@ -53,21 +52,9 @@ def is_valid_uuid(uuid: str):
 def main(args = None):
     args = parse_args(args)
 
-    vcf = args.vcf or None
     input_config = args.input_config or None
     dir = args.dir
     output_dir = args.output_dir
-
-    if vcf is None and dir is None and input_config is None:
-        logger.error("Need either --vcf or --input_config or --dir to run test")
-        return 1
-
-    if vcf is not None and (dir is not None or input_config is not None):
-        logger.error("Both --vcf and --input_config/--dir given, cannot work with both")
-        return 1
-
-    if vcf:
-        return pytest.main(["--vcf", f"{vcf}", "test_vcf/"])
 
     species_metadata = {}
     if input_config is not None:
