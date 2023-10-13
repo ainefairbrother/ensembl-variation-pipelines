@@ -101,7 +101,7 @@ def main(args = None):
                 f"--bigbed {bigbed} " + \
                 f"--bigwig {bigwig} " + \
                 f"--vcf {vcf} " + \
-                "./test_bigbed.py"
+                "./"
             ]
         )
 

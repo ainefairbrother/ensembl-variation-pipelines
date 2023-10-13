@@ -4,10 +4,70 @@ from cyvcf2 import VCF
 from cyvcf2.cyvcf2 import Variant
 from typing import Callable
 import subprocess
+import random
 import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+CSQ_FIELDS = {
+    "Allele": {
+        "empty_value": False,
+        "field_existance": "all"
+    },
+    "Consequence": {
+        "empty_value": False,
+        "field_existance": "all"
+    },
+    "Feature": {
+        "empty_value": True,
+        "field_existance": "all"
+    },
+    "Feature": {
+        "empty_value": True,
+        "field_existance": "all"
+    },
+    "VARIANT_CLASS": {
+        "empty_value": False,
+        "field_existance": "all"
+    },
+    "SPDI": {
+        "empty_value": False,
+        "field_existance": "all"
+    },
+    "PUBMED": {
+        "empty_value": True,
+        "field_existance": "all"
+    },
+    "VAR_SYNONYMS": {
+        "empty_value": True,
+        "field_existance": "all"
+    },
+    "PHENOTYPES": {
+        "empty_value": True,
+        "field_existance": "human"
+    },
+    "Conservation": {
+        "empty_value": True,
+        "field_existance": "human"
+    },
+    "CADD_PHRED": {
+        "empty_value": True,
+        "field_existance": "human"
+    },
+    "AA": {
+        "empty_value": True,
+        "field_existance": "human"
+    },
+    "SIFT": {
+        "empty_value": True,
+        "field_existance": "human"
+    },
+    "PolyPhen": {
+        "empty_value": True,
+        "field_existance": "human"
+    }
+}
 
 class TestFile:
 
@@ -27,13 +87,13 @@ class TestHeader:
         assert vcf_reader.get_header_type("CSQ")
 
         csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
-        csq_list = csq_info_description.split("Format: ")[1].split("|")
+        csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
 
-        assert "Consequence" in csq_list
-        assert "Feature" in csq_list
-        assert "VARIANT_CLASS" in csq_list
-        assert "SPDI" in csq_list
-        assert "VAR_SYNONYMS" in csq_list
+        for csq_field in CSQ_FIELDS:
+            if CSQ_FIELDS[csq_field]["field_existance"] == "all":
+                assert csq_field in csq_list
+            else:
+                logger.info(f"{csq_field} exist - {csq_field in csq_list}")
 
 class TestDuplicate:
 
@@ -122,3 +182,47 @@ class TestSrcCount:
             # TBD: all chr will not be present in vcf file as vcf_prepper remove some chr variant
             if chr in variant_counts and chr in source_variant_counts:
                 assert variant_counts[chr] > source_variant_counts[chr] * 0.95
+
+class TestContent:
+
+    def test_csq_content(self, vcf_reader):
+        NO_VARIANTS = 100
+        NO_ITER = 100000
+        
+        csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
+        csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
+
+        csq_field_idx = {}
+        for csq_field in CSQ_FIELDS:
+            if csq_field in csq_list:
+                csq_field_idx[csq_field] = csq_list.index(csq_field)
+
+        chrs = vcf_reader.seqnames
+        variants = []
+        iter = 0
+        while(len(variants) < NO_VARIANTS and iter <= NO_ITER):
+            chr = random.choice(chrs)
+            start = random.choice(range(10000, 1000000))
+
+            for variant in vcf_reader(f"{chr}:{start}"):
+                variants.append(variant)
+                break
+
+            iter += 1
+
+        csq_field_cnt = {}
+        for csq_field in csq_field_idx:
+            csq_field_cnt[csq_field] = 0
+
+        for variant in variants:
+            csq = variant.INFO["CSQ"].split(",")[0]
+            csq_field_vals = csq.split("|")
+            for csq_field in csq_field_idx:
+                if csq_field_vals[csq_field_idx[csq_field]] != '':
+                    csq_field_cnt[csq_field] += 1
+
+        for csq_field in csq_field_idx:
+            if not CSQ_FIELDS[csq_field]["empty_value"]:
+                assert csq_field_cnt[csq_field] == NO_VARIANTS
+            else:
+                logger.info(f"{csq_field_cnt[csq_field]} expected: {NO_VARIANTS * 0.5}")

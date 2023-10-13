@@ -45,11 +45,14 @@ class TestSrcCount:
 class TestSrcExistance:
 
     def test_variant_exist_from_source(self, bb_reader, vcf_reader):
+        NO_VARIANTS = 100
+        NO_ITER = 100000
+        
         chrs = vcf_reader.seqnames
 
         variants = []
         iter = 0
-        while(len(variants) < 100 and iter <= 100000):
+        while(len(variants) < NO_VARIANTS and iter <= NO_ITER):
             chr = random.choice(chrs)
             start = random.choice(range(10000, 1000000))
 
