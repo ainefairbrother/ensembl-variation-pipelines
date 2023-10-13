@@ -10,6 +10,8 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# default:                # 
+# default: "field_existance": ["homo_sapiens", "homo_sapiens_37"] 
 CSQ_FIELDS = {
     "Allele": {
         "empty_value": False,
@@ -19,14 +21,8 @@ CSQ_FIELDS = {
         "empty_value": False,
         "field_existance": "all"
     },
-    "Feature": {
-        "empty_value": True,
-        "field_existance": "all"
-    },
-    "Feature": {
-        "empty_value": True,
-        "field_existance": "all"
-    },
+    "Feature": {"field_existance": "all"},
+    "Feature": {"field_existance": "all"},
     "VARIANT_CLASS": {
         "empty_value": False,
         "field_existance": "all"
@@ -35,38 +31,74 @@ CSQ_FIELDS = {
         "empty_value": False,
         "field_existance": "all"
     },
-    "PUBMED": {
-        "empty_value": True,
-        "field_existance": "all"
-    },
-    "VAR_SYNONYMS": {
-        "empty_value": True,
-        "field_existance": "all"
-    },
-    "PHENOTYPES": {
-        "empty_value": True,
-        "field_existance": "human"
-    },
-    "Conservation": {
-        "empty_value": True,
-        "field_existance": "human"
-    },
-    "CADD_PHRED": {
-        "empty_value": True,
-        "field_existance": "human"
-    },
-    "AA": {
-        "empty_value": True,
-        "field_existance": "human"
-    },
-    "SIFT": {
-        "empty_value": True,
-        "field_existance": "human"
-    },
-    "PolyPhen": {
-        "empty_value": True,
-        "field_existance": "human"
-    }
+    "PUBMED": {"field_existance": "all"},
+    "VAR_SYNONYMS": {"field_existance": "all"},
+    "PHENOTYPES": {},
+    "Conservation": {},
+    "CADD_PHRED": {},
+    "AA": {},
+    "SIFT": {},
+    "PolyPhen": {},
+    "gnomAD_exomes_AF": {},
+    "gnomAD_exomes_AC": {},
+    "gnomAD_exomes_AN": {},
+    "gnomAD_exomes_AF_afr": {},
+    "gnomAD_exomes_AC_afr": {},
+    "gnomAD_exomes_AN_afr": {},
+    "gnomAD_exomes_AF_amr": {},
+    "gnomAD_exomes_AC_amr": {},
+    "gnomAD_exomes_AN_amr": {},
+    "gnomAD_exomes_AF_asj": {},
+    "gnomAD_exomes_AC_asj": {},
+    "gnomAD_exomes_AN_asj": {},
+    "gnomAD_exomes_AF_eas": {},
+    "gnomAD_exomes_AC_eas": {},
+    "gnomAD_exomes_AN_eas": {},
+    "gnomAD_exomes_AF_fin": {},
+    "gnomAD_exomes_AC_fin": {},
+    "gnomAD_exomes_AN_fin": {},
+    "gnomAD_exomes_AF_nfe": {},
+    "gnomAD_exomes_AC_nfe": {},
+    "gnomAD_exomes_AN_nfe": {},
+    "gnomAD_exomes_AF_oth": {},
+    "gnomAD_exomes_AC_oth": {},
+    "gnomAD_exomes_AN_oth": {},
+    "gnomAD_exomes_AF_sas": {},
+    "gnomAD_exomes_AC_sas": {},
+    "gnomAD_exomes_AN_sas": {},
+    "gnomAD_genomes_AF": {},
+    "gnomAD_genomes_AC": {},
+    "gnomAD_genomes_AN": {},
+    "gnomAD_genomes_AF_afr": {},
+    "gnomAD_genomes_AC_afr": {},
+    "gnomAD_genomes_AN_afr": {},
+    "gnomAD_genomes_AF_amr": {},
+    "gnomAD_genomes_AC_amr": {},
+    "gnomAD_genomes_AN_amr": {},
+    "gnomAD_genomes_AF_asj": {},
+    "gnomAD_genomes_AC_asj": {},
+    "gnomAD_genomes_AN_asj": {},
+    "gnomAD_genomes_AF_eas": {},
+    "gnomAD_genomes_AC_eas": {},
+    "gnomAD_genomes_AN_eas": {},
+    "gnomAD_genomes_AF_fin": {},
+    "gnomAD_genomes_AC_fin": {},
+    "gnomAD_genomes_AN_fin": {},
+    "gnomAD_genomes_AF_nfe": {},
+    "gnomAD_genomes_AC_nfe": {},
+    "gnomAD_genomes_AN_nfe": {},
+    "gnomAD_genomes_AF_oth": {},
+    "gnomAD_genomes_AC_oth": {},
+    "gnomAD_genomes_AN_oth": {},
+    "gnomAD_genomes_AF_sas": {},
+    "gnomAD_genomes_AC_sas": {},
+    "gnomAD_exomes_AN_sas": {},
+    "AF": {},
+    "AFR_AF": {},
+    "AMR_AF": {},
+    "EAS_AF": {},
+    "EUR_AF": {},
+    "SAS_AF": {}
 }
 
 class TestFile:
@@ -83,17 +115,25 @@ class TestHeader:
         header_line = vcf_reader.raw_header.split("\n")[-2]
         assert header_line.startswith("#CHROM\tPOS\tID\tREF\tALT")
 
-    def test_info_csq(self, vcf_reader):
+    def test_info_csq(self, vcf_reader, species):
         assert vcf_reader.get_header_type("CSQ")
 
         csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
         csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
 
         for csq_field in CSQ_FIELDS:
-            if CSQ_FIELDS[csq_field]["field_existance"] == "all":
+            if "field_existance" in CSQ_FIELDS[csq_field]:
+                field_existance = CSQ_FIELDS[csq_field]["field_existance"]
+            else:
+                field_existance = ["homo_sapiens", "homo_sapiens_37"]
+
+            if type(field_existance) is str and (field_existance == "all" or field_existance == species):
+                assert csq_field in csq_list
+            elif type(field_existance) is list and species in field_existance:
                 assert csq_field in csq_list
             else:
                 logger.info(f"{csq_field} exist - {csq_field in csq_list}")
+            
 
 class TestDuplicate:
 
@@ -222,7 +262,12 @@ class TestContent:
                     csq_field_cnt[csq_field] += 1
 
         for csq_field in csq_field_idx:
-            if not CSQ_FIELDS[csq_field]["empty_value"]:
+            if "empty_value" in CSQ_FIELDS[csq_field]:
+                canbe_empty = CSQ_FIELDS[csq_field]["empty_value"]
+            else:
+                canbe_empty = True
+
+            if not canbe_empty:
                 assert csq_field_cnt[csq_field] == NO_VARIANTS
             else:
-                logger.info(f"{csq_field_cnt[csq_field]} expected: {NO_VARIANTS * 0.5}")
+                logger.info(f"{csq_field} count: {csq_field_cnt[csq_field]} expected: {NO_VARIANTS * 0.5}")
