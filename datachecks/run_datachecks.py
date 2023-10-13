@@ -84,13 +84,15 @@ def main(args = None):
         vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
         source_vcf = species_metadata[genome_uuid]["file_location"]
         bigbed = os.path.join(track_outdir, genome_uuid, "variant-details.bb")
+        bigwig = os.path.join(track_outdir, genome_uuid, "variant-details.bw")
 
         retcode = pytest.main(
             [
                 "--source_vcf", f"{source_vcf}",
                 "--bigbed", f"{bigbed}",
+                "--bigwig", f"{bigwig}",
                 "--vcf", f"{vcf}", 
-                "./"
+                "./test_bigwig.py"
             ]
         )
         if retcode != 0:

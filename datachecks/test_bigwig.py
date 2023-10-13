@@ -5,11 +5,11 @@ import random
 
 class TestFile:
 
-    def test_exist(self, bigbed):
-        assert os.path.isfile(bigbed)
+    def test_exist(self, bigwig):
+        assert os.path.isfile(bigwig)
 
-    def test_validity(self, bb_reader):
-        assert bb_reader.isBigBed()
+    def test_validity(self, bw_reader):
+        assert bw_reader.isBigWig()
 
 class TestSrcCount:
 
@@ -30,21 +30,22 @@ class TestSrcCount:
         return int(process.stdout.decode().strip())
 
 
-    def get_total_variant_count_from_bb(self, bb_reader) -> int:
+    def get_total_variant_count_from_bb(self, bw_reader) -> int:
         variant_counts = 0
-        for chr in bb_reader.chroms():
-            variant_counts += len(bb_reader.entries(chr, 0, bb_reader.chroms(chr)))
+        for chr in bw_reader.chroms():
+            non_zero_vals = [val for val in bw_reader.values(chr, 0, bb_reader.chroms(chr)) if val > 0.0]
+            variant_counts += len(non_zero_vals)
         return variant_counts
 
-    def test_compare_count_with_source(self, vcf, bb_reader):
+    def test_compare_count_with_source(self, vcf, bw_reader):
         variant_count_vcf = self.get_total_variant_count_from_vcf(vcf)
-        variant_count_bb = self.get_total_variant_count_from_bb(bb_reader)
+        variant_count_bw = self.get_total_variant_count_from_bb(bw_reader)
 
-        assert variant_count_bb > variant_count_vcf * 0.95
+        assert variant_count_bw > variant_count_vcf * 0.95
 
 class TestSrcExistance:
 
-    def test_variant_exist_from_source(self, bb_reader, vcf_reader):
+    def test_variant_exist_from_source(self, bw_reader, vcf_reader):
         chrs = vcf_reader.seqnames
 
         variants = []
@@ -61,17 +62,8 @@ class TestSrcExistance:
 
         for variant in variants:
             chr = variant.CHROM
-            start = int(variant.POS) - 1
-            end = start + 2 # for insertion
+            start = int(variant.POS)
+            end = start + 1 # for insertion
 
-            bb_entries = bb_reader.entries(chr, start, end)
-            assert bb_entries is not None
-            assert len(bb_entries) >= 1
-
-            id_in_vcf = variant.ID
-            ids_in_bb = []
-            for bb_entry in bb_entries:
-                id = bb_entry[2].split("\t")[0]
-                ids_in_bb.append(id)
-
-            assert id_in_vcf in ids_in_bb
+            bw_state = bw_reader.stats(chr, start, end)
+            assert bw_state > 0.0
