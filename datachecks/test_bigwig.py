@@ -11,6 +11,31 @@ class TestFile:
     def test_validity(self, bw_reader):
         assert bw_reader.isBigWig()
 
+class TestSrcExistance:
+
+    def test_variant_exist_from_source(self, bw_reader, vcf_reader):
+        chrs = vcf_reader.seqnames
+
+        variants = []
+        iter = 0
+        while(len(variants) < 100 and iter <= 100000):
+            chr = random.choice(chrs)
+            start = random.choice(range(10000, 1000000))
+
+            for variant in vcf_reader(f"{chr}:{start}"):
+                variants.append(variant)
+                break
+
+            iter += 1
+
+        for variant in variants:
+            chr = variant.CHROM
+            start = int(variant.POS) - 1
+            end = start + 2
+
+            bw_state = bw_reader.stats(chr, start, end)[0]
+            assert bw_state > 0.0
+
 class TestSrcCount:
 
     def get_total_variant_count_from_vcf(self, vcf: str) -> int:
@@ -42,28 +67,3 @@ class TestSrcCount:
         variant_count_bw = self.get_total_variant_count_from_bw(bw_reader)
 
         assert variant_count_bw > variant_count_vcf * 0.95
-
-class TestSrcExistance:
-
-    def test_variant_exist_from_source(self, bw_reader, vcf_reader):
-        chrs = vcf_reader.seqnames
-
-        variants = []
-        iter = 0
-        while(len(variants) < 100 and iter <= 100000):
-            chr = random.choice(chrs)
-            start = random.choice(range(10000, 1000000))
-
-            for variant in vcf_reader(f"{chr}:{start}"):
-                variants.append(variant)
-                break
-
-            iter += 1
-
-        for variant in variants:
-            chr = variant.CHROM
-            start = int(variant.POS) - 1
-            end = start + 2
-
-            bw_state = bw_reader.stats(chr, start, end)[0]
-            assert bw_state > 0.0
