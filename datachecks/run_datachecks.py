@@ -89,7 +89,7 @@ def main(args = None):
         vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
         source_vcf = species_metadata[genome_uuid]["file_location"]
         bigbed = os.path.join(track_outdir, genome_uuid, "variant-details.bb")
-        bigwig = os.path.join(track_outdir, genome_uuid, "variant-details.bw")
+        bigwig = os.path.join(track_outdir, genome_uuid, "variant-summary.bw")
 
         subprocess.run([
                 "bsub",
