@@ -1,6 +1,8 @@
 #!/usr/bin/env nextflow
 
 process CONCAT_BEDS {
+  label 'bigmem'
+  
   input: 
   tuple val(meta), path(bed_files)
   
