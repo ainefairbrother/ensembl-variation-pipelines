@@ -119,6 +119,8 @@ def main(args = None):
         species_metadata = parse_input_config(input_config)
     
     print(f"[INFO] checking directory - {api_outdir} for genome uuids")
+    if debug:
+        aggregate_payload = []
     for genome_uuid in os.listdir(api_outdir):
         if species_metadata and genome_uuid not in species_metadata:
             continue
@@ -138,7 +140,7 @@ def main(args = None):
 
         variant_count = get_variant_count(api_vcf)
         variant_example = get_variant_example(api_vcf, species)
-        
+
         if variant_count is not None:
             payload = {}
             payload["user"] = "nakib"
@@ -167,10 +169,13 @@ def main(args = None):
 
             payload["dataset_attribute"] = dataset_attribute
             
-            if not debug:
-                submit_payload(endpoint, payload)
+            if debug:
+                aggregate_payload.append(payload)
             else:
-                print(json.dumps(payload, indent = 4))
+                submit_payload(endpoint, payload)
+
+    if debug:    
+        print(json.dumps(aggregate_payload, indent = 4))
     
 if __name__ == "__main__":
     sys.exit(main())
