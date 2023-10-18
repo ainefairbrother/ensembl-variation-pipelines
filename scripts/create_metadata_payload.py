@@ -16,6 +16,7 @@ def parse_args(args = None):
     parser.add_argument("--api_outdir", dest="api_outdir", type=str, help="path to a vcf prepper api output directory")
     parser.add_argument("--input_config", dest="input_config", type=str, help="input_config json file used in vcf_prepper")
     parser.add_argument("--endpoint", dest="endpoint", type=str, help="metadata api url")
+    parser.add_argument("--dataset_type", dest="dataset_type", type=str, help="dataset type, accepted values: 'variation', 'evidence' or 'all'; Default is 'all'")
     parser.add_argument("--debug", dest="debug", action="store_true")
     
     return parser.parse_args(args)
@@ -45,6 +46,8 @@ def get_csq_field_index(csq: str, field: str ="Consequence") -> int:
     for index, value in enumerate(csq_list):
         if value == field:
             return index
+
+    return None
 
 def get_variant_example(file: str, species: str) -> str:
     vcf = VCF(file)
@@ -80,6 +83,28 @@ def get_variant_example(file: str, species: str) -> str:
         id = variant.ID
         return f"{chrom}:{pos}:{id}"
 
+def get_evidence_count(file: str, csq_field: str) -> int:
+    vcf = VCF(file)
+    
+    csq_info_description = vcf.get_header_type("CSQ")["Description"]
+    csq_field_idx = get_csq_field_index(csq_info_description, csq_field)
+
+    if csq_field_idx is None:
+        return None
+
+    # find a missense_variant
+    count = 0
+    for variant in vcf:
+        csqs = variant.INFO["CSQ"]
+        for csq in csqs.split(","):
+            csq_value = csq.split("|")[csq_field_idx]
+
+            if csq_value != "":
+                count += 1
+                break
+
+    return count
+
 def parse_input_config(input_config: str) -> dict:
     if not os.path.isfile(input_config):
         return []
@@ -110,6 +135,11 @@ def main(args = None):
     endpoint = args.endpoint or None
     debug = args.debug
 
+    if args.dataset_type == 'all':
+        dataset_types = ['variation', 'evidence']
+    else:
+        dataset_types = [args.dataset_type]
+
     if not debug and endpoint is None:
         print("[ERROR] please provide an endpoint using --endpoint if not using debug mode")
         exit(1)
@@ -118,36 +148,38 @@ def main(args = None):
     if input_config is not None:
         species_metadata = parse_input_config(input_config)
     
-    print(f"[INFO] checking directory - {api_outdir} for genome uuids")
-    if debug:
-        aggregate_payload = []
-    for genome_uuid in os.listdir(api_outdir):
-        if species_metadata and genome_uuid not in species_metadata:
-            continue
+    for dataset_type in dataset_types:
+        if debug:
+            aggregate_payload = []
 
-        if not is_valid_uuid(genome_uuid):
-            print(f"[WARN] {genome_uuid} is not a valid uuid")
-            continue
+        
+        print(f"[INFO] checking directory - {api_outdir} for {dataset_type} statistics data")
+        for genome_uuid in os.listdir(api_outdir):
+            if species_metadata and genome_uuid not in species_metadata:
+                continue
 
-        api_vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
-        if not os.path.isfile(api_vcf):
-            print(f"[WARN] file not found - {api_vcf}")
-            continue
+            if not is_valid_uuid(genome_uuid):
+                print(f"[WARN] {genome_uuid} is not a valid uuid")
+                continue
 
-        # TBD: get this data from thoas if input_config not given
-        species = species_metadata[genome_uuid]["species"]
-        assembly = species_metadata[genome_uuid]["assembly"]
+            api_vcf = os.path.join(api_outdir, genome_uuid, "variation.vcf.gz")
+            if not os.path.isfile(api_vcf):
+                print(f"[WARN] file not found - {api_vcf}")
+                continue
 
-        variant_count = get_variant_count(api_vcf)
-        variant_example = get_variant_example(api_vcf, species)
+            # TBD: get this data from thoas if input_config not given
+            species = species_metadata[genome_uuid]["species"]
+            assembly = species_metadata[genome_uuid]["assembly"]
 
-        if variant_count is not None:
             payload = {}
             payload["user"] = "nakib"
-            payload["name"] = "variation"
-            payload["description"] = f"Short variant data for {species}"
+            payload["name"] = dataset_type
+            if dataset_type == 'variation':
+                payload["description"] = f"Short variant data for {species}"
+            else:
+                payload["description"] = f"Short variant evidence data for {species}"
             payload["label"] = assembly
-            payload["dataset_type"] = "variation"
+            payload["dataset_type"] = dataset_type
             
             dataset_source = {}
             dataset_source["name"] = api_vcf
@@ -158,14 +190,40 @@ def main(args = None):
 
             dataset_attribute = []
             
-            attribute = {}
-            attribute["name"] = "variation.short_variants"
-            attribute["value"] = str(variant_count)
-            dataset_attribute.append(attribute)
-            attribute = {}
-            attribute["name"] = "variation.sample_variant"
-            attribute["value"] = variant_example
-            dataset_attribute.append(attribute)
+            if dataset_type == 'variation':
+                variant_count = get_variant_count(api_vcf)
+                if variant_count is not None:
+                    attribute = {}
+                    attribute["name"] = "variation.short_variants"
+                    attribute["value"] = str(variant_count)
+                    dataset_attribute.append(attribute)
+
+
+                variant_example = get_variant_example(api_vcf, species)
+                attribute = {}
+                attribute["name"] = "variation.sample_variant"
+                attribute["value"] = variant_example
+                dataset_attribute.append(attribute)
+            else:
+                phenotype_count = get_evidence_count(api_vcf, "PHENOTYPES")
+                if phenotype_count is not None:
+                    attribute = {}
+                    attribute["name"] = "variation.short_variants_with_phenotype_assertions"
+                    attribute["value"] = phenotype_count
+                    dataset_attribute.append(attribute)
+
+                publication_count = get_evidence_count(api_vcf, "PUBMED")
+                if publication_count is not None:
+                    attribute = {}
+                    attribute["name"] = "variation.short_variants_with_publications"
+                    attribute["value"] = publication_count
+                    dataset_attribute.append(attribute)
+
+                if species == "homo_sapiens" or species == "homo_sapiens_37":
+                    attribute = {}
+                    attribute["name"] = "variation.short_variants_frequency_studies"
+                    attribute["value"] = 2
+                    dataset_attribute.append(attribute)
 
             payload["dataset_attribute"] = dataset_attribute
             
@@ -174,8 +232,8 @@ def main(args = None):
             else:
                 submit_payload(endpoint, payload)
 
-    if debug:    
-        print(json.dumps(aggregate_payload, indent = 4))
+        if debug:    
+            print(json.dumps(aggregate_payload, indent = 4))
     
 if __name__ == "__main__":
     sys.exit(main())
