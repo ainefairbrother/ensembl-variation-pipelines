@@ -57,7 +57,7 @@ def get_source_url(source: str) -> str:
     elif source == "EVA":
         return "https://www.ebi.ac.uk/eva"
     elif source == "Ensembl":
-        return "hhttps://www.ensembl.org/index.html"
+        return "https://www.ensembl.org/index.html"
     
 def main(args = None):
     args = parse_args(args)
