@@ -83,11 +83,11 @@ def main(args = None):
                 "-oo", f"{output_dir}/dc_{species}.out",
                 "-eo", f"{output_dir}/dc_{species}.err",
                 f"pytest " + \
-                f"--source_vcf {source_vcf} " + \
-                f"--bigbed {bigbed} " + \
-                f"--bigwig {bigwig} " + \
-                f"--vcf {vcf} " + \
-                f"--species {species} " + \
+                f"--source_vcf={source_vcf} " + \
+                f"--bigbed={bigbed} " + \
+                f"--bigwig={bigwig} " + \
+                f"--vcf={vcf} " + \
+                f"--species={species} " + \
                 "./"
             ]
         )
