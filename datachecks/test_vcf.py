@@ -183,7 +183,7 @@ class TestSrcCount:
             logger.warning(f"Could not get variant count from {vcf} using bcftools\n Will retry in naive iteration method")
             try:
                 local_vcf_reader = VCF(vcf)
-                
+
                 count = 0
                 for _ in local_vcf_reader:
                     count += 1
@@ -217,7 +217,7 @@ class TestSrcCount:
                 for chrom in chrs:
                     count = 0
                     # to be safe assuming 100 billion to be max bp in a chr
-                    for _ in local_vcf_reader(f"{chrom}:1-100000000000")
+                    for _ in local_vcf_reader(f"{chrom}:1-100000000000"):
                         count += 1
                     chrom_variant_counts[chrom] = count
                 local_vcf_reader.close()
