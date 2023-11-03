@@ -178,9 +178,20 @@ class TestSrcCount:
             stderr = subprocess.PIPE
         )
 
+        # if bcftools command fails try to naively iterate the file get count
         if process.returncode != 0:
-            logger.warning(f"Could not get variant count from vcf - {vcf}")
-            return -1
+            logger.warning(f"Could not get variant count from {vcf} using bcftools\n Will retry in naive iteration method")
+            try:
+                local_vcf_reader = VCF(vcf)
+                
+                count = 0
+                for _ in local_vcf_reader:
+                    count += 1
+                local_vcf_reader.close()
+
+                return count
+            except:
+                return -1
 
         return int(process.stdout.decode().strip())
 
@@ -195,9 +206,25 @@ class TestSrcCount:
             stderr = subprocess.PIPE
         )
 
+        # if bcftools command fails try to naively iterate the file get count
         if process.returncode != 0:
-            logger.warning(f"Could not get variant count from vcf - {vcf}")
-            return -1
+            logger.warning(f"Could not get variant count from {vcf} using bcftools\n Will retry in naive iteration method")
+            try:
+                local_vcf_reader = VCF(vcf)
+                chrs = local_vcf_reader.seqnames
+
+                chrom_variant_counts = {}
+                for chrom in chrs:
+                    count = 0
+                    # to be safe assuming 100 billion to be max bp in a chr
+                    for _ in local_vcf_reader(f"{chrom}:1-100000000000")
+                        count += 1
+                    chrom_variant_counts[chrom] = count
+                local_vcf_reader.close()
+
+                return chrom_variant_counts
+            except:
+                return -1
 
         chrom_variant_counts = {}
         for chrom_stat in process.stdout.decode().strip().split("\n"):
@@ -207,8 +234,8 @@ class TestSrcCount:
         return chrom_variant_counts
 
     def test_compare_count_with_source(self, vcf, source_vcf):
-        variant_count = self.get_total_variant_count_from_vcf(vcf)
-        source_variant_count = self.get_total_variant_count_from_vcf(source_vcf)
+        variant_count = self.get_total_variant_count_from_vcf(vcf, vcf_reader)
+        source_variant_count = self.get_total_variant_count_from_vcf(source_vcf, vcf_reader)
 
         assert variant_count != -1
         assert source_variant_count != -1
