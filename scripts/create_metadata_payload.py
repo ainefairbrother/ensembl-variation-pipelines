@@ -103,6 +103,8 @@ def get_evidence_count(file: str, csq_field: str) -> int:
                 count += 1
                 break
 
+    # do not report 0 count
+    count = None if count == 0 else count
     return count
 
 def parse_input_config(input_config: str) -> dict:
