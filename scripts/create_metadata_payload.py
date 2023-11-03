@@ -226,7 +226,7 @@ def main(args = None):
                 if species == "homo_sapiens" or species == "homo_sapiens_37":
                     attribute = {}
                     attribute["name"] = "variation.short_variants_frequency_studies"
-                    attribute["value"] = 2
+                    attribute["value"] = 1
                     dataset_attribute.append(attribute)
 
             payload["dataset_attribute"] = dataset_attribute
