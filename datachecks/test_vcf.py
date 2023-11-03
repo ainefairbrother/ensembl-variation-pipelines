@@ -210,12 +210,17 @@ class TestSrcCount:
         variant_count = self.get_total_variant_count_from_vcf(vcf)
         source_variant_count = self.get_total_variant_count_from_vcf(source_vcf)
 
+        assert variant_count != -1
+        assert source_variant_count != -1
         assert variant_count > source_variant_count * 0.90
 
     def test_compare_count_with_source_by_chr(self, vcf_reader, vcf, source_vcf):
         chrs = vcf_reader.seqnames
         variant_counts = self.get_variant_count_from_vcf_by_chr(vcf)
         source_variant_counts = self.get_variant_count_from_vcf_by_chr(source_vcf)
+
+        assert variant_counts != -1
+        assert source_variant_counts != -1
 
         for chr in chrs:
             # TBD: all chr will not be present in source VCF as vcf_prepper rename some of them
