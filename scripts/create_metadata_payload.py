@@ -42,7 +42,9 @@ def get_variant_count(file: str) -> str:
         return None
 
 def get_csq_field_index(csq: str, field: str ="Consequence") -> int:
-    csq_list = csq.split("Format: ")[1].split("|")
+    prefix = "Consequence annotations from Ensembl VEP. Format: "
+    csq_list = csq[len(prefix):].split("|")
+
     for index, value in enumerate(csq_list):
         if value == field:
             return index
@@ -52,7 +54,7 @@ def get_csq_field_index(csq: str, field: str ="Consequence") -> int:
 def get_variant_example(file: str, species: str) -> str:
     vcf = VCF(file)
     
-    csq_info_description = vcf.get_header_type("CSQ")["Description"]
+    csq_info_description = vcf.get_header_type("CSQ")["Description"].strip("\"")
     consequence_idx = get_csq_field_index(csq_info_description, "Consequence")
 
     # if human, try to find rs699 in 20kbp range
@@ -86,7 +88,7 @@ def get_variant_example(file: str, species: str) -> str:
 def get_evidence_count(file: str, csq_field: str) -> int:
     vcf = VCF(file)
     
-    csq_info_description = vcf.get_header_type("CSQ")["Description"]
+    csq_info_description = vcf.get_header_type("CSQ")["Description"].strip("\"")
     csq_field_idx = get_csq_field_index(csq_info_description, csq_field)
 
     if csq_field_idx is None:
