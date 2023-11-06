@@ -118,8 +118,9 @@ class TestHeader:
     def test_info_csq(self, vcf_reader, species):
         assert vcf_reader.get_header_type("CSQ")
 
-        csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
-        csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
+        csq_info_description = vcf_reader.get_header_type("CSQ")["Description"].strip("\"")
+        prefix = "Consequence annotations from Ensembl VEP. Format: "
+        csq_list = [csq.strip() for csq in csq_info_description[len(prefix):].split("|")]
 
         for csq_field in CSQ_FIELDS:
             if "field_existance" in CSQ_FIELDS[csq_field]:
@@ -234,8 +235,8 @@ class TestSrcCount:
         return chrom_variant_counts
 
     def test_compare_count_with_source(self, vcf, source_vcf):
-        variant_count = self.get_total_variant_count_from_vcf(vcf, vcf_reader)
-        source_variant_count = self.get_total_variant_count_from_vcf(source_vcf, vcf_reader)
+        variant_count = self.get_total_variant_count_from_vcf(vcf)
+        source_variant_count = self.get_total_variant_count_from_vcf(source_vcf)
 
         assert variant_count != -1
         assert source_variant_count != -1
