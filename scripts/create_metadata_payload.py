@@ -16,7 +16,7 @@ def parse_args(args = None):
     parser.add_argument("--api_outdir", dest="api_outdir", type=str, help="path to a vcf prepper api output directory")
     parser.add_argument("--input_config", dest="input_config", type=str, help="input_config json file used in vcf_prepper")
     parser.add_argument("--endpoint", dest="endpoint", type=str, help="metadata api url")
-    parser.add_argument("--dataset_type", dest="dataset_type", type=str, help="dataset type, accepted values: 'variation', 'evidence' or 'all'; Default is 'all'")
+    parser.add_argument("--dataset_type", dest="dataset_type", type=str, default = "all", help="dataset type, accepted values: 'variation', 'evidence' or 'all'; Default is 'all'")
     parser.add_argument("--debug", dest="debug", action="store_true")
     
     return parser.parse_args(args)
@@ -57,9 +57,9 @@ def get_variant_example(file: str, species: str) -> str:
     csq_info_description = vcf.get_header_type("CSQ")["Description"].strip("\"")
     consequence_idx = get_csq_field_index(csq_info_description, "Consequence")
 
-    # if human, try to find rs699 in 20kbp range
+    # if human, try to find rs699 in 400kbp range
     if species.startswith("homo_sapiens"):
-        for variant in vcf('1:230700048-230720048'):
+        for variant in vcf('1:230500000-230900000'):
             if variant.ID == "rs699":
                 chrom = variant.CHROM
                 pos = variant.POS
@@ -139,7 +139,7 @@ def main(args = None):
     endpoint = args.endpoint or None
     debug = args.debug
 
-    if args.dataset_type == 'all':
+    if args.dataset_type == 'all' or args.dataset_type == None:
         dataset_types = ['variation', 'evidence']
     else:
         dataset_types = [args.dataset_type]
@@ -156,7 +156,6 @@ def main(args = None):
         if debug:
             aggregate_payload = []
 
-        
         print(f"[INFO] checking directory - {api_outdir} for {dataset_type} statistics data")
         for genome_uuid in os.listdir(api_outdir):
             if species_metadata and genome_uuid not in species_metadata:
