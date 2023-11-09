@@ -42,7 +42,7 @@ class TestSrcCount:
 
         assert variant_count_bb > variant_count_vcf * 0.95
 
-class TestSrcExistance:
+class TestSrcExistence:
 
     def test_variant_exist_from_source(self, bb_reader, vcf_reader):
         NO_VARIANTS = 100

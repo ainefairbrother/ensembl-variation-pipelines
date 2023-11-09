@@ -11,7 +11,7 @@ class TestFile:
     def test_validity(self, bw_reader):
         assert bw_reader.isBigWig()
 
-class TestSrcExistance:
+class TestSrcExistence:
 
     def test_variant_exist_from_source(self, bw_reader, vcf_reader):
         chrs = vcf_reader.seqnames
