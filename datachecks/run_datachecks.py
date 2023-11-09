@@ -56,6 +56,9 @@ def main(args = None):
     dir = args.dir
     output_dir = args.output_dir
 
+    # create output directory if not already exist
+    os.makedirs(output_dir, exist_ok=True)
+
     species_metadata = {}
     if input_config is not None:
         species_metadata = get_species_metadata(input_config)
