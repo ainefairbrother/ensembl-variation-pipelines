@@ -31,10 +31,7 @@ process UPDATE_FIELDS {
   version = params.version
   ini_file = params.ini_file
   rename_clinvar_ids = params.rename_clinvar_ids ? "--rename_clinvar_ids" : ""
-<<<<<<< HEAD
-=======
 
->>>>>>> fbe43fe (Query database to get source name)
   '''
   chrs=$(tabix !{vcf} -l | xargs | tr ' ' ',')
   update_fields.py !{vcf} !{source} !{synonym_file} \
