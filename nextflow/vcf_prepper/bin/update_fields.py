@@ -102,7 +102,7 @@ def main(args = None):
         for variant in input_vcf:
 
             if query_source:
-                source = get_variant_source(variation_server, variation_db)
+                source = get_variant_source(variation_server, variation_db, variant.ID)
                 if source is None:
                     source = "."
 
