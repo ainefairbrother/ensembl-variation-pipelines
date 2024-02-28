@@ -103,8 +103,12 @@ workflow VCF_PREPPER {
     BED_TO_BIGBED( CONCAT_BEDS.out )
     BED_TO_BIGWIG( CONCAT_BEDS.out )
 
-    // if track generation is run vep-ed VCF file move needs to wait for this step
+    // if track generation is run vep-ed VCF file move needs to wait for this step to finish
     SPLIT_VCF.out
+    .map {
+      meta, splits ->
+        [meta]
+    }
     .set { ch_split_finish }
   }
 
@@ -123,7 +127,7 @@ workflow VCF_PREPPER {
       ch_split_finish
       .join ( ch_stats_finish )
       .map {
-        meta, vcf, vcf_index, splits ->
+        meta, vcf, vcf_index ->
           [meta, vcf, vcf_index]
       }
       .set { ch_post_process }
@@ -132,7 +136,7 @@ workflow VCF_PREPPER {
       ch_split_finish
       .join ( ch_post_api )
       .map {
-        meta, vcf, vcf_index, splits ->
+        meta, vcf, vcf_index ->
           [meta, vcf, vcf_index]
       }
       .set { ch_post_process }
