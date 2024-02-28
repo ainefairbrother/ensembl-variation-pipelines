@@ -26,7 +26,7 @@ workflow RUN_VEP {
   .map {
     meta, vcf, vcf_index ->
       vep_meta = [:]
-      vep_meta.output_dir = meta.genome_api_outdir
+      vep_meta.output_dir = meta.genome_temp_dir
       vep_meta.one_to_many = 0
       vep_meta.index_type = meta.index_type
 
@@ -39,7 +39,7 @@ workflow RUN_VEP {
   .map {
     meta, vcf ->
       // tag here is the output vcf file from nextflow-vep
-      tag = "${meta.genome_api_outdir}/${meta.genome}-${meta.source}_VEP.vcf.gz"    
+      tag = "${meta.genome_temp_dir}/${meta.genome}-${meta.source}_VEP.vcf.gz"    
       [tag, meta]
   }
   .join ( vep.out, failOnDuplicate: true )
