@@ -48,11 +48,8 @@ def parse_args(args = None, description: bool = None):
     return parser.parse_args(args)
 
 def minimise_allele(ref: str, alt: str) -> str:
-    minimised_allele_string = alt
-    if len(alt) > len(ref):
-        minimised_allele_string = alt[1:] 
-    elif len(alt) < len(ref):
-        minimised_allele_string = "-"
+    if ref[0] == alt[0]:
+        minimised_allele_string = alt[1:] if len(alt) > 1 else "-" 
     return minimised_allele_string
 
 def main(args = None):
