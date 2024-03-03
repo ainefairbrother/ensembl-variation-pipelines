@@ -8,7 +8,7 @@ process UPDATE_FIELDS {
   tuple val(meta), path(output_file)
   
   shell:
-  output_file =  "UPDATED_" + file(vcf).getName()
+  output_file =  "UPDATED_S_" + file(vcf).getName()
   source = meta.source
   synonym_file = meta.synonym_file
   rename_clinvar_ids = params.rename_clinvar_ids ? "--rename_clinvar_ids" : ""
