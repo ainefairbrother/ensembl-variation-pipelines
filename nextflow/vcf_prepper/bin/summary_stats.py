@@ -7,7 +7,7 @@ from Bio import bgzf
 import argparse
 
 HEADERS = [
-    {'ID': 'AF', 'Description': 'Allele frequencies', 'Type':'Float', 'Number': 'A'},
+    {'ID': 'RAF', 'Description': 'Allele frequencies from representative population (gnomAD genomes v3.1.2)', 'Type':'Float', 'Number': 'A'},
     {'ID': 'NTCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': '1'},
     {'ID': 'NRCSQ', 'Description': 'Number of transcripts consequences', 'Type':'Integer', 'Number': '1'},
     {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': '1'},
@@ -28,7 +28,7 @@ PER_VARIANT_FIELDS = {
     "citation": "NCITE"
 }
 
-FREQUENCY_FIELD = "AF"
+FREQUENCY_FIELD = "RAF"
 
 SKIP_CONSEQUENCE = [
     "downstream_gene_variant",
@@ -57,7 +57,7 @@ def main(args = None):
     args = parse_args(args)
 
     input_file = os.path.realpath(args.input_file)
-    output_file = args.output_file or "UPDATED_SS_" + input_file
+    output_file = args.output_file or os.path.join(os.path.dirname(input_file), "UPDATED_SS_" + os.path.basename(input_file))
 
     input_vcf = VCF(input_file)
     # add to header and write header to output vcf
@@ -65,10 +65,6 @@ def main(args = None):
         input_vcf.add_info_to_header(header)
 
     output_vcf = Writer(output_file, input_vcf, mode="w")
-    # with bgzf.open(output_file, "wt") as o_file:
-
-        
-    # o_file.write(input_vcf.raw_header)
 
     # parse csq header and get index of each field
     csq_list = input_vcf.get_header_type("CSQ")['Description'].split("Format: ")[1].split("|")
@@ -111,32 +107,36 @@ def main(args = None):
                     items_per_variant["regulatory_consequence"].add(f"{feature_stable_id}:{csq}")
                 else:
                     items_per_variant["transcipt_consequence"].add(f"{feature_stable_id}:{csq}")
+            
+            csq_values_len = len(csq_values)
 
             # phenotype
-            if "PHENOTYPES" in csq_values:
-                phenotypes = csq_values[csq_header_idx["PHENOTYPES"]]
+            phenotype_csq_idx = csq_header_idx["PHENOTYPES"]
+            if phenotype_csq_idx < csq_values_len:
+                phenotypes = csq_values[phenotype_csq_idx]
                 for phenotype in phenotypes.split("&"):
                     pheno_PER_ALLELE_FIELDS = phenotype.split("+")
                     if len(pheno_PER_ALLELE_FIELDS) != 3:
                         continue
                     
                     (name, source, feature) = pheno_PER_ALLELE_FIELDS
-
                     if feature.startswith("ENS"):
                         items_per_allele[allele]["gene_phenotype"].add(f"{name}:{source}:{feature}")
                     else:
                         items_per_allele[allele]["variant_phenotype"].add(f"{name}:{source}:{feature}")
 
             # citations
-            if "PUBMED" in csq_values:
-                citations = csq_values[csq_header_idx["PUBMED"]]
+            pubmed_csq_idx = csq_header_idx["PUBMED"]
+            if pubmed_csq_idx < csq_values_len:
+                citations = csq_values[pubmed_csq_idx]
                 for citation in citations.split("&"):
                     if citation != "":
                         items_per_variant["citation"].add(citation)
 
             # frequency
-            if "gnomAD_genomes_AF" in csq_values:
-                frequency = csq_values[csq_header_idx["gnomAD_genomes_AF"]]
+            af_csq_idx = csq_header_idx["gnomAD_genomes_AF"]
+            if af_csq_idx < csq_values_len:
+                frequency = csq_values[af_csq_idx]
                 if frequency != "":
                     items_per_allele[allele]["frequency"] = frequency
 
