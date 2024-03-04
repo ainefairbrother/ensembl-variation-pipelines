@@ -8,6 +8,8 @@ process SUMMARY_STATS {
   tuple val(meta), path(output_file), path(vcf_index)
   
   shell:
+  species = meta.species
+  assembly = meta.assembly
   output_file =  "UPDATED_SS_" + file(vcf).getName()
   uncomressed_output_file = output_file.replaceFirst(/.gz$/, "")
   index_type = meta.index_type
@@ -15,7 +17,12 @@ process SUMMARY_STATS {
   vcf_index = output_file + ".${index_type}"
 
   '''
-  summary_stats.py !{vcf} -O !{uncomressed_output_file}
+  summary_stats.py \
+    !{species} \
+    !{assembly} \
+    !{vcf} \
+    -O !{uncomressed_output_file}
+  
   bgzip !{uncomressed_output_file}
   bcftools index !{flag_index} !{output_file}
   '''

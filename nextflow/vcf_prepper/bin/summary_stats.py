@@ -7,7 +7,7 @@ from Bio import bgzf
 import argparse
 
 HEADERS = [
-    {'ID': 'RAF', 'Description': 'Allele frequencies from representative population (gnomAD genomes v3.1.2)', 'Type':'Float', 'Number': 'A'},
+    {'ID': 'RAF', 'Description': 'Allele frequencies from representative population', 'Type':'Float', 'Number': 'A'},
     {'ID': 'NTCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': '1'},
     {'ID': 'NRCSQ', 'Description': 'Number of transcripts consequences', 'Type':'Integer', 'Number': '1'},
     {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': '1'},
@@ -29,6 +29,13 @@ PER_VARIANT_FIELDS = {
 }
 
 FREQUENCY_FIELD = "RAF"
+# [csq_field, diplay_name]
+FREQUENCY_META = {
+    "homo_sapiens": {
+        "GRCh38": ["gnomAD_genomes_AF", "gnomAD genomes v3.1.2"],
+        "GRCh37": ["gnomAD_exomes_AF", "gnomAD exomes v2.1.1"]
+    }
+}
 
 SKIP_CONSEQUENCE = [
     "downstream_gene_variant",
@@ -42,6 +49,8 @@ SKIP_CONSEQUENCE = [
 def parse_args(args = None, description: bool = None):
     parser = argparse.ArgumentParser(description = description)
     
+    parser.add_argument(dest="species", type=str, help="species production name")
+    parser.add_argument(dest="assembly", type=str, help="assembly default")
     parser.add_argument(dest="input_file", type=str, help="input VCF file")
     parser.add_argument('-O', '--output_file', dest="output_file", type=str)
     
@@ -56,11 +65,21 @@ def minimise_allele(ref: str, alt: str) -> str:
 def main(args = None):
     args = parse_args(args)
 
+    species = args.species
+    assembly = args.assembly
     input_file = os.path.realpath(args.input_file)
     output_file = args.output_file or os.path.join(os.path.dirname(input_file), "UPDATED_SS_" + os.path.basename(input_file))
 
+    # frequency meta
+    (freq_csq_field, freq_info_display) = (None, "")
+    if species in FREQUENCY_META and assembly in FREQUENCY_META[species] and len(FREQUENCY_META[species][assembly]) == 2:
+        (freq_csq_field, freq_info_display) = FREQUENCY_META[species][assembly]
+
     input_vcf = VCF(input_file)
+
     # add to header and write header to output vcf
+    if freq_info_display != "":
+        HEADERS[0]['Description'] = HEADERS[0]['Description'] + f" ({freq_info_display})"
     for header in HEADERS:
         input_vcf.add_info_to_header(header)
 
@@ -134,11 +153,12 @@ def main(args = None):
                         items_per_variant["citation"].add(citation)
 
             # frequency
-            af_csq_idx = csq_header_idx["gnomAD_genomes_AF"]
-            if af_csq_idx < csq_values_len:
-                frequency = csq_values[af_csq_idx]
-                if frequency != "":
-                    items_per_allele[allele]["frequency"] = frequency
+            if freq_csq_field:
+                af_csq_idx = csq_header_idx[freq_csq_field]
+                if af_csq_idx < csq_values_len:
+                    frequency = csq_values[af_csq_idx]
+                    if frequency != "":
+                        items_per_allele[allele]["frequency"] = frequency
 
         # create summary info for per allele fields
         for field in PER_ALLELE_FIELDS:
