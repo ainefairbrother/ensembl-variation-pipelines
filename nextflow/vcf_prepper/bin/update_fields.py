@@ -47,7 +47,7 @@ def main(args = None):
     source = args.source
     synonym_file = args.synonym_file
     chromosomes = args.chromosomes or None
-    output_file = args.output_file or "UPDATED_S_" + input_file
+    output_file = args.output_file or os.path.join(os.path.dirname(input_file), "UPDATED_S_" + os.path.basename(input_file))
 
     synonyms = {}
     with open(synonym_file) as file:
