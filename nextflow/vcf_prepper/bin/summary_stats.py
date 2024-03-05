@@ -127,19 +127,28 @@ def main(args = None):
                 
             consequences = csq_values[csq_header_idx["Consequence"]]
             feature_stable_id = csq_values[csq_header_idx["Feature"]]
+            
+            # if all consequence in the skipped list do not add that feature in the count
+            add_regulatory_feature = False
+            add_transcript_feature = False
             for csq in consequences.split("&"):
-                if csq in SKIP_CONSEQUENCE:
-                    continue
-
+                if csq not in SKIP_CONSEQUENCE:
+                    if csq.startswith("regulatory"):
+                        add_regulatory_feature = True
+                    else:
+                        add_transcript_feature = True
+            
+            if add_transcript_feature:
                 # genes
                 gene = csq_values[csq_header_idx["Gene"]]               
                 items_per_variant["gene"].add(gene)
 
-                # regualtory and transcript consequences
-                if csq.startswith("regulatory"):
-                    items_per_variant["regulatory_consequence"].add(f"{feature_stable_id}:{csq}")
-                else:
-                    items_per_variant["transcipt_consequence"].add(f"{feature_stable_id}:{csq}")
+                # transcipt consequences
+                items_per_variant["transcipt_consequence"].add(f"{feature_stable_id}:{consequences}")
+
+            # regualtory consequences
+            if add_regulatory_feature:
+                items_per_variant["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
             
             csq_values_len = len(csq_values)
 
