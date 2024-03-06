@@ -149,12 +149,10 @@ def main(args = None):
             # regualtory consequences
             if add_regulatory_feature:
                 items_per_variant["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
-            
-            csq_values_len = len(csq_values)
 
             # phenotype
-            phenotype_csq_idx = csq_header_idx["PHENOTYPES"]
-            if phenotype_csq_idx < csq_values_len:
+            if "PHENOTYPES" in csq_header_idx:
+                phenotype_csq_idx = csq_header_idx["PHENOTYPES"]
                 phenotypes = csq_values[phenotype_csq_idx]
                 for phenotype in phenotypes.split("&"):
                     pheno_PER_ALLELE_FIELDS = phenotype.split("+")
@@ -168,8 +166,8 @@ def main(args = None):
                         items_per_allele[allele]["variant_phenotype"].add(f"{name}:{source}:{feature}")
 
             # citations
-            pubmed_csq_idx = csq_header_idx["PUBMED"]
-            if pubmed_csq_idx < csq_values_len:
+            if "PUBMED" in csq_header_idx:
+                pubmed_csq_idx = csq_header_idx["PUBMED"]
                 citations = csq_values[pubmed_csq_idx]
                 for citation in citations.split("&"):
                     if citation != "":
@@ -178,10 +176,9 @@ def main(args = None):
             # frequency
             if freq_csq_field:
                 af_csq_idx = csq_header_idx[freq_csq_field]
-                if af_csq_idx < csq_values_len:
-                    frequency = csq_values[af_csq_idx]
-                    if frequency != "":
-                        items_per_allele[allele]["frequency"] = frequency
+                frequency = csq_values[af_csq_idx]
+                if frequency != "":
+                    items_per_allele[allele]["frequency"] = frequency
 
         # create summary info for per allele fields
         for field in PER_ALLELE_FIELDS:
