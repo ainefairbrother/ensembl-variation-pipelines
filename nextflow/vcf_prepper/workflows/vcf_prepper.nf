@@ -36,6 +36,7 @@ include { VCF_TO_BED } from "../modules/local/vcf_to_bed.nf"
 include { CONCAT_BEDS } from "../modules/local/concat_beds.nf"
 include { BED_TO_BIGBED } from "../modules/local/bed_to_bigbed.nf"
 include { BED_TO_BIGWIG } from "../modules/local/bed_to_bigwig.nf"
+include { SUMMARY_STATS } from "../modules/local/summary_stats.nf"
 
 def parse_config (config) {
   input_set = []
@@ -61,7 +62,7 @@ def parse_config (config) {
 }
 
 workflow VCF_PREPPER {
-  if (params.skip_vep && params.skip_tracks) {
+  if (params.skip_vep && params.skip_tracks && params.skip_stats) {
     exit 0, "Skipping VEP and track file generation, nothing to do ..."
   }
   
@@ -95,32 +96,21 @@ workflow VCF_PREPPER {
           "NO_VARIANT"
         }
         else {
-          // TODO: when we have multiple source per genome we need to delete source specific files
-          new_vcf = "${meta.genome_api_outdir}/variation.vcf.gz"
-          new_vcf_index = "${meta.genome_api_outdir}/variation.vcf.gz.${meta.index_type}"
-          
-          // in -resume vcf and vcf_index may not exists as already renamed
-          // moveTo instead of renameTo - in -resume dest file may exists from previous run
-          if ( file(vcf).exists() && file(vcf_index).exists() ) {
-            file(vcf).moveTo(new_vcf)
-            file(vcf_index).moveTo(new_vcf_index)
-          }
-
-          [meta, new_vcf, new_vcf_index]
+          [meta, vcf, vcf_index]
         }
     }
     .filter { ! it.equals("NO_VARIANT") }
-    .set { ch_tracks }
+    .set { ch_post_api }
   }
   else {
-    ch_tracks = PREPARE_GENOME.out
+    ch_post_api = PREPARE_GENOME.out
   }
 
   // track files
   if (!params.skip_tracks) {
     // create bed from VCF
     // TODO: vcf_to_bed maybe faster without SPLIT_VCF - needs benchmarking
-    SPLIT_VCF( ch_tracks )
+    SPLIT_VCF( ch_post_api )
     VCF_TO_BED( CREATE_RANK_FILE.out, SPLIT_VCF.out.transpose() )
     CONCAT_BEDS( VCF_TO_BED.out.groupTuple() )
 
@@ -128,5 +118,65 @@ workflow VCF_PREPPER {
     // TODO: remove symlink creation for focus track when we have multiple source
     BED_TO_BIGBED( CONCAT_BEDS.out )
     BED_TO_BIGWIG( CONCAT_BEDS.out )
+
+    // if track generation is run vep-ed VCF file move needs to wait for this step to finish
+    SPLIT_VCF.out
+    .map {
+      meta, splits ->
+        [meta]
+    }
+    .set { ch_split_finish }
+  }
+
+  // summary stats
+  if (!params.skip_stats) {
+    // it can run in parallel to track generation
+    SUMMARY_STATS( ch_post_api )
+
+    SUMMARY_STATS.out
+    .set { ch_stats_finish }
+  }
+
+  // post process
+  if (!params.skip_vep || !params.skip_stats){
+    if(!params.skip_stats && !params.skip_tracks) {
+      ch_split_finish
+      .join ( ch_stats_finish )
+      .map {
+        meta, vcf, vcf_index ->
+          [meta, vcf, vcf_index]
+      }
+      .set { ch_post_process }
+    }
+    else if (params.skip_stats) {
+      ch_split_finish
+      .join ( ch_post_api )
+      .map {
+        meta, vcf, vcf_index ->
+          [meta, vcf, vcf_index]
+      }
+      .set { ch_post_process }
+    }
+    else if (params.skip_tracks) {
+      ch_stats_finish
+      .set { ch_post_process }
+    }
+
+    ch_post_process
+    .map {
+      meta, vcf, vcf_index ->
+        // TODO: when we have multiple source per genome we need to delete source specific files
+        new_vcf = "${meta.genome_api_outdir}/variation.vcf.gz"
+        new_vcf_index = "${meta.genome_api_outdir}/variation.vcf.gz.${meta.index_type}"
+        
+        // in -resume vcf and vcf_index may not exists as already renamed
+        // moveTo instead of renameTo - in -resume dest file may exists from previous run
+        if ( file(vcf).exists() && file(vcf_index).exists() ) {
+          file(vcf).moveTo(new_vcf)
+          file(vcf_index).moveTo(new_vcf_index)
+        }
+
+        [meta, new_vcf, new_vcf_index]
+    }
   }
 }

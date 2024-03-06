@@ -16,24 +16,30 @@
  * limitations under the License.
  */
  
-process UPDATE_FIELDS {
+process SUMMARY_STATS {
   input: 
   tuple val(meta), path(vcf), path(vcf_index)
-  
+
   output:
-  tuple val(meta), path(output_file)
+  tuple val(meta), path(output_file), path(vcf_index)
   
   shell:
-  output_file =  "UPDATED_S_" + file(vcf).getName()
-  source = meta.source
-  synonym_file = meta.synonym_file
-  rename_clinvar_ids = params.rename_clinvar_ids ? "--rename_clinvar_ids" : ""
-  
+  species = meta.species
+  assembly = meta.assembly
+  output_file =  "UPDATED_SS_" + file(vcf).getName()
+  uncomressed_output_file = output_file.replaceFirst(/.gz$/, "")
+  index_type = meta.index_type
+  flag_index = (index_type == "tbi" ? "-t" : "-c")
+  vcf_index = output_file + ".${index_type}"
+
   '''
-  chrs=$(tabix !{vcf} -l | xargs | tr ' ' ',')
-  update_fields.py !{vcf} !{source} !{synonym_file} \
-    !{rename_clinvar_ids} \
-    -O !{output_file} \
-    --chromosomes ${chrs}
+  summary_stats.py \
+    !{species} \
+    !{assembly} \
+    !{vcf} \
+    -O !{uncomressed_output_file}
+  
+  bgzip !{uncomressed_output_file}
+  bcftools index !{flag_index} !{output_file}
   '''
 }
