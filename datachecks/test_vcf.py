@@ -19,6 +19,7 @@ from cyvcf2.cyvcf2 import Variant
 from typing import Callable
 import subprocess
 import random
+from math import isclose
 import logging
 
 logger = logging.getLogger(__name__)
@@ -402,7 +403,7 @@ class TestSummaryStatistics:
             
             iter += 1
 
-    def test_summary_statistics_per_allele(self, vcf_reader):
+    def test_summary_statistics_per_allele(self, vcf_reader, species):
         NO_VARIANTS = 100
         NO_ITER = 100000
         
@@ -414,7 +415,7 @@ class TestSummaryStatistics:
                 csq_field_idx[csq_field] = csq_list.index(csq_field)
             
         if "PHENOTYPES" not in csq_field_idx:
-            logger.info("There are no phenotypes for, skipping ...")
+            pytest.skip(f"There are no phenotypes for {species}, skipping ...")
 
         chrs = vcf_reader.seqnames
         variants = []
@@ -449,14 +450,77 @@ class TestSummaryStatistics:
                                 variant_phenotype[allele] = set()
                             variant_phenotype[allele].add(f"{name}:{source}:{feature}")
                 
-                if len(gene_phenotype) > 0:
-                    assert sorted(gene_phenotype.values()) == sorted(variant.INFO["NGPHN"])
+                if len(gene_phenotype) > 1:
+                    assert sorted([len(val) for val in gene_phenotype.values()]) == sorted(variant.INFO["NGPHN"])
+                elif len(gene_phenotype) == 1:
+                    assert [len(val) for val in gene_phenotype.values()] == [variant.INFO["NGPHN"]]
                 else:
                     assert "NGPHN" not in variant.INFO
 
-                if len(variant_phenotype) > 0:
-                    assert sorted(variant_phenotype.values()) == sorted(variant.INFO["NVPHN"])
+                if len(variant_phenotype) > 1:
+                    assert sorted([len(val) for val in variant_phenotype.values()]) == sorted(variant.INFO["NVPHN"])
+                elif len(variant_phenotype) == 1:
+                    assert [len(val) for val in variant_phenotype.values()] == [variant.INFO["NVPHN"]]
                 else:
                     assert "NVPHN" not in variant.INFO
+            
+            iter += 1
+
+    def test_summary_statistics_frequency(self, vcf_reader, species):
+        if species not in ["homo_sapiens", "homo_sapiens_37"]:
+             pytest.skip("Unsupported species, skipping ...")
+
+        if species == "homo_sapiens":
+            freq_csq_field = "gnomAD_genomes_AF" 
+        elif species == "homo_sapiens_37":
+            freq_csq_field = "gnomAD_exomes_AF"
+
+        NO_VARIANTS = 100
+        NO_ITER = 100000
+
+        csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
+        csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
+
+        csq_field_idx = {}
+        for csq_field in csq_list:
+                csq_field_idx[csq_field] = csq_list.index(csq_field)
+            
+        assert freq_csq_field in csq_field_idx
+
+        chrs = vcf_reader.seqnames
+        variants = []
+        iter = 0
+        while(len(variants) < NO_VARIANTS and iter <= NO_ITER):
+            chr = random.choice(chrs)
+            start = random.choice(range(10000, 1000000))
+
+            for variant in vcf_reader(f"{chr}:{start}"):
+                frequency = {}
+
+                csqs = variant.INFO["CSQ"]
+                for csq in csqs.split(","):
+                    csq_values = csq.split("|")
+
+                    allele = csq_values[csq_field_idx["Allele"]]
+                    freq = csq_values[csq_field_idx[freq_csq_field]]
+
+                    if freq != "":
+                        frequency[allele] = float(freq)
+                
+                if len(frequency) > 1:
+                    actual = sorted(frequency.values())
+                    got = sorted([ val for val in variant.INFO["RAF"] if val is not None ])
+                    for idx, _ in enumerate(actual):
+                        assert isclose(actual[idx], got[idx], rel_tol=1e-5)
+                elif len(frequency) == 1:
+                    actual = frequency[list(frequency.keys())[0]]
+                    if type(variant.INFO["RAF"]) is tuple:
+                        got = [ val for val in variant.INFO["RAF"] if val is not None ]
+                        assert len(got) == 1
+                        assert isclose(actual, got[0], rel_tol=1e-5)
+                    else:
+                        assert isclose(actual, variant.INFO["RAF"], rel_tol=1e-5)
+                else:
+                    assert "RAF" not in variant.INFO
             
             iter += 1
