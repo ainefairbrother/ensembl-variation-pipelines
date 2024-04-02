@@ -107,7 +107,7 @@ def main(args = None):
             
             file.write(f"#SBATCH --time={args.time}\n")
             file.write(f"#SBATCH --mem={args.memory}\n")
-            file.write(f"#SBATCH -p={args.partition}\n")
+            file.write(f"#SBATCH --partition={args.partition}\n")
             file.write(f"#SBATCH --mail-user={args.mail_user}\n")
             file.write(f"#SBATCH --mail-type=END\n")
             file.write(f"#SBATCH --mail-type=FAIL\n")
