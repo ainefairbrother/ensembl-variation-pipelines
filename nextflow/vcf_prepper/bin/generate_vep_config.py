@@ -175,7 +175,7 @@ def get_plugin_args(
             print(f"[INFO] Cannot get Phenotype data file - {file}. Skipping ...")
             return None
             
-        return f"Phenotypes,file={file},phenotype_feature=1"
+        return f"Phenotypes,file={file},id_match=1,cols=phenotype&source&id&type&clinvar_clin_sig"
         
     if plugin == "IntAct":
         mutation_file = os.path.join(plugin_data_dir, "mutations.tsv")
