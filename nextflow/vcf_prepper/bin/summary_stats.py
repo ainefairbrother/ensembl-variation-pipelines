@@ -33,13 +33,14 @@ HEADERS = [
 PER_ALLELE_FIELDS = {
     "variant_phenotype": "NVPHN",
     "gene_phenotype": "NGPHN",
-}
-
-PER_VARIANT_FIELDS = {
     "transcipt_consequence": "NTCSQ",
     "regulatory_consequence": "NRCSQ",
     "gene": "NGENE",
     "citation": "NCITE"
+}
+
+PER_VARIANT_FIELDS = {
+
 }
 
 FREQUENCY_FIELD = "RAF"
@@ -141,14 +142,14 @@ def main(args = None):
             if add_transcript_feature:
                 # genes
                 gene = csq_values[csq_header_idx["Gene"]]               
-                items_per_variant["gene"].add(gene)
+                items_per_allele[allele]["gene"].add(gene)
 
                 # transcipt consequences
-                items_per_variant["transcipt_consequence"].add(f"{feature_stable_id}:{consequences}")
+                items_per_allele[allele]["transcipt_consequence"].add(f"{feature_stable_id}:{consequences}")
 
             # regualtory consequences
             if add_regulatory_feature:
-                items_per_variant["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
+                items_per_allele[allele]["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
 
             # phenotype
             if "PHENOTYPES" in csq_header_idx:
@@ -171,7 +172,7 @@ def main(args = None):
                 citations = csq_values[pubmed_csq_idx]
                 for citation in citations.split("&"):
                     if citation != "":
-                        items_per_variant["citation"].add(citation)
+                        items_per_allele[allele]["citation"].add(citation)
 
             # frequency
             if freq_csq_field:
