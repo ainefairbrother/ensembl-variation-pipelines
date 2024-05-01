@@ -35,12 +35,11 @@ PER_ALLELE_FIELDS = {
     "gene_phenotype": "NGPHN",
     "transcipt_consequence": "NTCSQ",
     "regulatory_consequence": "NRCSQ",
-    "gene": "NGENE",
-    "citation": "NCITE"
+    "gene": "NGENE"
 }
 
 PER_VARIANT_FIELDS = {
-
+    "citation": "NCITE"
 }
 
 FREQUENCY_FIELD = "RAF"
@@ -172,7 +171,7 @@ def main(args = None):
                 citations = csq_values[pubmed_csq_idx]
                 for citation in citations.split("&"):
                     if citation != "":
-                        items_per_allele[allele]["citation"].add(citation)
+                        items_per_variant["citation"].add(citation)
 
             # frequency
             if freq_csq_field:
