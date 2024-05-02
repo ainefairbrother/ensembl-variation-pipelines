@@ -22,9 +22,9 @@ import argparse
 
 HEADERS = [
     {'ID': 'RAF', 'Description': 'Allele frequencies from representative population', 'Type':'Float', 'Number': 'A'},
-    {'ID': 'NTCSQ', 'Description': 'Number of transcript consequences', 'Type':'Integer', 'Number': '1'},
-    {'ID': 'NRCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': '1'},
-    {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': '1'},
+    {'ID': 'NTCSQ', 'Description': 'Number of transcript consequences', 'Type':'Integer', 'Number': 'A'},
+    {'ID': 'NRCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': 'A'},
+    {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NVPHN', 'Description': 'Number of associated variant-linked phenotypes', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NGPHN', 'Description': 'Number of associated gene-linked phenotypes', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NCITE', 'Description': 'Number of citations', 'Type':'Integer', 'Number': '1'}
@@ -33,12 +33,12 @@ HEADERS = [
 PER_ALLELE_FIELDS = {
     "variant_phenotype": "NVPHN",
     "gene_phenotype": "NGPHN",
+    "transcipt_consequence": "NTCSQ",
+    "regulatory_consequence": "NRCSQ",
+    "gene": "NGENE"
 }
 
 PER_VARIANT_FIELDS = {
-    "transcipt_consequence": "NTCSQ",
-    "regulatory_consequence": "NRCSQ",
-    "gene": "NGENE",
     "citation": "NCITE"
 }
 
@@ -141,14 +141,14 @@ def main(args = None):
             if add_transcript_feature:
                 # genes
                 gene = csq_values[csq_header_idx["Gene"]]               
-                items_per_variant["gene"].add(gene)
+                items_per_allele[allele]["gene"].add(gene)
 
                 # transcipt consequences
-                items_per_variant["transcipt_consequence"].add(f"{feature_stable_id}:{consequences}")
+                items_per_allele[allele]["transcipt_consequence"].add(f"{feature_stable_id}:{consequences}")
 
             # regualtory consequences
             if add_regulatory_feature:
-                items_per_variant["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
+                items_per_allele[allele]["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
 
             # phenotype
             if "PHENOTYPES" in csq_header_idx:
