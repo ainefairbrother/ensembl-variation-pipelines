@@ -22,9 +22,9 @@ import argparse
 
 HEADERS = [
     {'ID': 'RAF', 'Description': 'Allele frequencies from representative population', 'Type':'Float', 'Number': 'A'},
-    {'ID': 'NTCSQ', 'Description': 'Number of transcript consequences', 'Type':'Integer', 'Number': '1'},
-    {'ID': 'NRCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': '1'},
-    {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': '1'},
+    {'ID': 'NTCSQ', 'Description': 'Number of transcript consequences', 'Type':'Integer', 'Number': 'A'},
+    {'ID': 'NRCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': 'A'},
+    {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NVPHN', 'Description': 'Number of associated variant-linked phenotypes', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NGPHN', 'Description': 'Number of associated gene-linked phenotypes', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NCITE', 'Description': 'Number of citations', 'Type':'Integer', 'Number': '1'}
