@@ -45,10 +45,8 @@ PER_VARIANT_FIELDS = {
 FREQUENCY_FIELD = "RAF"
 # [csq_field, diplay_name]
 FREQUENCY_META = {
-    "homo_sapiens": {
-        "GRCh38": ["gnomAD_genomes_AF", "gnomAD genomes v3.1.2"],
-        "GRCh37": ["gnomAD_exomes_AF", "gnomAD exomes v2.1.1"]
-    }
+    "homo_sapiens": ["gnomAD_genomes_AF", "gnomAD genomes v3.1.2"],
+    "homo_sapiens_37": ["gnomAD_exomes_AF", "gnomAD exomes v2.1.1"]
 }
 
 SKIP_CONSEQUENCE = [
@@ -86,8 +84,8 @@ def main(args = None):
 
     # frequency meta
     (freq_csq_field, freq_info_display) = (None, "")
-    if species in FREQUENCY_META and assembly in FREQUENCY_META[species] and len(FREQUENCY_META[species][assembly]) == 2:
-        (freq_csq_field, freq_info_display) = FREQUENCY_META[species][assembly]
+    if species in FREQUENCY_META and len(FREQUENCY_META[species]) == 2:
+        (freq_csq_field, freq_info_display) = FREQUENCY_META[species]
 
     input_vcf = VCF(input_file)
 
