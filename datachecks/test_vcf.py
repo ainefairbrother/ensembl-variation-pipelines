@@ -409,7 +409,6 @@ class TestSummaryStatistics:
                     allele = csq_values[csq_field_idx["Allele"]]
                     consequences = csq_values[csq_field_idx["Consequence"]]
                     feature_stable_id = csq_values[csq_field_idx["Feature"]]
-                    phenotypes = csq_values[csq_field_idx["PHENOTYPES"]]
 
                     for csq in consequences.split("&"):
                         if csq not in self.SKIP_CONSEQUENCE:
@@ -425,20 +424,22 @@ class TestSummaryStatistics:
                                     gene[allele] = set()
                                 gene[allele].add(csq_values[csq_field_idx["Gene"]] )
 
-                    for phenotype in phenotypes.split("&"):
-                        pheno_per_allele_fields = phenotype.split("+")
-                        if len(pheno_per_allele_fields) != 3:
-                            continue
+                    if "PHENOTYPES" in csq_field_idx:
+                        phenotypes = csq_values[csq_field_idx["PHENOTYPES"]]
+                        for phenotype in phenotypes.split("&"):
+                            pheno_per_allele_fields = phenotype.split("+")
+                            if len(pheno_per_allele_fields) != 3:
+                                continue
 
-                        (name, source, feature) = pheno_per_allele_fields
-                        if feature.startswith("ENS"):
-                            if allele not in gene_phenotype:
-                                gene_phenotype[allele] = set()
-                            gene_phenotype[allele].add(f"{name}:{source}:{feature}")
-                        else:
-                            if allele not in variant_phenotype:
-                                variant_phenotype[allele] = set()
-                            variant_phenotype[allele].add(f"{name}:{source}:{feature}")
+                            (name, source, feature) = pheno_per_allele_fields
+                            if feature.startswith("ENS"):
+                                if allele not in gene_phenotype:
+                                    gene_phenotype[allele] = set()
+                                gene_phenotype[allele].add(f"{name}:{source}:{feature}")
+                            else:
+                                if allele not in variant_phenotype:
+                                    variant_phenotype[allele] = set()
+                                variant_phenotype[allele].add(f"{name}:{source}:{feature}")
                 
                 if len(regulatory_consequence) > 1:
                     assert sorted([len(val) for val in regulatory_consequence.values()]) == sorted(variant.INFO["NRCSQ"])
