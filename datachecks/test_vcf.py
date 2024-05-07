@@ -322,7 +322,10 @@ class TestContent:
 
 class TestSummaryStatistics:
     
-    PER_ALLELE_FIELDS = {
+    PER_ALLELE_FIELDS = {    
+        "transcript_consequence": "NTCSQ",
+        "regulatory_consequence": "NRCSQ",
+        "gene": "NGENE",
         "variant_phenotype": "NVPHN",
         "gene_phenotype": "NGPHN",
     }
@@ -355,46 +358,17 @@ class TestSummaryStatistics:
             start = random.choice(range(10000, 1000000))
 
             for variant in vcf_reader(f"{chr}:{start}"):
-                transcript_consequence = set()
-                regulatory_consequence = set()
-                gene = set()
                 citation = set()
 
                 csqs = variant.INFO["CSQ"]
                 for csq in csqs.split(","):
                     csq_values = csq.split("|")
 
-                    consequences = csq_values[csq_field_idx["Consequence"]]
-                    feature_stable_id = csq_values[csq_field_idx["Feature"]]
-
-                    for csq in consequences.split("&"):
-                        if csq not in self.SKIP_CONSEQUENCE:
-                            if csq.startswith("regulatory"):
-                                regulatory_consequence.add(f"{feature_stable_id}:{consequences}")
-                            else:
-                                transcript_consequence.add(f"{feature_stable_id}:{consequences}")
-                                gene.add(csq_values[csq_field_idx["Gene"]] )
-
                     if "PUBMED" in csq_field_idx:
                         cites = csq_values[csq_field_idx["PUBMED"]]
                         for cite in cites.split("&"):
                             if cite != "":
                                 citation.add(cite)
-
-                if len(transcript_consequence) > 0:
-                    assert len(transcript_consequence) == int(variant.INFO["NTCSQ"])
-                else:
-                    assert "NTCSQ" not in variant.INFO
-
-                if len(regulatory_consequence) > 0:
-                    assert len(regulatory_consequence) == int(variant.INFO["NRCSQ"])
-                else:
-                    assert "NRCSQ" not in variant.INFO
-
-                if len(gene) > 0:
-                    assert len(gene) == int(variant.INFO["NGENE"])
-                else:
-                    assert "NGENE" not in variant.INFO
 
                 if len(citation) > 0:
                     assert len(citation) == int(variant.INFO["NCITE"])
@@ -413,9 +387,6 @@ class TestSummaryStatistics:
         csq_field_idx = {}
         for csq_field in csq_list:
                 csq_field_idx[csq_field] = csq_list.index(csq_field)
-            
-        if "PHENOTYPES" not in csq_field_idx:
-            pytest.skip(f"There are no phenotypes for {species}, skipping ...")
 
         chrs = vcf_reader.seqnames
         variants = []
@@ -425,6 +396,9 @@ class TestSummaryStatistics:
             start = random.choice(range(10000, 1000000))
 
             for variant in vcf_reader(f"{chr}:{start}"):
+                transcript_consequence = {}
+                regulatory_consequence = {}
+                gene = {}
                 gene_phenotype = {}
                 variant_phenotype = {}
 
@@ -433,7 +407,23 @@ class TestSummaryStatistics:
                     csq_values = csq.split("|")
 
                     allele = csq_values[csq_field_idx["Allele"]]
+                    consequences = csq_values[csq_field_idx["Consequence"]]
+                    feature_stable_id = csq_values[csq_field_idx["Feature"]]
                     phenotypes = csq_values[csq_field_idx["PHENOTYPES"]]
+
+                    for csq in consequences.split("&"):
+                        if csq not in self.SKIP_CONSEQUENCE:
+                            if csq.startswith("regulatory"):
+                                if allele not in regulatory_consequence:
+                                    regulatory_consequence[allele] = set()
+                                regulatory_consequence[allele].add(f"{feature_stable_id}:{consequences}")
+                            else:
+                                if allele not in transcript_consequence:
+                                    transcript_consequence[allele] = set()
+                                transcript_consequence[allele].add(f"{feature_stable_id}:{consequences}")
+                                if allele not in gene:
+                                    gene[allele] = set()
+                                gene[allele].add(csq_values[csq_field_idx["Gene"]] )
 
                     for phenotype in phenotypes.split("&"):
                         pheno_per_allele_fields = phenotype.split("+")
@@ -450,6 +440,27 @@ class TestSummaryStatistics:
                                 variant_phenotype[allele] = set()
                             variant_phenotype[allele].add(f"{name}:{source}:{feature}")
                 
+                if len(regulatory_consequence) > 1:
+                    assert sorted([len(val) for val in regulatory_consequence.values()]) == sorted(variant.INFO["NRCSQ"])
+                elif len(regulatory_consequence) == 1:
+                    assert [len(val) for val in regulatory_consequence.values()] == [variant.INFO["NRCSQ"]]
+                else:
+                    assert "NRCSQ" not in variant.INFO
+                
+                if len(transcript_consequence) > 1:
+                    assert sorted([len(val) for val in transcript_consequence.values()]) == sorted(variant.INFO["NTCSQ"])
+                elif len(transcript_consequence) == 1:
+                    assert [len(val) for val in transcript_consequence.values()] == [variant.INFO["NTCSQ"]]
+                else:
+                    assert "NTCSQ" not in variant.INFO
+                
+                if len(gene) > 1:
+                    assert sorted([len(val) for val in gene.values()]) == sorted(variant.INFO["NGENE"])
+                elif len(gene) == 1:
+                    assert [len(val) for val in gene.values()] == [variant.INFO["NGENE"]]
+                else:
+                    assert "NGENE" not in variant.INFO
+
                 if len(gene_phenotype) > 1:
                     assert sorted([len(val) for val in gene_phenotype.values()]) == sorted(variant.INFO["NGPHN"])
                 elif len(gene_phenotype) == 1:
