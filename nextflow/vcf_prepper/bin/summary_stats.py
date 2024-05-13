@@ -68,6 +68,14 @@ def parse_args(args = None, description: bool = None):
     
     return parser.parse_args(args)
 
+def header_match(want_header: dict, got_header: dict) -> bool:
+    got_header.pop("IDX")
+
+    return want_header['ID'] == got_header['ID'] and \
+        want_header['Type'] == got_header['Type'] and \
+        want_header['Number'] == got_header['Number'] and \
+        f'"{ want_header["Description"] }"' == got_header['Description']
+
 def minimise_allele(ref: str, alt: str) -> str:
     minimised_allele_string = alt
     if ref[0] == alt[0]:
@@ -92,10 +100,36 @@ def main(args = None):
     # add to header and write header to output vcf
     if freq_info_display != "":
         HEADERS[0]['Description'] = HEADERS[0]['Description'] + f" ({freq_info_display})"
+    
+    use_input_vcf_for_h = True
     for header in HEADERS:
-        input_vcf.add_info_to_header(header)
+        h_id = header['ID']
+        if input_vcf.contains(h_id) and not header_match(header, input_vcf.get_header_type(key=h_id)):
+            use_input_vcf_for_h = False
 
-    output_vcf = Writer(output_file, input_vcf, mode="w")
+    if use_input_vcf_for_h:
+        for header in HEADERS:
+            input_vcf.add_info_to_header(header)
+
+        output_vcf = Writer(output_file, input_vcf, mode="w")
+    else:
+        h_vcf_file = "header.vcf"
+        raw_h = input_vcf.raw_header
+        header_hash = {info['ID']: info for info in HEADERS}
+
+        with open(h_vcf_file, "w") as file:
+            for line in raw_h.split("\n"):
+                for iid in header_hash:
+                    if f"ID={ iid }" in line:
+                        line = f"##INFO=<ID={ iid },Number={ header_hash[iid]['Number'] },Type={ header_hash[iid]['Type'] },Description=\"{ header_hash[iid]['Description'] }\">"
+                        break
+                file.write(line + "\n")
+
+        h_vcf = VCF(h_vcf_file)
+        output_vcf = Writer(output_file, h_vcf, mode="w")
+
+        h_vcf.close()
+        os.remove(h_vcf_file)
 
     # parse csq header and get index of each field
     csq_list = input_vcf.get_header_type("CSQ")['Description'].split("Format: ")[1].split("|")
