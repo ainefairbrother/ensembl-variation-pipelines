@@ -76,11 +76,22 @@ def header_match(want_header: dict, got_header: dict) -> bool:
         want_header['Number'] == got_header['Number'] and \
         f'"{ want_header["Description"] }"' == got_header['Description']
 
-def minimise_allele(ref: str, alt: str) -> str:
-    minimised_allele_string = alt
-    if ref[0] == alt[0]:
-        minimised_allele_string = alt[1:] if len(alt) > 1 else "-" 
-    return minimised_allele_string
+def minimise_allele(ref: str, alts: list) -> str:
+    alleles = [ref] + alts
+    first_bases = {allele[0] for allele in alleles}
+
+    if len(first_bases) == 1:
+        ref = ref[1:] or "-"
+
+        temp_alts = []
+        for alt in alts:
+            if "*" in alt:
+                temp_alts.append(alt)
+            else:
+                temp_alts.append(alt[1:] or "-")
+        alts = temp_alts
+
+    return (ref, alts)
 
 def main(args = None):
     args = parse_args(args)
@@ -140,10 +151,7 @@ def main(args = None):
     # iterate through the file
     for variant in input_vcf:
         # create minimalized allele order
-        allele_order = []
-        ref = variant.REF
-        for alt in variant.ALT:
-            allele_order.append(minimise_allele(ref, alt))
+        (ref, allele_order) = minimise_allele(variant.REF, variant.ALT)
 
         items_per_variant = {item: set() for item in PER_VARIANT_FIELDS}
         items_per_allele = {}
