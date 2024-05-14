@@ -45,6 +45,7 @@ workflow RUN_VEP {
       vep_meta.output_dir = meta.genome_temp_dir
       vep_meta.one_to_many = 0
       vep_meta.index_type = meta.index_type
+      vep_meta.filters = "amino_acids not match X[A-Za-z*]?\\/"
 
       [vep_meta, vcf, vcf_index, meta.vep_config]
   }
