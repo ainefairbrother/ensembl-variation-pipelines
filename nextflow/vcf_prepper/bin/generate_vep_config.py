@@ -63,21 +63,36 @@ FREQUENCIES = {
     "1000genomes": "af_1kg 1",
     "gnomAD_exomes": {
         "GRCh38": {
-            "version": "2.1.1",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v2.1.1/grch38/exomes",
-            "file_pattern": "gnomad.exomes.r2.1.1.sites.##CHR##.liftover_grch38_no_VEP.vcf.gz"
+            "version": "4.1",
+            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/exomes",
+            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##.vcf.bgz"
         },
         "GRCh37": {
-            "version": "2.1",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v2.1/grch37/exomes",
-            "file_pattern": "gnomad.exomes.r2.1.sites.chr##CHR##_noVEP.vcf.gz"
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/exomes/grch37",
+            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
+        },
+        "T2T-CHM13v2.0": {
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/exomes/T2T-CHM13v2.0",
+            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
         }
     },
     "gnomAD_genomes": {
         "GRCh38": {
-            "version": "3.1.2",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v3.1.2/grch38/genomes",
-            "file_pattern": "gnomad.genomes.v3.1.2.sites.chr##CHR##_trimmed_info.vcf.bgz"
+            "version": "4.1",
+            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/genomes",
+            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##.vcf.bgz"
+        },
+        "GRCh37": {
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/genomes/grch37",
+            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
+        },
+        "T2T-CHM13v2.0": {
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/genomes/T2T-CHM13v2.0",
+            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
         }
     }
 }
