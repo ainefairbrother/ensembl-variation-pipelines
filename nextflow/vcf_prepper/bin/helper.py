@@ -69,6 +69,52 @@ def get_division(server: dict, core_db: str) -> str:
     )
     return process.stdout.decode().strip()
 
+def dump_variant_source(server: dict, variation_db: str, dump_file: str) -> str:
+    query = "SELECT DISTINCT vf.variation_name, s.name FROM variation_feature AS vf, source AS s WHERE vf.source_id = s.source_id;"
+
+    with open(dump_file, "w") as file:
+        process = subprocess.run(["mysql",
+                "--host", server["host"],
+                "--port", server["port"],
+                "--user", server["user"],
+                "--database", variation_db,
+                "-N",
+                "--execute", query
+            ],
+            stdout = file,
+            stderr = subprocess.PIPE
+        )
+
+    return process.returncode
+
+def get_sources_meta_info(server: dict, variation_db: str) -> dict:
+    query = "SELECT name, description, url, version FROM source;"
+    process = subprocess.run(["mysql",
+            "--host", server["host"],
+            "--port", server["port"],
+            "--user", server["user"],
+            "--database", variation_db,
+            "-N",
+            "--execute", query
+        ],
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE
+    )
+    if process.returncode != 0:
+        return []
+
+    sources_meta_raw = process.stdout.decode().strip()
+    sources_meta = []
+    for source_meta_line in sources_meta_raw.split("\n"):
+        (name, description, url, version) = source_meta_line.split("\t")
+        sources_meta.append({
+            "name": name,
+            "description": description,
+            "url": url,
+            "version": version
+        })
+    return sources_meta
+
 def get_fasta_species_name(species_production_name: str) -> str:
     return species_production_name[0].upper() + species_production_name[1:]
     
