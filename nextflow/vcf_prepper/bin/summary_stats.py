@@ -22,9 +22,9 @@ import argparse
 
 HEADERS = [
     {'ID': 'RAF', 'Description': 'Allele frequencies from representative population', 'Type':'Float', 'Number': 'A'},
-    {'ID': 'NTCSQ', 'Description': 'Number of transcript consequences', 'Type':'Integer', 'Number': '1'},
-    {'ID': 'NRCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': '1'},
-    {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': '1'},
+    {'ID': 'NTCSQ', 'Description': 'Number of transcript consequences', 'Type':'Integer', 'Number': 'A'},
+    {'ID': 'NRCSQ', 'Description': 'Number of regulatory consequences', 'Type':'Integer', 'Number': 'A'},
+    {'ID': 'NGENE', 'Description': 'Number of overlapped gene', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NVPHN', 'Description': 'Number of associated variant-linked phenotypes', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NGPHN', 'Description': 'Number of associated gene-linked phenotypes', 'Type':'Integer', 'Number': 'A'},
     {'ID': 'NCITE', 'Description': 'Number of citations', 'Type':'Integer', 'Number': '1'}
@@ -33,22 +33,20 @@ HEADERS = [
 PER_ALLELE_FIELDS = {
     "variant_phenotype": "NVPHN",
     "gene_phenotype": "NGPHN",
+    "transcipt_consequence": "NTCSQ",
+    "regulatory_consequence": "NRCSQ",
+    "gene": "NGENE"
 }
 
 PER_VARIANT_FIELDS = {
-    "transcipt_consequence": "NTCSQ",
-    "regulatory_consequence": "NRCSQ",
-    "gene": "NGENE",
     "citation": "NCITE"
 }
 
 FREQUENCY_FIELD = "RAF"
 # [csq_field, diplay_name]
 FREQUENCY_META = {
-    "homo_sapiens": {
-        "GRCh38": ["gnomAD_genomes_AF", "gnomAD genomes v3.1.2"],
-        "GRCh37": ["gnomAD_exomes_AF", "gnomAD exomes v2.1.1"]
-    }
+    "homo_sapiens": ["gnomAD_genomes_AF", "gnomAD genomes v3.1.2"],
+    "homo_sapiens_37": ["gnomAD_exomes_AF", "gnomAD exomes v2.1.1"]
 }
 
 SKIP_CONSEQUENCE = [
@@ -86,8 +84,8 @@ def main(args = None):
 
     # frequency meta
     (freq_csq_field, freq_info_display) = (None, "")
-    if species in FREQUENCY_META and assembly in FREQUENCY_META[species] and len(FREQUENCY_META[species][assembly]) == 2:
-        (freq_csq_field, freq_info_display) = FREQUENCY_META[species][assembly]
+    if species in FREQUENCY_META and len(FREQUENCY_META[species]) == 2:
+        (freq_csq_field, freq_info_display) = FREQUENCY_META[species]
 
     input_vcf = VCF(input_file)
 
@@ -141,14 +139,14 @@ def main(args = None):
             if add_transcript_feature:
                 # genes
                 gene = csq_values[csq_header_idx["Gene"]]               
-                items_per_variant["gene"].add(gene)
+                items_per_allele[allele]["gene"].add(gene)
 
                 # transcipt consequences
-                items_per_variant["transcipt_consequence"].add(f"{feature_stable_id}:{consequences}")
+                items_per_allele[allele]["transcipt_consequence"].add(f"{feature_stable_id}:{consequences}")
 
             # regualtory consequences
             if add_regulatory_feature:
-                items_per_variant["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
+                items_per_allele[allele]["regulatory_consequence"].add(f"{feature_stable_id}:{consequences}")
 
             # phenotype
             if "PHENOTYPES" in csq_header_idx:
