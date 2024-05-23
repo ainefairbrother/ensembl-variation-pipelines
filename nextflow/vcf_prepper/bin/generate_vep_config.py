@@ -386,7 +386,7 @@ def main(args = None):
         polyphen = True
     
     frequencies = []
-    if species == "homo_sapiens":
+    if species.startswith("homo_sapiens"):
         frequencies = get_frequency_args(assembly)
         
     plugins = get_plugins(species, version, assembly, repo_dir, conservation_data_dir)
