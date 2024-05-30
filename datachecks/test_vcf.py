@@ -19,6 +19,7 @@ from cyvcf2.cyvcf2 import Variant
 from typing import Callable
 import subprocess
 import random
+from math import isclose
 import logging
 
 logger = logging.getLogger(__name__)
@@ -318,3 +319,220 @@ class TestContent:
                 assert csq_field_cnt[csq_field] == NO_VARIANTS
             else:
                 logger.info(f"{csq_field} count: {csq_field_cnt[csq_field]} expected: {NO_VARIANTS * 0.5}")
+
+class TestSummaryStatistics:
+    
+    PER_ALLELE_FIELDS = {    
+        "transcript_consequence": "NTCSQ",
+        "regulatory_consequence": "NRCSQ",
+        "gene": "NGENE",
+        "variant_phenotype": "NVPHN",
+        "gene_phenotype": "NGPHN",
+    }
+
+    SKIP_CONSEQUENCE = [
+        "downstream_gene_variant",
+        "upstream_gene_variant",
+        "intergenic_variant",
+        "TF_binding_site_variant",
+        "TFBS_ablation",
+        "TFBS_amplification"
+    ]
+
+    def test_summary_statistics_per_variant(self, vcf_reader):
+        NO_VARIANTS = 100
+        NO_ITER = 100000
+        
+        csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
+        csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
+
+        csq_field_idx = {}
+        for csq_field in csq_list:
+                csq_field_idx[csq_field] = csq_list.index(csq_field)
+
+        chrs = vcf_reader.seqnames
+        variants = []
+        iter = 0
+        while(len(variants) < NO_VARIANTS and iter <= NO_ITER):
+            chr = random.choice(chrs)
+            start = random.choice(range(10000, 1000000))
+
+            for variant in vcf_reader(f"{chr}:{start}"):
+                citation = set()
+
+                csqs = variant.INFO["CSQ"]
+                for csq in csqs.split(","):
+                    csq_values = csq.split("|")
+
+                    if "PUBMED" in csq_field_idx:
+                        cites = csq_values[csq_field_idx["PUBMED"]]
+                        for cite in cites.split("&"):
+                            if cite != "":
+                                citation.add(cite)
+
+                if len(citation) > 0:
+                    assert len(citation) == int(variant.INFO["NCITE"])
+                else:
+                    assert "NCITE" not in variant.INFO
+            
+            iter += 1
+
+    def test_summary_statistics_per_allele(self, vcf_reader, species):
+        NO_VARIANTS = 100
+        NO_ITER = 100000
+        
+        csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
+        csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
+
+        csq_field_idx = {}
+        for csq_field in csq_list:
+                csq_field_idx[csq_field] = csq_list.index(csq_field)
+
+        chrs = vcf_reader.seqnames
+        variants = []
+        iter = 0
+        while(len(variants) < NO_VARIANTS and iter <= NO_ITER):
+            chr = random.choice(chrs)
+            start = random.choice(range(10000, 1000000))
+
+            for variant in vcf_reader(f"{chr}:{start}"):
+                transcript_consequence = {}
+                regulatory_consequence = {}
+                gene = {}
+                gene_phenotype = {}
+                variant_phenotype = {}
+
+                csqs = variant.INFO["CSQ"]
+                for csq in csqs.split(","):
+                    csq_values = csq.split("|")
+
+                    allele = csq_values[csq_field_idx["Allele"]]
+                    consequences = csq_values[csq_field_idx["Consequence"]]
+                    feature_stable_id = csq_values[csq_field_idx["Feature"]]
+
+                    for csq in consequences.split("&"):
+                        if csq not in self.SKIP_CONSEQUENCE:
+                            if csq.startswith("regulatory"):
+                                if allele not in regulatory_consequence:
+                                    regulatory_consequence[allele] = set()
+                                regulatory_consequence[allele].add(f"{feature_stable_id}:{consequences}")
+                            else:
+                                if allele not in transcript_consequence:
+                                    transcript_consequence[allele] = set()
+                                transcript_consequence[allele].add(f"{feature_stable_id}:{consequences}")
+                                if allele not in gene:
+                                    gene[allele] = set()
+                                gene[allele].add(csq_values[csq_field_idx["Gene"]] )
+
+                    if "PHENOTYPES" in csq_field_idx:
+                        phenotypes = csq_values[csq_field_idx["PHENOTYPES"]]
+                        for phenotype in phenotypes.split("&"):
+                            pheno_per_allele_fields = phenotype.split("+")
+                            if len(pheno_per_allele_fields) != 3:
+                                continue
+
+                            (name, source, feature) = pheno_per_allele_fields
+                            if feature.startswith("ENS"):
+                                if allele not in gene_phenotype:
+                                    gene_phenotype[allele] = set()
+                                gene_phenotype[allele].add(f"{name}:{source}:{feature}")
+                            else:
+                                if allele not in variant_phenotype:
+                                    variant_phenotype[allele] = set()
+                                variant_phenotype[allele].add(f"{name}:{source}:{feature}")
+                
+                if len(regulatory_consequence) > 1:
+                    assert sorted([len(val) for val in regulatory_consequence.values()]) == sorted(variant.INFO["NRCSQ"])
+                elif len(regulatory_consequence) == 1:
+                    assert [len(val) for val in regulatory_consequence.values()] == [variant.INFO["NRCSQ"]]
+                else:
+                    assert "NRCSQ" not in variant.INFO
+                
+                if len(transcript_consequence) > 1:
+                    assert sorted([len(val) for val in transcript_consequence.values()]) == sorted(variant.INFO["NTCSQ"])
+                elif len(transcript_consequence) == 1:
+                    assert [len(val) for val in transcript_consequence.values()] == [variant.INFO["NTCSQ"]]
+                else:
+                    assert "NTCSQ" not in variant.INFO
+                
+                if len(gene) > 1:
+                    assert sorted([len(val) for val in gene.values()]) == sorted(variant.INFO["NGENE"])
+                elif len(gene) == 1:
+                    assert [len(val) for val in gene.values()] == [variant.INFO["NGENE"]]
+                else:
+                    assert "NGENE" not in variant.INFO
+
+                if len(gene_phenotype) > 1:
+                    assert sorted([len(val) for val in gene_phenotype.values()]) == sorted(variant.INFO["NGPHN"])
+                elif len(gene_phenotype) == 1:
+                    assert [len(val) for val in gene_phenotype.values()] == [variant.INFO["NGPHN"]]
+                else:
+                    assert "NGPHN" not in variant.INFO
+
+                if len(variant_phenotype) > 1:
+                    assert sorted([len(val) for val in variant_phenotype.values()]) == sorted(variant.INFO["NVPHN"])
+                elif len(variant_phenotype) == 1:
+                    assert [len(val) for val in variant_phenotype.values()] == [variant.INFO["NVPHN"]]
+                else:
+                    assert "NVPHN" not in variant.INFO
+            
+            iter += 1
+
+    def test_summary_statistics_frequency(self, vcf_reader, species):
+        if species not in ["homo_sapiens", "homo_sapiens_37"]:
+             pytest.skip("Unsupported species, skipping ...")
+
+        if species == "homo_sapiens":
+            freq_csq_field = "gnomAD_genomes_AF" 
+        elif species == "homo_sapiens_37":
+            freq_csq_field = "gnomAD_exomes_AF"
+
+        NO_VARIANTS = 100
+        NO_ITER = 100000
+
+        csq_info_description = vcf_reader.get_header_type("CSQ")["Description"]
+        csq_list = [csq.strip() for csq in csq_info_description.split("Format: ")[1].split("|")]
+
+        csq_field_idx = {}
+        for csq_field in csq_list:
+                csq_field_idx[csq_field] = csq_list.index(csq_field)
+            
+        assert freq_csq_field in csq_field_idx
+
+        chrs = vcf_reader.seqnames
+        variants = []
+        iter = 0
+        while(len(variants) < NO_VARIANTS and iter <= NO_ITER):
+            chr = random.choice(chrs)
+            start = random.choice(range(10000, 1000000))
+
+            for variant in vcf_reader(f"{chr}:{start}"):
+                frequency = {}
+
+                csqs = variant.INFO["CSQ"]
+                for csq in csqs.split(","):
+                    csq_values = csq.split("|")
+
+                    allele = csq_values[csq_field_idx["Allele"]]
+                    freq = csq_values[csq_field_idx[freq_csq_field]]
+
+                    if freq != "":
+                        frequency[allele] = float(freq)
+                
+                if len(frequency) > 1:
+                    actual = sorted(frequency.values())
+                    got = sorted([ val for val in variant.INFO["RAF"] if val is not None ])
+                    for idx, _ in enumerate(actual):
+                        assert isclose(actual[idx], got[idx], rel_tol=1e-5)
+                elif len(frequency) == 1:
+                    actual = frequency[list(frequency.keys())[0]]
+                    if type(variant.INFO["RAF"]) is tuple:
+                        got = [ val for val in variant.INFO["RAF"] if val is not None ]
+                        assert len(got) == 1
+                        assert isclose(actual, got[0], rel_tol=1e-5)
+                    else:
+                        assert isclose(actual, variant.INFO["RAF"], rel_tol=1e-5)
+                else:
+                    assert "RAF" not in variant.INFO
+            
+            iter += 1

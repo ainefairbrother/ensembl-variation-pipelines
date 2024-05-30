@@ -43,7 +43,7 @@ PER_VARIANT_FIELDS = {
 }
 
 FREQUENCY_FIELD = "RAF"
-# [csq_field, diplay_name]
+# [csq_field, display_name]
 FREQUENCY_META = {
     "homo_sapiens": ["gnomAD_genomes_AF", "gnomAD genomes v3.1.2"],
     "homo_sapiens_37": ["gnomAD_exomes_AF", "gnomAD exomes v2.1.1"]
@@ -153,11 +153,11 @@ def main(args = None):
                 phenotype_csq_idx = csq_header_idx["PHENOTYPES"]
                 phenotypes = csq_values[phenotype_csq_idx]
                 for phenotype in phenotypes.split("&"):
-                    pheno_PER_ALLELE_FIELDS = phenotype.split("+")
-                    if len(pheno_PER_ALLELE_FIELDS) != 3:
+                    pheno_per_allele_fields = phenotype.split("+")
+                    if len(pheno_per_allele_fields) != 3:
                         continue
                     
-                    (name, source, feature) = pheno_PER_ALLELE_FIELDS
+                    (name, source, feature) = pheno_per_allele_fields
                     if feature.startswith("ENS"):
                         items_per_allele[allele]["gene_phenotype"].add(f"{name}:{source}:{feature}")
                     else:
