@@ -50,32 +50,49 @@ POLYPHEN_SPECIES = [
 ]
 PLUGINS = [
     "CADD",
-    "REVEL",
     "SpliceAI",
     "Phenotypes",
     "IntAct",
     "AncestralAllele",
-    "Conservation"
+    "Conservation",
+    "MaveDB",
+    "AlphaMissense",
+    "Downstream"
 ]
 FREQUENCIES = {
     "1000genomes": "af_1kg 1",
     "gnomAD_exomes": {
         "GRCh38": {
-            "version": "2.1.1",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v2.1.1/grch38/exomes",
-            "file_pattern": "gnomad.exomes.r2.1.1.sites.##CHR##.liftover_grch38_no_VEP.vcf.gz"
+            "version": "4.1",
+            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/exomes",
+            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##.vcf.bgz"
         },
         "GRCh37": {
-            "version": "2.1",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v2.1/grch37/exomes",
-            "file_pattern": "gnomad.exomes.r2.1.sites.chr##CHR##_noVEP.vcf.gz"
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/exomes/grch37",
+            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
+        },
+        "T2T-CHM13v2.0": {
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/exomes/T2T-CHM13v2.0",
+            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
         }
     },
     "gnomAD_genomes": {
         "GRCh38": {
-            "version": "3.1.2",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v3.1.2/grch38/genomes",
-            "file_pattern": "gnomad.genomes.v3.1.2.sites.chr##CHR##_trimmed_info.vcf.bgz"
+            "version": "4.1",
+            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/genomes",
+            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##.vcf.bgz"
+        },
+        "GRCh37": {
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/genomes/grch37",
+            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
+        },
+        "T2T-CHM13v2.0": {
+            "version": "4.1",
+            "directory": "/hps/nobackup/flicek/ensembl/variation/snhossain/website/gnomad_liftover/remapped/genomes/T2T-CHM13v2.0",
+            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##.liftover_grch38.vcf.gz"
         }
     }
 }
@@ -113,16 +130,16 @@ def format_gnomad_args(source: str, metadata: dict) -> str:
             "%AF_asj%AC_asj%AN_asj" + \
             "%AF_eas%AC_eas%AN_eas" + \
             "%AF_fin%AC_fin%AN_fin" + \
+            "%AF_mid%AC_mid%AN_mid" + \
             "%AF_nfe%AC_nfe%AN_nfe" + \
-            "%AF_oth%AC_oth%AN_oth" + \
+            "%AF_remaining%AC_remaining%AN_remaining" + \
             "%AF_sas%AC_sas%AN_sas"
-
+    
         if source == "gnomAD_genomes":
-            custom_line += "%AF_mid%AC_mid%AN_mid%AF_ami%AC_ami%AN_ami"
+            custom_line += "%AF_ami%AC_ami%AN_ami"
 
         gnomAD_custom_args.append(custom_line)
 
-    
     return "\n".join(gnomAD_custom_args)
     
 def get_frequency_args(assembly: str) -> str:
@@ -161,13 +178,6 @@ def get_plugin_args(
         check_plugin_files(plugin, [snv, indels])
         
         return f"CADD,{snv},{indels}"
-    
-    if plugin == "REVEL":
-        data_file = f"/nfs/production/flicek/ensembl/variation/data/REVEL/2021-may/new_tabbed_revel_{assembly.lower()}.tsv.gz"
-        
-        check_plugin_files(plugin, [data_file])
-            
-        return f"REVEL,{data_file}"
         
     if plugin == "SpliceAI":
         ucsc_assembly = "hg38" if assembly == "GRCh38" else "hg19"
@@ -186,7 +196,7 @@ def get_plugin_args(
             print(f"[INFO] Cannot get Phenotype data file - {file}. Skipping ...")
             return None
             
-        return f"Phenotypes,file={file},phenotype_feature=1"
+        return f"Phenotypes,file={file},id_match=1,cols=phenotype&source&id&type&clinvar_clin_sig"
         
     if plugin == "IntAct":
         mutation_file = os.path.join(plugin_data_dir, "mutations.tsv")
@@ -213,9 +223,26 @@ def get_plugin_args(
             return None
             
         return f"Conservation,{file}"
+    
+    if plugin == "MaveDB":
+        file = os.path.join(plugin_data_dir, "MaveDB_variants.tsv.gz")
         
-    print(f"[ERROR] Unknown plugin argument requested - {plugin}. Exiting ...")
-    exit(1)
+        check_plugin_files(plugin, [file])
+            
+        return f"MaveDB,file={file},cols=MaveDB_score:MaveDB_urn,transcript_match=1"
+    
+    if plugin == "AlphaMissense":
+        # Alphamissense do not have data file in e110 directory or below 
+        if version < 111:
+            plugin_data_dir = plugin_data_dir.replace(f"{version}", "111")
+        file = os.path.join(plugin_data_dir, "AlphaMissense_hg38.tsv.gz")
+        
+        check_plugin_files(plugin, [file])
+            
+        return f"AlphaMissense,file={file}"
+
+    # some plugin do not need any arguments, for example - Downstream plugin
+    return plugin
     
 def get_plugin_species(plugin: str, repo_dir: str) -> list:
     plugin_config_file = f"{repo_dir}/VEP_plugins/plugin_config.txt"
@@ -298,6 +325,8 @@ def generate_vep_config(
         file.write("pubmed 1\n")
         file.write("var_synonyms 1\n")
         file.write("variant_class 1\n")
+        file.write("protein 1\n")
+        file.write("transcript_version 1\n")
         
         if sift:
             file.write(f"sift b\n")
@@ -357,7 +386,7 @@ def main(args = None):
         polyphen = True
     
     frequencies = []
-    if species == "homo_sapiens":
+    if species.startswith("homo_sapiens"):
         frequencies = get_frequency_args(assembly)
         
     plugins = get_plugins(species, version, assembly, repo_dir, conservation_data_dir)
