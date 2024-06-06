@@ -227,7 +227,9 @@ def get_plugin_args(
     if plugin == "MaveDB":
         file = os.path.join(plugin_data_dir, "MaveDB_variants.tsv.gz")
         
-        check_plugin_files(plugin, [file])
+        if not os.path.isfile(file):
+            print(f"[INFO] Cannot get MaveDB data file - {file}. Skipping ...")
+            return None
             
         return f"MaveDB,file={file},cols=MaveDB_score:MaveDB_urn,transcript_match=1"
     
