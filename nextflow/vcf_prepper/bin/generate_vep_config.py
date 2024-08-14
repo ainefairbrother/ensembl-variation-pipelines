@@ -58,7 +58,8 @@ PLUGINS = [
     "Conservation",
     "MaveDB",
     "AlphaMissense",
-    "Downstream"
+    "Downstream",
+    "ClinPred"
 ]
 FREQUENCIES = {
     "1000genomes": "af_1kg 1",
@@ -248,6 +249,17 @@ def get_plugin_args(
         check_plugin_files(plugin, [file], "skip")
             
         return f"AlphaMissense,file={file}"
+
+    if plugin == "ClinPred":
+        # ClinPred do not have data file in e113 directory or below
+        if version < 113:
+            plugin_data_dir = plugin_data_dir.replace(f"{version}", "113")
+        file_name = "ClinPred_hg38_sorted_tabbed.tsv.gz" if assembly == "GRCh38" else "ClinPred_tabbed.tsv.gz"
+        file = os.path.join(plugin_data_dir, file_name)
+        
+        check_plugin_files(plugin, [file], "skip")
+            
+        return f"ClinPred,file={file}"
 
     # some plugin do not need any arguments, for example - Downstream plugin
     return plugin
