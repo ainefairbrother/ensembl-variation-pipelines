@@ -50,6 +50,7 @@ POLYPHEN_SPECIES = [
 ]
 PLUGINS = [
     "CADD",
+    "REVEL",
     "SpliceAI",
     "Phenotypes",
     "IntAct",
@@ -182,6 +183,13 @@ def get_plugin_args(
         check_plugin_files(plugin, [snv, indels])
         
         return f"CADD,{snv},{indels}"
+    
+    if plugin == "REVEL":
+        data_file = f"/nfs/production/flicek/ensembl/variation/data/REVEL/2021-may/new_tabbed_revel_{assembly.lower()}.tsv.gz"
+
+        check_plugin_files(plugin, [data_file])
+
+        return f"REVEL,{data_file}"
         
     if plugin == "SpliceAI":
         ucsc_assembly = "hg38" if assembly == "GRCh38" else "hg19"
