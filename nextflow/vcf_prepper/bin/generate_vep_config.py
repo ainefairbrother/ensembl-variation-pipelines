@@ -67,7 +67,7 @@ FREQUENCIES = {
         "GRCh38": {
             "version": "4.1",
             "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/grch38/exomes",
-            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##.vcf.bgz"
+            "file_pattern": "gnomad.exomes.v4.1.sites.chr##CHR##_trimmed.vcf.bgz"
         },
         "GRCh37": {
             "version": "4.1",
@@ -84,7 +84,7 @@ FREQUENCIES = {
         "GRCh38": {
             "version": "4.1",
             "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/grch38/genomes",
-            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##.vcf.bgz"
+            "file_pattern": "gnomad.genomes.v4.1.sites.chr##CHR##_trimmed.vcf.bgz"
         },
         "GRCh37": {
             "version": "4.1",
@@ -181,7 +181,7 @@ def get_plugin_args(
         # CADD have data v1.7 data file from e113
         if version < 113:
             plugin_data_dir = plugin_data_dir.replace(f"{version}", "113")
-        snv = os.path.join(plugin_data_dir, f"CADD_{assembly}_1.7_whole_genome_SNVs.tsv.gz ")
+        snv = os.path.join(plugin_data_dir, f"CADD_{assembly}_1.7_whole_genome_SNVs.tsv.gz")
         indels = os.path.join(plugin_data_dir, f"CADD_{assembly}_1.7_InDels.tsv.gz")
         
         check_plugin_files(plugin, [snv, indels])
@@ -258,7 +258,7 @@ def get_plugin_args(
         if version < 113:
             plugin_data_dir = plugin_data_dir.replace(f"{version}", "113")
         file_name = "ClinPred_hg38_sorted_tabbed.tsv.gz" if assembly == "GRCh38" else "ClinPred_tabbed.tsv.gz"
-        file = os.path.join(plugin_data_dir, file_name)
+        file = os.path.join(plugin_data_dir, "ClinPred", file_name)
         
         check_plugin_files(plugin, [file], "skip")
             
