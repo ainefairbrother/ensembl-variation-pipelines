@@ -53,6 +53,9 @@ def parse_config (config) {
       meta.assembly = source_data.assembly
       meta.source = source_data.source_name.replace(" ", "_")
       meta.file_type = source_data.file_type
+
+      meta.source = meta.source.replace(" ", "%20")
+      meta.source = meta.source.replace("/", "%2F")
       
       input_set.add([meta, vcf])
     }  
