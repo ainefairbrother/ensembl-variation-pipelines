@@ -56,7 +56,9 @@ workflow RUN_VEP {
   .map {
     meta, vcf ->
       // tag here is the output vcf file from nextflow-vep
-      tag = "${meta.genome_temp_dir}/${meta.genome}-${meta.source}_VEP.vcf.gz"    
+      filename = "${meta.genome}-${meta.source}_VEP.vcf.gz".replace("/", "_")
+      tag = "${meta.genome_temp_dir}/${filename}"
+
       [tag, meta]
   }
   .join ( vep.out, failOnDuplicate: true )
