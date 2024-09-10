@@ -181,11 +181,18 @@ def get_plugin_args(
         # CADD have data v1.7 data file from e113
         if version < 113:
             plugin_data_dir = plugin_data_dir.replace(f"{version}", "113")
+
+        if species == "sus_scrofa":
+            snv = os.path.join(plugin_data_dir, f"ALL_pCADD-PHRED-scores.tsv.gz")
+            check_plugin_files(plugin, [snv])
+            
+            return f"CADD,{snv}"
+
         snv = os.path.join(plugin_data_dir, f"CADD_{assembly}_1.7_whole_genome_SNVs.tsv.gz")
         indels = os.path.join(plugin_data_dir, f"CADD_{assembly}_1.7_InDels.tsv.gz")
-        
+
         check_plugin_files(plugin, [snv, indels])
-        
+
         return f"CADD,{snv},{indels}"
     
     if plugin == "REVEL":
