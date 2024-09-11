@@ -133,7 +133,7 @@ def main(args = None):
             exit(1)
     else:
         if glob.glob(fasta_glob):
-            print(f"[INFO] {fasta_glob} exists. Will be oerwritten ...")
+            print(f"[INFO] {fasta_glob} exists. Will be overwritten ...")
             for f in glob.glob(fasta_glob):
                 os.remove(f)
         
