@@ -78,7 +78,12 @@ FREQUENCIES = {
             "version": "4.1",
             "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/T2T-CHM13v2.0/exomes",
             "file_pattern": "gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz"
-        }
+        },
+        "HPRCs": {
+            "version": "4.1",
+            "directory": "/nfs/production/flicek/ensembl/production/ensemblftp/rapid-release/species/Homo_sapiens/##ASSEMBLY##/ensembl/variation/2022_10/vcf/2024_07/",
+            "file_pattern": "gnomad.exomes.v4.1.sites.##ASSEMBLY##.trimmed_liftover.vcf.gz"            
+        } 
     },
     "gnomAD_genomes": {
         "GRCh38": {
@@ -95,8 +100,36 @@ FREQUENCIES = {
             "version": "4.1",
             "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/T2T-CHM13v2.0/genomes",
             "file_pattern": "gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz"
-        }
+        },
+        "HPRCs": {
+            "version": "4.1",
+            "directory": "/nfs/production/flicek/ensembl/production/ensemblftp/rapid-release/species/Homo_sapiens/##ASSEMBLY##/ensembl/variation/2022_10/vcf/2024_07/",
+            "file_pattern": "gnomad.genomes.v4.1.sites.##ASSEMBLY##.trimmed_liftover.vcf.gz"            
+        } 
     }
+}
+GNOMAD_CUSTOM_FIELDS={
+    "gnomAD_exomes": "AF%AC%AN" + \
+            "%AF_afr%AC_afr%AN_afr" + \
+            "%AF_amr%AC_amr%AN_amr" + \
+            "%AF_asj%AC_asj%AN_asj" + \
+            "%AF_eas%AC_eas%AN_eas" + \
+            "%AF_fin%AC_fin%AN_fin" + \
+            "%AF_mid%AC_mid%AN_mid" + \
+            "%AF_nfe%AC_nfe%AN_nfe" + \
+            "%AF_remaining%AC_remaining%AN_remaining" + \
+            "%AF_sas%AC_sas%AN_sas",
+    "gnomAD_genomes": "AF%AC%AN" + \
+            "%AF_afr%AC_afr%AN_afr" + \
+            "%AF_amr%AC_amr%AN_amr" + \
+            "%AF_asj%AC_asj%AN_asj" + \
+            "%AF_eas%AC_eas%AN_eas" + \
+            "%AF_fin%AC_fin%AN_fin" + \
+            "%AF_mid%AC_mid%AN_mid" + \
+            "%AF_nfe%AC_nfe%AN_nfe" + \
+            "%AF_remaining%AC_remaining%AN_remaining" + \
+            "%AF_sas%AC_sas%AN_sas" + \
+            "%AF_ami%AC_ami%AN_ami" 
 }
 
 def parse_args(args = None):
@@ -125,34 +158,32 @@ def format_gnomad_args(source: str, metadata: dict) -> str:
             print(f"[ERROR] Frequency file does not exist - {file}. Exiting ...")
             exit(1)
         
-        custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0," + \
-            "fields=AF%AC%AN" + \
-            "%AF_afr%AC_afr%AN_afr" + \
-            "%AF_amr%AC_amr%AN_amr" + \
-            "%AF_asj%AC_asj%AN_asj" + \
-            "%AF_eas%AC_eas%AN_eas" + \
-            "%AF_fin%AC_fin%AN_fin" + \
-            "%AF_mid%AC_mid%AN_mid" + \
-            "%AF_nfe%AC_nfe%AN_nfe" + \
-            "%AF_remaining%AC_remaining%AN_remaining" + \
-            "%AF_sas%AC_sas%AN_sas"
-    
-        if source == "gnomAD_genomes":
-            custom_line += "%AF_ami%AC_ami%AN_ami"
-
+        custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0,fields=GNOMAD_CUSTOM_FIELDS[{source}]"
         gnomAD_custom_args.append(custom_line)
 
     return "\n".join(gnomAD_custom_args)
     
-def get_frequency_args(assembly: str) -> str:
+def get_frequency_args(species: str, assembly: str) -> str:
     frequencies = []
     for source in FREQUENCIES:
         if source.startswith("gnomAD"):
             if assembly in FREQUENCIES[source]:
                 frequencies.append(format_gnomad_args(source, FREQUENCIES[source][assembly]))
+        elif source.startswith("HPRCs"):
+            # add gnomAD frequency for HPRC assembly (other than T2T)
+            if species.startswith("homo_sapiens_gca"):
+                metadata = FREQUENCIES[source]["HPRCs"]
+                assembly_acc =  species.split("_")[2].replace("gca", "GCA_").replace("v", ".")
+                file = os.path.join(metadata["directory"].replace("##ASSEMBLY##", assembly_acc), metadata["file_pattern"].replace("##ASSEMBLY##", assembly_acc))
+                
+                if not os.file.exists(file):
+                    continue
+
+                custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0,fields=GNOMAD_CUSTOM_FIELDS[{source}]"
+                frequencies.append(custom_line)
         else:
             frequencies.append(FREQUENCIES[source])
-    
+
     return frequencies
     
 def check_plugin_files(plugin: str, files: list, exit_rule: str = "exit") -> bool:
@@ -422,7 +453,7 @@ def main(args = None):
     
     frequencies = []
     if species.startswith("homo_sapiens"):
-        frequencies = get_frequency_args(assembly)
+        frequencies = get_frequency_args(species, assembly)
         
     plugins = get_plugins(species, version, assembly, repo_dir, conservation_data_dir)
     
