@@ -157,8 +157,8 @@ def format_gnomad_args(source: str, metadata: dict) -> str:
         if not os.path.isfile(file):
             print(f"[ERROR] Frequency file does not exist - {file}. Exiting ...")
             exit(1)
-        
-        custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0,fields=GNOMAD_CUSTOM_FIELDS[{source}]"
+
+        custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0,fields={GNOMAD_CUSTOM_FIELDS[source]}"
         gnomAD_custom_args.append(custom_line)
 
     return "\n".join(gnomAD_custom_args)
@@ -169,18 +169,15 @@ def get_frequency_args(species: str, assembly: str) -> str:
         if source.startswith("gnomAD"):
             if assembly in FREQUENCIES[source]:
                 frequencies.append(format_gnomad_args(source, FREQUENCIES[source][assembly]))
-        elif source.startswith("HPRCs"):
-            # add gnomAD frequency for HPRC assembly (other than T2T)
-            if species.startswith("homo_sapiens_gca"):
+            elif species.startswith("homo_sapiens_gca"):
+                # add gnomAD frequency for HPRC assembly (other than T2T)
                 metadata = FREQUENCIES[source]["HPRCs"]
                 assembly_acc =  species.split("_")[2].replace("gca", "GCA_").replace("v", ".")
                 file = os.path.join(metadata["directory"].replace("##ASSEMBLY##", assembly_acc), metadata["file_pattern"].replace("##ASSEMBLY##", assembly_acc))
-                
-                if not os.file.exists(file):
-                    continue
 
-                custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0,fields=GNOMAD_CUSTOM_FIELDS[{source}]"
-                frequencies.append(custom_line)
+                if os.path.exists(file):
+                    custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0,fields={GNOMAD_CUSTOM_FIELDS[source]}"
+                    frequencies.append(custom_line)
         else:
             frequencies.append(FREQUENCIES[source])
 
