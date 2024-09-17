@@ -56,7 +56,8 @@ workflow RUN_VEP {
   .map {
     meta, vcf ->
       // tag here is the output vcf file from nextflow-vep
-      tag = "${meta.genome_temp_dir}/${meta.genome}-${meta.source}_VEP.vcf.gz"
+      filename = file("${meta.genome}-${meta.source}").getSimpleName() + "_VEP.vcf.gz"
+      tag = "${meta.genome_temp_dir}/${filename}"
 
       [tag, meta]
   }
@@ -65,6 +66,10 @@ workflow RUN_VEP {
     tag, meta ->
       vcf = tag
       vcf_index = "${tag}.${meta.index_type}"
+
+      if (! file(vcf).exists() || ! file(vcf_index).exists()){
+        exit 1, "ERROR: Could not find nextflow-vep output files. Check the following - \n\tVCF - ${vcf}\n\tVCF index - ${vcf_index}"
+      }
       
       [meta, vcf, vcf_index]
   }.set { ch_post_vep }
