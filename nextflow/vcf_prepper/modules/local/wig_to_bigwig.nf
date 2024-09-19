@@ -23,7 +23,7 @@ process WIG_TO_BIGWIG {
   output:
   path "variant-${source}-summary.bw"
   
-  memory  { (wig.size() * 6.B + 1.GB) * task.attempt }
+  memory  { (wig.size() * 10.B + 1.GB) * task.attempt }
   time    { 48.hour * task.attempt }
   
   shell:
