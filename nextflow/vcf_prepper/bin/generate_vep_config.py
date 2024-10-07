@@ -74,11 +74,6 @@ FREQUENCIES = {
             "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/grch37/exomes",
             "file_pattern": "gnomad.exomes.v4.1.sites.grch37.chr##CHR##_trimmed_liftover.vcf.gz"
         },
-        "T2T-CHM13v2.0": {
-            "version": "4.1",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/T2T-CHM13v2.0/exomes",
-            "file_pattern": "gnomad.exomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz"
-        },
         "HPRCs": {
             "version": "4.1",
             "directory": "/nfs/production/flicek/ensembl/production/ensemblftp/rapid-release/species/Homo_sapiens/##ASSEMBLY##/ensembl/variation/2022_10/vcf/2024_07/",
@@ -95,11 +90,6 @@ FREQUENCIES = {
             "version": "4.1",
             "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/grch37/genomes",
             "file_pattern": "gnomad.genomes.v4.1.sites.grch37.chr##CHR##_trimmed_liftover.vcf.gz"
-        },
-        "T2T-CHM13v2.0": {
-            "version": "4.1",
-            "directory": "/nfs/production/flicek/ensembl/variation/data/gnomAD/v4.1/T2T-CHM13v2.0/genomes",
-            "file_pattern": "gnomad.genomes.v4.1.sites.GCA_009914755.4.trimmed_liftover.vcf.gz"
         },
         "HPRCs": {
             "version": "4.1",
