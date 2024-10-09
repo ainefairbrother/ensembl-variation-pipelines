@@ -178,10 +178,12 @@ def check_plugin_files(plugin: str, files: list, exit_rule: str = "exit") -> boo
         if not os.path.isfile(file):
             if exit_rule == "skip":
                 print(f"[INFO] Cannot get {plugin} data file - {file}. Skipping ...")
-                return None
+                return False
 
             print(f"[INFO] Cannot get {plugin} data file - {file}. Exiting ...")
             exit(1)
+
+    return True
     
 def get_plugin_args(
         plugin: str, 
@@ -233,7 +235,7 @@ def get_plugin_args(
         pl_assembly = f"_{assembly}" if species == "homo_sapiens" else ""
         file = os.path.join(plugin_data_dir, f"Phenotypes_data_files/Phenotypes.pm_{species}_{version}{pl_assembly}.gvf.gz")
         
-        if check_plugin_files(plugin, [file], "skip") is None:
+        if not check_plugin_files(plugin, [file], "skip"):
             return None
             
         return f"Phenotypes,file={file},id_match=1,cols=phenotype&source&id&type&clinvar_clin_sig"
@@ -258,7 +260,7 @@ def get_plugin_args(
     if plugin == "Conservation":
         file = os.path.join(conservation_data_dir, f"gerp_conservation_scores.{species}.{assembly}.bw")
         
-        if check_plugin_files(plugin, [file], "skip") is None:
+        if not check_plugin_files(plugin, [file], "skip"):
             return None
             
         return f"Conservation,{file}"
@@ -266,7 +268,7 @@ def get_plugin_args(
     if plugin == "MaveDB":
         file = os.path.join(plugin_data_dir, "MaveDB_variants.tsv.gz")
         
-        if check_plugin_files(plugin, [file], "skip") is None:
+        if not check_plugin_files(plugin, [file], "skip"):
             return None
             
         return f"MaveDB,file={file},cols=MaveDB_score:MaveDB_urn,transcript_match=1"
@@ -277,7 +279,7 @@ def get_plugin_args(
             plugin_data_dir = plugin_data_dir.replace(f"{version}", "111")
         file = os.path.join(plugin_data_dir, "AlphaMissense_hg38.tsv.gz")
         
-        if check_plugin_files(plugin, [file], "skip") is None:
+        if not check_plugin_files(plugin, [file], "skip"):
             return None
             
         return f"AlphaMissense,file={file}"
@@ -289,7 +291,7 @@ def get_plugin_args(
         file_name = "ClinPred_hg38_sorted_tabbed.tsv.gz" if assembly == "GRCh38" else "ClinPred_tabbed.tsv.gz"
         file = os.path.join(plugin_data_dir, "ClinPred", file_name)
         
-        if check_plugin_files(plugin, [file], "skip") is None:
+        if not check_plugin_files(plugin, [file], "skip"):
             return None
             
         return f"ClinPred,file={file}"
