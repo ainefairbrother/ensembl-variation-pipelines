@@ -23,7 +23,7 @@ process SUMMARY_STATS {
   output:
   tuple val(meta), path(output_file), path(vcf_index)
 
-  memory 32.GB
+  memory  { (vcf.size() * 1.2.B + 2.GB) * task.attempt }
 
   shell:
   species = meta.species

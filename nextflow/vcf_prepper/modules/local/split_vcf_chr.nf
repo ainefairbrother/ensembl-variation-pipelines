@@ -25,7 +25,7 @@ process SPLIT_VCF_CHR {
   output:
   tuple val(meta), path("split.*.vcf.gz")
 
-  memory 32.GB
+  memory { 32.GB * task.attempt }
 
   shell:
   
