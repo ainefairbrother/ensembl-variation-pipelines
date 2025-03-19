@@ -171,6 +171,18 @@ def get_frequency_args(species: str, assembly: str) -> str:
         else:
             frequencies.append(FREQUENCIES[source])
 
+    if species == "mus_musculus":
+        files = [
+            "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/mus_musculus/GRCm39/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
+            "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/mus_musculus/GRCm39/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz"
+        ]
+        source = "MGP"
+        fields = "AC%AN"
+
+        for file in files:
+            custom_line = f"custom file={file},short_name={source},format=vcf,type=exact,coords=0,fields={fields}"
+            frequencies.append(custom_line)
+
     return frequencies
     
 def check_plugin_files(plugin: str, files: list, exit_rule: str = "exit") -> bool:
@@ -441,7 +453,7 @@ def main(args = None):
         polyphen = True
     
     frequencies = []
-    if species.startswith("homo_sapiens"):
+    if species.startswith("homo_sapiens") or species == "mus_musculus":
         frequencies = get_frequency_args(species, assembly)
         
     plugins = get_plugins(species, version, assembly, repo_dir, conservation_data_dir)
