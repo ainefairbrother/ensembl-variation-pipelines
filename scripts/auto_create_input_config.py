@@ -265,7 +265,6 @@ def count_ensembl_variants(ensembl_vcf_path: str) -> int:
     """
 
     try:
-        # Run the zgrep command with subprocess.check_output to capture output
         output = subprocess.check_output(
             ["zgrep", "-vc", "^#", ensembl_vcf_path], stderr=subprocess.STDOUT
         )
@@ -522,7 +521,6 @@ def get_ensembl_release_status(server: dict, meta_db: str) -> str:
         (production_name, accession, status, release_id) = release_meta.split()
         ensembl_release_status[accession] = {
             "species": re.sub(r'_gca.*$', '', production_name), # remove accession suffix
-            # "species": production_name,
             "release_status": status,
             "release_id": release_id,
         }
