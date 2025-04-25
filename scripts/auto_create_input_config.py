@@ -74,13 +74,13 @@ def parse_args(args=None):
         help="Config file with database server information",
     )
     parser.add_argument(
-        "-O",
-        "--output_file",
-        dest="output_file",
+        "-O", 
+        "--output_dir",
+        dest="output_dir",
         type=str,
-        default="input_config.json",
+        default=".",
         required=False,
-        help="Full path to output file",
+        help="Dir in which to write output files",
     )
 
     return parser.parse_args(args)
@@ -543,6 +543,7 @@ def main(args=None):
     """
 
     args = parse_args(args)
+    os.makedirs(args.output_dir, exist_ok=True)
 
     # Pull EVA metadata
     eva_release       = get_latest_eva_version()
@@ -631,14 +632,14 @@ def main(args=None):
                 eva_updates.setdefault(genome_key, []).append(record)
 
     # Write the output JSON files 
-    with open(f"ensembl_prepared_{prepared_release_id}.json", "w") as out:
+    with open(os.path.join(args.output_dir, f"ensembl_prepared_{prepared_release_id}.json"), "w") as out:
         json.dump(ensembl_prepared, out, indent=4)
 
-    with open(f"ensembl_planned_{planned_release_id}.json", "w") as out:
+    with open(os.path.join(args.output_dir, f"ensembl_planned_{planned_release_id}.json"), "w") as out:
         json.dump(ensembl_planned, out, indent=4)
 
-    with open(f"eva_updates.json", "w") as out:
-        json.dump(eva_updates, out, indent=4)
+    with open(eva_path, "w") as out:
+        json.dump(os.path.join(args.output_dir, "eva_updates.json"), out, indent=4)
 
 if __name__ == "__main__":
     sys.exit(main())
