@@ -73,16 +73,7 @@ def parse_args(args=None):
         required=False,
         help="Config file with database server information",
     )
-    parser.add_argument(
-        "-O",
-        "--output_file",
-        dest="output_file",
-        type=str,
-        default="input_config.json",
-        required=False,
-        help="Full path to output file",
-    )
-
+    
     return parser.parse_args(args)
 
 
