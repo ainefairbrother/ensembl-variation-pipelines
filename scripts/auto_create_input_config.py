@@ -116,7 +116,7 @@ def parse_ini(ini_file: str, section: str = "database") -> dict:
     return {"host": host, "port": port, "user": user}
 
 
-def get_ensembl_species(server: dict, meta_db: str) -> str:
+def get_ensembl_species(server: dict, meta_db: str) -> dict:
 
     """
     Query the metadata database for all Ensembl species and their assemblies.
