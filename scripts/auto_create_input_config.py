@@ -636,8 +636,8 @@ def main(args=None):
     with open(os.path.join(args.output_dir, f"ensembl_planned_{planned_release_id}.json"), "w") as out:
         json.dump(ensembl_planned, out, indent=4)
 
-    with open(eva_path, "w") as out:
-        json.dump(os.path.join(args.output_dir, "eva_updates.json"), out, indent=4)
+    with open(os.path.join(args.output_dir, "eva_updates.json"), "w") as out:
+        json.dump(eva_updates, out, indent=4)
 
 if __name__ == "__main__":
     sys.exit(main())
