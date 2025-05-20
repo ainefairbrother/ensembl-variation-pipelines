@@ -30,6 +30,7 @@ import requests
 import time
 import re
 from pathlib import Path
+from collections import defaultdict
 
 ## IMPORTANT: currently this script only supports EVA - we should update the output to have Ensembl data manually -
 # - triticum_aestivum
@@ -57,7 +58,7 @@ def parse_args(args=None):
         args (list[str], optional): List of arguments to parse (defaults to sys.argv).
 
     Returns:
-        argparse.Namespace: Parsed arguments with attributes 'ini_file' and 'output_file'.
+        argparse.Namespace: Parsed arguments with attributes 'ini_file' and 'output_dir'.
     """
 
     parser = argparse.ArgumentParser(
@@ -179,7 +180,7 @@ def get_ensembl_species(server: dict, meta_db: str) -> dict:
     return ensembl_species
 
 
-def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> str:
+def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> dict:
 
     """
     Retrieve file paths of already-prepared VCFs for Ensembl species.
@@ -425,44 +426,55 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
         If tabix fails repeatedly on the EVA file.
     """
     
-    max_retries = 3
-    retry_delay = 10 # seconds
+    max_retries = 4
+    retry_delay = 60 # seconds
 
-    for attempt in range(max_retries):
-        process = subprocess.run(
-            ["tabix", "-D", eva_file, "-l"],
+    # EVA VCF
+    eva_seq_regs = None
+    for attempt in range(1, max_retries + 1):
+        proc = subprocess.run(
+            ["tabix", "-l", eva_file],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
+            text=True,
         )
-        if process.returncode == 0:
+        if proc.returncode == 0:
+            eva_seq_regs = proc.stdout.strip().splitlines()
             break
-        else:
-            print(f"[WARNING] Attempt {attempt+1} of {max_retries} failed to retrieve seq regions from {eva_file}.")
-            print(f"Error: {process.stderr.decode().strip()}")
-            if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-    else:
-        print(f"[ERROR] Failed to retrieve seq regions from {eva_file} after {max_retries} attempts.\nExiting...")
-        exit(1)
 
-    eva_seq_regions = process.stdout.decode().strip().split('\n')
+        print(
+            f"[WARNING] Attempt {attempt}/{max_retries} "
+            f"failed to list seq‑regions for {eva_file}\n"
+            f"{proc.stderr.strip()}"
+        )
+        if attempt < max_retries:
+            print(f"Retrying in {retry_delay}s …")
+            time.sleep(retry_delay)
 
-    # ENS file
-    process = subprocess.run(["tabix", "-D", ensembl_file, "-l"],
-        stdout = subprocess.PIPE,
-        stderr = subprocess.PIPE
+    # Couldn’t get EVA seqnames, throw warning and don't let check pass to be safe
+    if eva_seq_regs is None:
+        print(f"[WARNING] Cannot check seqnames in {eva_file}; skipping seq‑region check. Check failed.")
+        return False
+
+    # Ensembl VCF
+    proc = subprocess.run(
+        ["tabix", "-l", ensembl_file],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
+    if proc.returncode != 0:
+        print(
+            f"[ERROR] Cannot list seq‑regions for local VCF {ensembl_file}\n"
+            f"{proc.stderr.strip()}"
+        )
+        sys.exit(1)
 
-    if process.returncode != 0:
-        print(f"[ERROR] Failed to retrieve seq regions from - {ensembl_file} \nerror: {process.stderr.decode().strip()}. \nExiting...")
-        exit(1)
-
-    ensembl_seq_regions = process.stdout.decode().strip().split('\n')
+    ensembl_seq_regs = proc.stdout.strip().splitlines()
 
     # We accept only single seq region match
-    for seq_region in eva_seq_regions:
-        if seq_region in ensembl_seq_regions:
+    for seq_region in eva_seq_regs:
+        if seq_region in ensembl_seq_regs:
             return True
     return False
 
@@ -470,7 +482,7 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
 def get_ensembl_release_status(server: dict, meta_db: str) -> str:
 
     """
-    Retrieve genome release statuses ('prepared' or 'planned') from metadata DB.
+    Retrieve genome release statuses ('prepared', 'planned') from metadata DB.
 
     Parameters:
         server (dict): DB connection info.
@@ -516,14 +528,14 @@ def get_ensembl_release_status(server: dict, meta_db: str) -> str:
         print(f"[ERROR] Failed to retrieve release status - {process.stderr.decode().strip()}. \nExiting...")
         exit(1)
 
-    ensembl_release_status = {}
+    ensembl_release_status = defaultdict(list)
     for release_meta in process.stdout.decode().strip().split("\n"):
         (production_name, accession, status, release_id) = release_meta.split()
-        ensembl_release_status[accession] = {
+        ensembl_release_status[accession].append({
             "species": re.sub(r'_gca.*$', '', production_name), # remove accession suffix
             "release_status": status,
             "release_id": release_id,
-        }
+        })
 
     return ensembl_release_status
 
@@ -554,13 +566,22 @@ def main(args=None):
     ensembl_status    = get_ensembl_release_status(server, meta_db="ensembl_genome_metadata")
 
     # Get release_id for "Planned" and "Prepared"
-    planned_release_id  = { meta["release_id"]
-                        for meta in ensembl_status.values()
-                        if meta["release_status"] == "Planned" }.pop()
+    planned_ids  = set()
+    prepared_ids = set()
+    for recs in ensembl_status.values():
+        for rec in recs:
+            if rec["release_status"].lower() == "planned":
+                planned_ids.add(rec["release_id"])
+            elif rec["release_status"].lower() == "prepared":
+                prepared_ids.add(rec["release_id"])
 
-    prepared_release_id = { meta["release_id"]
-                        for meta in ensembl_status.values()
-                        if meta["release_status"] == "Prepared" }.pop()
+    if len(planned_ids) != 1:
+        print(f"[WARN] expected exactly one 'planned' release_id, got {planned_ids}")
+    if len(prepared_ids) != 1:
+        print(f"[WARN] expected exactly one 'prepared' release_id, got {prepared_ids}")
+
+    planned_release_id  = planned_ids.pop()  
+    prepared_release_id = prepared_ids.pop()
 
     # Prepare empty dicts
     ensembl_prepared   = {}
@@ -577,9 +598,6 @@ def main(args=None):
 
         sp = meta["species"]
         print(f"Processing {asm}, where species is {sp}")
-
-        if status:
-            release_id = status.get("release_id")
 
         # Skip human
         if meta["species"].startswith("homo"):
@@ -599,15 +617,16 @@ def main(args=None):
             "file_location": file_loc, # EVA file URL
         }
 
-        # Check for genebuild/assembly candidates - candidates must have a planned/prepared status in the metdata db
+        # Check for genebuild/assembly candidates - candidates must have a planned, prepared or both statuses in the metdata db
         if status:
             genome_key = f"{meta['species']}_{meta['assembly_name']}"
 
-            if status["release_status"] == "Prepared":
-                ensembl_prepared.setdefault(genome_key, []).append(record)
-
-            elif status["release_status"] == "Planned":
-                ensembl_planned.setdefault(genome_key, []).append(record)
+            for rel_status in status:
+                rs = rel_status["release_status"].lower()
+                if rs == "prepared":
+                    ensembl_prepared.setdefault(genome_key, []).append(record)
+                if rs == "planned":
+                    ensembl_planned.setdefault(genome_key, []).append(record)
 
         # Check for EVA variant update candidates - only if we already have a VCF 
         if vcf_meta:
