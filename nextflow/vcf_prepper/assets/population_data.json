@@ -172,5 +172,226 @@
             }
          ]
       }
+   ],
+   "bos_taurus": [
+      {
+         "name": "NextGen",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "NextGen",
+               "representative_af_field": "AF_IRBT",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/bos_taurus/ARS-UCD1.3/variation_genotype/IRBT_ARS-UCD1_3.vcf.gz",
+               "include_fields": [
+                  {"name": "NextGen", "fields": {"af": "AF_IRBT", "an": "AN_IRBT", "ac": "AC_IRBT"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "gallus_gallus": [
+      {
+         "name": "PRJEB44919",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "PRJEB44919",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/gallus_gallus/bGalGal1.mat.broiler.GRCg7b/variation_genotype/cohort188.ALL.1-28.fixed_remap7b.vcf.gz",
+               "include_fields": [
+                  {"name": "PRJEB44919", "fields": {"af": "AF"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "canis_lupus_familiaris": [
+      {
+         "name": "PRJEB24066",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "PRJEB24066",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/canis_lupus_familiaris/ROS_Cfam_1.0/variation_genotype/ROS_Cfam_1.0_remap_PRJEB24066.vcf.gz",
+               "include_fields": [
+                  {"name": "PRJEB24066", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "canis_lupus_familiarisboxer": [
+      {
+         "name": "PRJEB24066",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "PRJEB24066",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/canis_lupus_familiarisboxer/Dog10K_Boxer_Tasha/variation_genotype/Dog10K_Boxer_Tasha_remap_PRJEB24066.vcf.gz",
+               "include_fields": [
+                  {"name": "PRJEB24066", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "ovis_aries": [
+      {
+         "name": "NextGen:IROA",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "NextGen:IROA",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/ovis_aries/Oar_v3.1/variation_genotype/IROA.population_sites.OARv3_1.20140307.vcf.gz",
+               "include_fields": [
+                  {"name": "NextGen:IROA", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      },
+      {
+         "name": "NextGen:MOOA",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "NextGen:MOOA",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/ovis_aries/Oar_v3.1/variation_genotype/MOOA.population_sites.OARv3_1.20140328.vcf.gz",
+               "include_fields": [
+                  {"name": "NextGen:MOOA", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      },
+      {
+         "name": "ISGC",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "ISGC",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/ovis_aries/Oar_v3.1/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
+               "include_fields": [
+                  {"name": "ISGC", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "ovis_aries_rambouillet": [
+      {
+         "name": "NextGen:IROA",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "NextGen:IROA",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/IROA.population_sites.ARS_UI_Ramb_v2_0.20140307.vcf.g",
+               "include_fields": [
+                  {"name": "NextGen:IROA", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      },
+      {
+         "name": "NextGen:MOOA",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "NextGen:MOOA",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/MOOA.population_sites.ARS-UI_Ramb_v2_0.20140328.vcf.gz",
+               "include_fields": [
+                  {"name": "NextGen:MOOA", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      },
+      {
+         "name": "ISGC",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "ISGC",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/###CHR###.filtered_ARS-UI_Ramb_v2.0_intersect.vcf.gz",
+               "include_fields": [
+                  {"name": "ISGC", "fields": {"af": "AF", "an": "AN", "ac": "AC"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "capra_hircus": [
+      {
+         "name": "NextGen",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "NextGen",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/capra_hircus/ARS1/variation_genotype/NextGenCapraHircusRemappedARS1.vcf.gz",
+               "include_fields": [
+                  {"name": "NextGen:All", "fields": {"af": "AF", "ac": "AC", "an": "AN"}},
+                  {"name": "NextGen:MOCH", "fields": {"af": "AF_MOCH", "ac": "AC_MOCH", "an": "AN_MOCH"}},
+                  {"name": "NextGen:FRCH", "fields": {"af": "AF_FRCH", "ac": "AC_FRCH", "an": "AN_FRCH"}},
+                  {"name": "NextGen:AUCH", "fields": {"af": "AF_AUCH", "ac": "AC_AUCH", "an": "AN_AUCH"}},
+                  {"name": "NextGen:ITCH", "fields": {"af": "AF_ITCH", "ac": "AC_ITCH", "an": "AN_ITCH"}},
+                  {"name": "NextGen:IRCH", "fields": {"af": "AF_IRCH", "ac": "AC_IRCH", "an": "AN_IRCH"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "equus_caballus": [
+      {
+         "name": "PRJEB9799",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "PRJEB9799",
+               "representative_af_field": "AF_PRJEB9799",
+               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/equus_caballus/EquCab3.0/variation_genotype/PRJEB9799_EquCab3_0.vcf.gz",
+               "include_fields": [
+                  {"name": "PRJEB9799", "fields": {"af": "AF_PRJEB9799", "ac": "AC_PRJEB9799", "an": "AN_PRJEB9799"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "oreochromis_niloticus": [
+      {
+         "name": "PRJEB38548",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "PRJEB38548",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/variation/new_website/vep/custom_data/PRJEB38548/oreochromis_niloticus/O_niloticus_UMD_NMBU/tilapia_snp_array.vcf.gz",
+               "include_fields": [
+                  {"name": "PRJEB38548", "fields": {"af": "AF"}}
+               ]
+            }
+         ]
+      }
+   ],
+   "neovison_vison": [
+      {
+         "name": "PRJEB26368",
+         "representative": true,
+         "files": [
+            {
+               "short_name": "PRJEB26368",
+               "representative_af_field": "AF",
+               "file_location": "/nfs/production/flicek/ensembl/variation/new_website/vep/custom_data/PRJEB26368/neovison_vison/NNQGG.v01/GBS_mink_eva.vcf.gz",
+               "include_fields": [
+                  {"name": "PRJEB26368", "fields": {"af": "AF", "ac": "AC", "an": "AN"}}
+               ]
+            }
+         ]
+      }
    ]
 }
