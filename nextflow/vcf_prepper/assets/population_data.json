@@ -333,7 +333,7 @@
             {
                "short_name": "NextGen",
                "representative_af_field": "AF",
-               "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/capra_hircus/ARS1/variation_genotype/NextGenCapraHircusRemappedARS1.vcf.gz",
+               "file_location": "/nfs/production/flicek/ensembl/variation/new_website/vep/custom_data/Nextgen/capra_hircus/ARS1/NextGenCapraHircusRemappedARS1_comb.vcf.gz",
                "include_fields": [
                   {"name": "NextGen:All", "fields": {"af": "AF", "ac": "AC", "an": "AN"}},
                   {"name": "NextGen:MOCH", "fields": {"af": "AF_MOCH", "ac": "AC_MOCH", "an": "AN_MOCH"}},
