@@ -2,6 +2,7 @@
    "homo_sapiens": [
       {
          "name": "gnomAD_exomes",
+         "version": "4.1",
          "files": [
             {
                "version": "4.1",
@@ -24,6 +25,7 @@
       },
       {
          "name": "gnomAD_genomes",
+         "version": "4.1",
          "representative": true,
          "files": [
             {
@@ -51,6 +53,7 @@
    "homo_sapiens_37": [
       {
          "name": "gnomAD_exomes",
+         "version": "4.1",
          "files": [
             {
                "version": "4.1",
@@ -73,6 +76,7 @@
       },
       {
          "name": "gnomAD_genomes",
+         "version": "4.1",
          "representative": true,
          "files": [
             {
@@ -100,6 +104,7 @@
    "homo_sapiens_gca\\d{9}v\\d{1}": [
       {
          "name": "gnomAD_exomes",
+         "version": "4.1",
          "files": [
             {
                "version": "4.1",
@@ -122,6 +127,7 @@
       },
       {
          "name": "gnomAD_genomes",
+         "version": "4.1",
          "representative": true,
          "files": [
             {
@@ -153,7 +159,7 @@
          "files": [
             {
                "type": "snp",
-               "short_name": "MVP_snp",
+               "short_name": "MGP_snp",
                "representative_af_field": "AF",
                "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/mus_musculus/GRCm39/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
                "include_fields": [
@@ -163,7 +169,7 @@
             {
                "type": "indels",
                "assembly": "GRCm39",
-               "short_name": "MVP_indels",
+               "short_name": "MGP_indels",
                "representative_af_field": "AF",
                "file_location": "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates/mus_musculus/GRCm39/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
                "include_fields": [
