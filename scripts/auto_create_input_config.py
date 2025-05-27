@@ -274,20 +274,20 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
     """
 
     query = f"""
-        SELECT
-            a.accession,
-            da.value
-        FROM dataset_attribute AS da
-        JOIN attribute AS attr ON da.attribute_id = attr.attribute_id
-        JOIN dataset AS d            ON da.dataset_id       = d.dataset_id
-        JOIN dataset_type AS dt      ON d.dataset_type_id   = dt.dataset_type_id
-        JOIN genome_dataset AS gd    ON d.dataset_id        = gd.dataset_id
-        JOIN genome AS g             ON gd.genome_id        = g.genome_id
-        JOIN assembly AS a           ON g.assembly_id       = a.assembly_id
-        WHERE
-            dt.name = 'variation'
-            AND attr.name = 'variation.stats.short_variants'
-        ;
+            SELECT
+                a.accession,
+                g.genome_uuid,
+                da.value
+            FROM dataset_attribute AS da
+            JOIN attribute AS attr ON da.attribute_id = attr.attribute_id
+            JOIN dataset AS d            ON da.dataset_id       = d.dataset_id
+            JOIN dataset_type AS dt      ON d.dataset_type_id   = dt.dataset_type_id
+            JOIN genome_dataset AS gd    ON d.dataset_id        = gd.dataset_id
+            JOIN genome AS g             ON gd.genome_id        = g.genome_id
+            JOIN assembly AS a           ON g.assembly_id       = a.assembly_id
+            WHERE
+                dt.name = 'variation'
+                AND attr.name = 'variation.stats.short_variants';
     """
 
     process = subprocess.run(
@@ -317,8 +317,15 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
 
     ensembl_variant_counts = {}
     for ensembl_variant_count in process.stdout.decode().strip().split("\n"):
-        (assembly, variant_count) = ensembl_variant_count.split()
-        ensembl_variant_counts[assembly] = int(variant_count)
+        (assembly, genome_uuid, variant_count) = ensembl_variant_count.split()
+        # ensembl_variant_counts[assembly] = {
+        #     "genome_uuid": genome_uuid,
+        #     "variant_count": int(variant_count)
+        # }
+        ensembl_variant_counts[genome_uuid] = {
+            "assembly": assembly,
+            "variant_count": int(variant_count)
+        }
 
     return ensembl_variant_counts
 
@@ -474,7 +481,6 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
     # EVA VCF
     eva_seq_regs = None
     for attempt in range(1, max_retries + 1):
-        print(eva_file)
         proc = subprocess.run(
             ["tabix", "-l", eva_file],
             stdout=subprocess.PIPE,
@@ -668,8 +674,6 @@ def main(args=None):
         sp = meta["species"]
         print(f"Processing: {asm}, for species: {sp}")
 
-        print(ensembl_variant_counts.get(asm, 0))
-
         # Skip human
         if meta["species"].startswith("homo"):
             continue
@@ -713,7 +717,8 @@ def main(args=None):
                 if eva_ensembl_version < eva_release:
                     update = True
             else:
-                if ensembl_variant_counts.get(asm, 0) < eva_meta["variant_count"]:
+                ensembl_variant_count = ensembl_variant_counts.get(meta["genome_uuid"])["variant_count"]
+                if ensembl_variant_count < eva_meta["variant_count"]:
                     update = True
 
             if update and seq_region_matches(eva_file=file_loc, ensembl_file=vcf_path):
