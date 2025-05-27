@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Auto-discover EVA-eligible species for the Ensembl beta VEP pipeline.
+Auto-discover EVA-eligible species for the Beta website VCF prepper pipeline.
 Generates JSON configs of species requiring re-run based on genebuild status
 (or "planned"/"prepared") and EVA variant-count updates.
 """
@@ -251,30 +251,67 @@ def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> dict:
     return ensembl_filepaths
 
 
-def count_ensembl_variants(ensembl_vcf_path: str) -> int:
+def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
+
     """
-    Count non-header rows (n variants) in a gzipped VCF using zgrep.
+    Retrieve the count of short variants for each assembly.
 
     Parameters:
-        ensembl_vcf_path (str): Path to a .vcf.gz file.
+        server (dict): DB connection info, keys 'host', 'port', 'user'.
+        meta_db (str): Name of the metadata database to query.
 
     Returns:
-        int: Number of lines not starting with '#'.
+        dict: Mapping assembly accession -> short_variant_count (int).
 
-    Raises:
-        CalledProcessError: If zgrep invocation fails.
+    Exits:
+        On subprocess/mysql error.
     """
 
-    try:
-        output = subprocess.check_output(
-            ["zgrep", "-vc", "^#", ensembl_vcf_path], stderr=subprocess.STDOUT
-        )
-        count = int(output.decode("utf-8").strip())
-        return count
+    query = f"""
+        SELECT
+            a.accession,
+            da.value
+        FROM dataset_attribute AS da
+        JOIN attribute AS attr ON da.attribute_id = attr.attribute_id
+        JOIN dataset AS d            ON da.dataset_id       = d.dataset_id
+        JOIN dataset_type AS dt      ON d.dataset_type_id   = dt.dataset_type_id
+        JOIN genome_dataset AS gd    ON d.dataset_id        = gd.dataset_id
+        JOIN genome AS g             ON gd.genome_id        = g.genome_id
+        JOIN assembly AS a           ON g.assembly_id       = a.assembly_id
+        WHERE
+            dt.name = 'variation'
+            AND attr.name = 'variation.stats.short_variants'
+        ;
+    """
 
-    except subprocess.CalledProcessError as e:
-        print("Error running zgrep command:", e.output.decode("utf-8"))
-        raise
+    process = subprocess.run(
+        [
+            "mysql",
+            "--host", server["host"],
+            "--port", server["port"],
+            "--user", server["user"],
+            "--database", meta_db,
+            "-N",
+            "--execute", query
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    if process.returncode != 0:
+        print(
+            f"[ERROR] Failed to retrieve Ensembl variant counts - {process.stderr.decode().strip()}. \nExiting..."
+        )
+        exit(1)
+
+    ensembl_variant_counts = {}
+    for ensembl_variant_count in process.stdout.decode().strip().split("\n"):
+        (assembly, variant_count) = ensembl_variant_count.split()
+        ensembl_variant_counts[assembly] = {
+            "variant_count": int(variant_count)
+        }
+
+    return(ensembl_variant_counts)
 
 
 def get_eva_version_from_ensembl_vcf(vcf_path: str):
@@ -543,11 +580,11 @@ def get_ensembl_release_status(server: dict, meta_db: str) -> str:
 def main(args=None):
 
     """
-    Main work: discover species needing re-run of VCF-prepper.
+    Discover species needing re-run of VCF-prepper.
 
     1) Query EVA and Ensembl metadata
     2) Build candidate lists for:
-       - genebuild "planned" and "prepared" releases
+       - Genebuild "planned" and "prepared" releases
        - EVA-variant-count updates
     3) Write out three JSON files accordingly
     """
@@ -556,14 +593,15 @@ def main(args=None):
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Pull EVA metadata
-    eva_release       = get_latest_eva_version()
-    eva_species       = get_eva_species(eva_release)
+    eva_release             = get_latest_eva_version()
+    eva_species             = get_eva_species(eva_release)
 
     # Pull Ensembl metadata
-    server            = parse_ini(args.ini_file, "metadata")
-    ensembl_species   = get_ensembl_species(server, meta_db="ensembl_genome_metadata")
-    ensembl_vcf_paths = get_ensembl_vcf_filepaths(server, meta_db="ensembl_genome_metadata")
-    ensembl_status    = get_ensembl_release_status(server, meta_db="ensembl_genome_metadata")
+    server                  = parse_ini(args.ini_file, "metadata")
+    ensembl_species         = get_ensembl_species(server, meta_db="ensembl_genome_metadata")
+    ensembl_vcf_paths       = get_ensembl_vcf_filepaths(server, meta_db="ensembl_genome_metadata")
+    ensembl_status          = get_ensembl_release_status(server, meta_db="ensembl_genome_metadata")
+    ensembl_variant_counts  = get_ensembl_variant_counts(server, meta_db="ensembl_genome_metadata")
 
     # Get release_id for "Planned" and "Prepared"
     planned_ids  = set()
@@ -591,10 +629,11 @@ def main(args=None):
     # Loop over only those assemblies present in BOTH Ensembl and EVA
     for asm in set(ensembl_species) & set(eva_species):
 
-        meta     = ensembl_species[asm]
-        status   = ensembl_status.get(asm)       # None or {"release_status": "...", "release_id": "..."}
-        vcf_meta = ensembl_vcf_paths.get(asm)    # None or {"file_path": "..."}
-        eva_meta = eva_species[asm]
+        meta                    = ensembl_species[asm]
+        status                  = ensembl_status.get(asm)       # None or {"release_status": "...", "release_id": "..."}
+        vcf_meta                = ensembl_vcf_paths.get(asm)    # None or {"file_path": "..."}
+        ensembl_variant_count   = ensembl_variant_counts.get(asm).get("variant_count")
+        eva_meta                = eva_species[asm]
 
         sp = meta["species"]
         print(f"Processing {asm}, where species is {sp}")
@@ -640,8 +679,7 @@ def main(args=None):
                 if eva_ensembl_version < eva_release:
                     update = True
             else:
-                ensembl_count = count_ensembl_variants(vcf_path)
-                if ensembl_count < eva_meta["variant_count"]:
+                if ensembl_variant_count < eva_meta["variant_count"]:
                     update = True
             
             if update and seq_region_matches(eva_file=file_loc, ensembl_file=vcf_path):
