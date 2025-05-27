@@ -307,9 +307,7 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
     ensembl_variant_counts = {}
     for ensembl_variant_count in process.stdout.decode().strip().split("\n"):
         (assembly, variant_count) = ensembl_variant_count.split()
-        ensembl_variant_counts[assembly] = {
-            "variant_count": int(variant_count)
-        }
+        ensembl_variant_counts[assembly] = int(variant_count)
 
     return(ensembl_variant_counts)
 
@@ -469,6 +467,7 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
     # EVA VCF
     eva_seq_regs = None
     for attempt in range(1, max_retries + 1):
+        print(eva_file)
         proc = subprocess.run(
             ["tabix", "-l", eva_file],
             stdout=subprocess.PIPE,
@@ -484,14 +483,21 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
             f"failed to list seq‑regions for {eva_file}\n"
             f"{proc.stderr.strip()}"
         )
+
         if attempt < max_retries:
             print(f"Retrying in {retry_delay}s …")
             time.sleep(retry_delay)
 
     # Couldn’t get EVA seqnames, throw warning and don't let check pass to be safe
     if eva_seq_regs is None:
-        print(f"[WARNING] Cannot check seqnames in {eva_file}; skipping seq‑region check. Check failed.")
+        print(f"[WARNING] Cannot check seqnames in {eva_file}; skipping seq‑region check.")
         return False
+    
+    # Clean up any temp EVA index files that have been generated in cwd
+    for ext in [".tbi", ".csi"]:
+        idx_file = os.path.basename(eva_file) + ext
+        if os.path.exists(idx_file):
+            os.remove(idx_file)
 
     # Ensembl VCF
     proc = subprocess.run(
@@ -632,11 +638,12 @@ def main(args=None):
         meta                    = ensembl_species[asm]
         status                  = ensembl_status.get(asm)       # None or {"release_status": "...", "release_id": "..."}
         vcf_meta                = ensembl_vcf_paths.get(asm)    # None or {"file_path": "..."}
-        ensembl_variant_count   = ensembl_variant_counts.get(asm).get("variant_count")
         eva_meta                = eva_species[asm]
 
         sp = meta["species"]
-        print(f"Processing {asm}, where species is {sp}")
+        print(f"Processing: {asm}, for species: {sp}")
+
+        print(ensembl_variant_counts.get(asm, 0))
 
         # Skip human
         if meta["species"].startswith("homo"):
@@ -679,7 +686,7 @@ def main(args=None):
                 if eva_ensembl_version < eva_release:
                     update = True
             else:
-                if ensembl_variant_count < eva_meta["variant_count"]:
+                if ensembl_variant_counts.get(asm, 0) < eva_meta["variant_count"]:
                     update = True
             
             if update and seq_region_matches(eva_file=file_loc, ensembl_file=vcf_path):
