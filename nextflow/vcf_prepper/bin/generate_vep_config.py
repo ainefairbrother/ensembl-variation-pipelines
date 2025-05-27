@@ -123,6 +123,10 @@ def get_frequency_args(population_data_file: str, species: str, placeholders: di
 
                     frequencies.append(format_custom_args(short_name=short_name, file=file_location, fields=fields))
 
+    # Add 1kg population to be included from cache for human GRCh38 and GRCh37
+    if species == "homo_sapiens" or species == "homo_sapiens_37":
+        frequencies.append("af_1kg 1")
+
     return frequencies
     
 def check_plugin_files(plugin: str, files: list, exit_rule: str = "exit") -> bool:
