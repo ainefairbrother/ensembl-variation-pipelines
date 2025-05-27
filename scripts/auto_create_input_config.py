@@ -50,7 +50,6 @@ EVA_REST_ENDPOINT = "https://www.ebi.ac.uk/eva/webservices/release"
 
 
 def parse_args(args=None):
-
     """
     Parse command-line arguments.
 
@@ -75,7 +74,7 @@ def parse_args(args=None):
         help="Config file with database server information",
     )
     parser.add_argument(
-        "-O", 
+        "-O",
         "--output_dir",
         dest="output_dir",
         type=str,
@@ -88,7 +87,6 @@ def parse_args(args=None):
 
 
 def parse_ini(ini_file: str, section: str = "database") -> dict:
-
     """
     Read database connection details from an INI file.
 
@@ -118,7 +116,6 @@ def parse_ini(ini_file: str, section: str = "database") -> dict:
 
 
 def get_ensembl_species(server: dict, meta_db: str) -> dict:
-
     """
     Query the metadata database for all Ensembl species and their assemblies.
 
@@ -150,13 +147,17 @@ def get_ensembl_species(server: dict, meta_db: str) -> dict:
     process = subprocess.run(
         [
             "mysql",
-            "--host", server["host"],
-            "--port", server["port"],
-            "--user", server["user"],
-            "--database", meta_db,
+            "--host",
+            server["host"],
+            "--port",
+            server["port"],
+            "--user",
+            server["user"],
+            "--database",
+            meta_db,
             "-N",
             "--execute",
-            query
+            query,
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -181,7 +182,6 @@ def get_ensembl_species(server: dict, meta_db: str) -> dict:
 
 
 def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> dict:
-
     """
     Retrieve file paths of already-prepared VCFs for Ensembl species.
 
@@ -224,21 +224,28 @@ def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> dict:
     process = subprocess.run(
         [
             "mysql",
-            "--host", server["host"],
-            "--port", server["port"],
-            "--user", server["user"],
-            "--database", meta_db,
+            "--host",
+            server["host"],
+            "--port",
+            server["port"],
+            "--user",
+            server["user"],
+            "--database",
+            meta_db,
             "-N",
-            "--execute", query
+            "--execute",
+            query,
         ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
     )
 
     if process.returncode != 0:
-        print(f"[ERROR] Failed to retrieve Ensembl species - {process.stderr.decode().strip()}. \nExiting...")
+        print(
+            f"[ERROR] Failed to retrieve Ensembl species - {process.stderr.decode().strip()}. \nExiting..."
+        )
         exit(1)
-    
+
     ensembl_filepaths = {}
     for filepath_meta in process.stdout.decode().strip().split("\n"):
         (accession, production_name, genome_uuid, file_path) = filepath_meta.split()
@@ -252,7 +259,6 @@ def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> dict:
 
 
 def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
-
     """
     Retrieve the count of short variants for each assembly.
 
@@ -287,15 +293,20 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
     process = subprocess.run(
         [
             "mysql",
-            "--host", server["host"],
-            "--port", server["port"],
-            "--user", server["user"],
-            "--database", meta_db,
+            "--host",
+            server["host"],
+            "--port",
+            server["port"],
+            "--user",
+            server["user"],
+            "--database",
+            meta_db,
             "-N",
-            "--execute", query
+            "--execute",
+            query,
         ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
     )
 
     if process.returncode != 0:
@@ -309,7 +320,7 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
         (assembly, variant_count) = ensembl_variant_count.split()
         ensembl_variant_counts[assembly] = int(variant_count)
 
-    return(ensembl_variant_counts)
+    return ensembl_variant_counts
 
 
 def get_eva_version_from_ensembl_vcf(vcf_path: str):
@@ -335,8 +346,7 @@ def get_eva_version_from_ensembl_vcf(vcf_path: str):
 
     try:
         output = subprocess.check_output(
-            ["zgrep", "^##source=", str(vcf)],
-            stderr=subprocess.DEVNULL
+            ["zgrep", "^##source=", str(vcf)], stderr=subprocess.DEVNULL
         )
     except subprocess.CalledProcessError:
         return None
@@ -356,7 +366,6 @@ def get_eva_version_from_ensembl_vcf(vcf_path: str):
 
 
 def get_latest_eva_version() -> int:
-
     """
     Query the EVA REST API for the most recent release version.
 
@@ -389,11 +398,10 @@ def get_latest_eva_version() -> int:
 
 
 def get_eva_species(release_version: int) -> dict:
-
     """
     Fetch per-species statistics from EVA for a given release.
     Filters out species with fewer than 5,000 variants.
-    Gets other metadata, including the EVA VCF folder. 
+    Gets other metadata, including the EVA VCF folder.
 
     Parameters:
         release_version (int): EVA release to query.
@@ -444,11 +452,10 @@ def get_eva_species(release_version: int) -> dict:
 
 
 def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
-
     """
     Compare sequence regions between a remote EVA VCF and a local Ensembl VCF.
-    Retries up to 3 times when fetching remote regions to account for failed 
-    connection to the EVA API. 
+    Retries up to 3 times when fetching remote regions to account for failed
+    connection to the EVA API.
 
     Parameters:
         eva_file (str): Remote EVA VCF URL.
@@ -460,9 +467,9 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
     Exits:
         If tabix fails repeatedly on the EVA file.
     """
-    
+
     max_retries = 4
-    retry_delay = 60 # seconds
+    retry_delay = 60  # seconds
 
     # EVA VCF
     eva_seq_regs = None
@@ -490,9 +497,11 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
 
     # Couldn’t get EVA seqnames, throw warning and don't let check pass to be safe
     if eva_seq_regs is None:
-        print(f"[WARNING] Cannot check seqnames in {eva_file}; skipping seq‑region check.")
+        print(
+            f"[WARNING] Cannot check seqnames in {eva_file}; skipping seq‑region check."
+        )
         return False
-    
+
     # Clean up any temp EVA index files that have been generated in cwd
     for ext in [".tbi", ".csi"]:
         idx_file = os.path.basename(eva_file) + ext
@@ -523,7 +532,6 @@ def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
 
 
 def get_ensembl_release_status(server: dict, meta_db: str) -> str:
-
     """
     Retrieve genome release statuses ('prepared', 'planned') from metadata DB.
 
@@ -556,35 +564,45 @@ def get_ensembl_release_status(server: dict, meta_db: str) -> str:
     process = subprocess.run(
         [
             "mysql",
-            "--host", server["host"],
-            "--port", server["port"],
-            "--user", server["user"],
-            "--database", meta_db,
+            "--host",
+            server["host"],
+            "--port",
+            server["port"],
+            "--user",
+            server["user"],
+            "--database",
+            meta_db,
             "-N",
-            "--execute", query
+            "--execute",
+            query,
         ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
     )
 
     if process.returncode != 0:
-        print(f"[ERROR] Failed to retrieve release status - {process.stderr.decode().strip()}. \nExiting...")
+        print(
+            f"[ERROR] Failed to retrieve release status - {process.stderr.decode().strip()}. \nExiting..."
+        )
         exit(1)
 
     ensembl_release_status = defaultdict(list)
     for release_meta in process.stdout.decode().strip().split("\n"):
         (production_name, accession, status, release_id) = release_meta.split()
-        ensembl_release_status[accession].append({
-            "species": re.sub(r'_gca.*$', '', production_name), # remove accession suffix
-            "release_status": status,
-            "release_id": release_id,
-        })
+        ensembl_release_status[accession].append(
+            {
+                "species": re.sub(
+                    r"_gca.*$", "", production_name
+                ),  # remove accession suffix
+                "release_status": status,
+                "release_id": release_id,
+            }
+        )
 
     return ensembl_release_status
 
 
 def main(args=None):
-
     """
     Discover species needing re-run of VCF-prepper.
 
@@ -599,18 +617,24 @@ def main(args=None):
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Pull EVA metadata
-    eva_release             = get_latest_eva_version()
-    eva_species             = get_eva_species(eva_release)
+    eva_release = get_latest_eva_version()
+    eva_species = get_eva_species(eva_release)
 
     # Pull Ensembl metadata
-    server                  = parse_ini(args.ini_file, "metadata")
-    ensembl_species         = get_ensembl_species(server, meta_db="ensembl_genome_metadata")
-    ensembl_vcf_paths       = get_ensembl_vcf_filepaths(server, meta_db="ensembl_genome_metadata")
-    ensembl_status          = get_ensembl_release_status(server, meta_db="ensembl_genome_metadata")
-    ensembl_variant_counts  = get_ensembl_variant_counts(server, meta_db="ensembl_genome_metadata")
+    server = parse_ini(args.ini_file, "metadata")
+    ensembl_species = get_ensembl_species(server, meta_db="ensembl_genome_metadata")
+    ensembl_vcf_paths = get_ensembl_vcf_filepaths(
+        server, meta_db="ensembl_genome_metadata"
+    )
+    ensembl_status = get_ensembl_release_status(
+        server, meta_db="ensembl_genome_metadata"
+    )
+    ensembl_variant_counts = get_ensembl_variant_counts(
+        server, meta_db="ensembl_genome_metadata"
+    )
 
     # Get release_id for "Planned" and "Prepared"
-    planned_ids  = set()
+    planned_ids = set()
     prepared_ids = set()
     for recs in ensembl_status.values():
         for rec in recs:
@@ -624,21 +648,22 @@ def main(args=None):
     if len(prepared_ids) != 1:
         print(f"[WARN] expected exactly one 'prepared' release_id, got {prepared_ids}")
 
-    planned_release_id  = planned_ids.pop()  
+    planned_release_id = planned_ids.pop()
     prepared_release_id = prepared_ids.pop()
 
     # Prepare empty dicts
-    ensembl_prepared   = {}
-    ensembl_planned    = {}
-    eva_updates        = {}
+    ensembl_prepared = {}
+    ensembl_planned = {}
+    eva_updates = {}
 
     # Loop over only those assemblies present in BOTH Ensembl and EVA
     for asm in set(ensembl_species) & set(eva_species):
-
-        meta                    = ensembl_species[asm]
-        status                  = ensembl_status.get(asm)       # None or {"release_status": "...", "release_id": "..."}
-        vcf_meta                = ensembl_vcf_paths.get(asm)    # None or {"file_path": "..."}
-        eva_meta                = eva_species[asm]
+        meta = ensembl_species[asm]
+        status = ensembl_status.get(
+            asm
+        )  # None or {"release_status": "...", "release_id": "..."}
+        vcf_meta = ensembl_vcf_paths.get(asm)  # None or {"file_path": "..."}
+        eva_meta = eva_species[asm]
 
         sp = meta["species"]
         print(f"Processing: {asm}, for species: {sp}")
@@ -649,18 +674,20 @@ def main(args=None):
         if meta["species"].startswith("homo"):
             continue
 
-        # Build template 'record' dict 
+        # Build template 'record' dict
         release_folder = eva_meta["release_folder"]
-        tax_part       = str(eva_meta["taxonomy_id"]) + "_" if eva_release >= 5 else ""
-        file_loc       = os.path.join(release_folder, asm, f"{tax_part}{asm}_current_ids.vcf.gz")
+        tax_part = str(eva_meta["taxonomy_id"]) + "_" if eva_release >= 5 else ""
+        file_loc = os.path.join(
+            release_folder, asm, f"{tax_part}{asm}_current_ids.vcf.gz"
+        )
 
         record = {
-            "genome_uuid":   meta["genome_uuid"],
-            "species":       meta["species"],
-            "assembly":      meta["assembly_name"],
-            "source_name":   "EVA",
-            "file_type":     "remote",
-            "file_location": file_loc, # EVA file URL
+            "genome_uuid": meta["genome_uuid"],
+            "species": meta["species"],
+            "assembly": meta["assembly_name"],
+            "source_name": "EVA",
+            "file_type": "remote",
+            "file_location": file_loc,  # EVA file URL
         }
 
         # Check for genebuild/assembly candidates - candidates must have a planned, prepared or both statuses in the metdata db
@@ -674,34 +701,40 @@ def main(args=None):
                 if rs == "planned":
                     ensembl_planned.setdefault(genome_key, []).append(record)
 
-        # Check for EVA variant update candidates - only if we already have a VCF 
+        # Check for EVA variant update candidates - only if we already have a VCF
         if vcf_meta:
             vcf_path = vcf_meta["file_path"]
-            
+
             # If the current Ensembl EVA version can be grabbed from vcf header, grab and compare, otherwise revert to variant count comparison
             eva_ensembl_version = get_eva_version_from_ensembl_vcf(vcf_path=vcf_path)
 
-            update=False
-            if eva_ensembl_version: 
+            update = False
+            if eva_ensembl_version:
                 if eva_ensembl_version < eva_release:
                     update = True
             else:
                 if ensembl_variant_counts.get(asm, 0) < eva_meta["variant_count"]:
                     update = True
-            
+
             if update and seq_region_matches(eva_file=file_loc, ensembl_file=vcf_path):
                 genome_key = f"{meta['species']}_{meta['assembly_name']}"
                 eva_updates.setdefault(genome_key, []).append(record)
 
-    # Write the output JSON files 
-    with open(os.path.join(args.output_dir, f"ensembl_prepared_{prepared_release_id}.json"), "w") as out:
+    # Write the output JSON files
+    with open(
+        os.path.join(args.output_dir, f"ensembl_prepared_{prepared_release_id}.json"),
+        "w",
+    ) as out:
         json.dump(ensembl_prepared, out, indent=4)
 
-    with open(os.path.join(args.output_dir, f"ensembl_planned_{planned_release_id}.json"), "w") as out:
+    with open(
+        os.path.join(args.output_dir, f"ensembl_planned_{planned_release_id}.json"), "w"
+    ) as out:
         json.dump(ensembl_planned, out, indent=4)
 
     with open(os.path.join(args.output_dir, "eva_updates.json"), "w") as out:
         json.dump(eva_updates, out, indent=4)
+
 
 if __name__ == "__main__":
     sys.exit(main())
