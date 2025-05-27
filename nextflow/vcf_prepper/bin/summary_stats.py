@@ -110,7 +110,6 @@ def main(args = None):
     for species_patt in population_data:
         if re.fullmatch(species_patt, species):
             for population in population_data[species_patt]:
-                print(population)
                 if population.get("representative"):
                     population_name = population["name"]
                     freq_info_display = population["name"].replace("_", " ") + population.get("version", "")
@@ -227,9 +226,8 @@ def main(args = None):
 
             # frequency
             if freq_csq_fields:
-                print(freq_csq_fields)
                 af_csq_idc = [csq_header_idx[freq_csq_field] for freq_csq_field in freq_csq_fields if freq_csq_field in csq_header_idx]
-                print(af_csq_idc)
+
                 if af_csq_idc:
                     frequencies = [csq_values[af_csq_idx] for af_csq_idx in af_csq_idc if csq_values[af_csq_idx]]
                 else:
@@ -241,8 +239,7 @@ def main(args = None):
                         print("[ERROR] Attempt to calculate frequency from AC and AN failed.")
                         print(f"{ac_csq_idc} number of AC field compared to {an_csq_idc} number of AN fields in CSQ. Exiting...")
                         exit(1)
-                    print(ac_csq_idc)
-                    print(an_csq_idc)
+
                     frequencies = []
                     for idx, _ in enumerate(ac_csq_idc):
                         ac_csq_idx = ac_csq_idc[idx]
@@ -255,7 +252,7 @@ def main(args = None):
                 if len(frequencies) > 1:
                     print(f"[ERROR] More than 1 representative allele frequencies for {species} population - {population_name}. Exiting ...")
                     exit(1)
-                print(frequencies)
+
                 if len(frequencies) == 1:
                     items_per_allele[allele]["frequency"] = frequencies[0]
 
