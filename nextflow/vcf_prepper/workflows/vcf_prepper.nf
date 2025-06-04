@@ -59,8 +59,8 @@ def parse_config (config) {
       meta.source = meta.source.replace(" ", "%20")
       meta.source = meta.source.replace("/", "%2F")
 
-      // if source is QUERY there are multiple sources; they must be listed  in sources field in the input config
-      if (meta.source == "QUERY"){
+      // if source is MULTIPLE there are multiple sources; they must be listed  in sources field in the input config
+      if (meta.source == "MULTIPLE"){
         meta.sources = meta.sources.join(",")
         meta.sources = meta.sources.replace(" ", "%20") // we cannot use whitespace in cmd argument
       }

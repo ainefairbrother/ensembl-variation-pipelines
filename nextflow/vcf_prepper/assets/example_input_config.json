@@ -24,7 +24,7 @@
         "genome_uuid": "a73357ab-93e7-11ec-a39d-005056b38ce3",
         "species": "triticum_aestivum",
         "assembly": "IWGSC",
-        "source_name": "QUERY",
+        "source_name": "MULTIPLE",
         "sources": [
           "CerealsDB",
           "EMS-induced mutation",

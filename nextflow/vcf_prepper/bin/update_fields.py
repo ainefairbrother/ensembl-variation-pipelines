@@ -83,7 +83,7 @@ def main(args = None):
             "../assets/source_meta.json"
         )
 
-    if source == "QUERY" and not sources:
+    if source == "MULTIPLE" and not sources:
         print("[ERROR] {source} source type requires source list to be provided. See --sources option.")
         exit(1)
 
@@ -135,7 +135,7 @@ def main(args = None):
         for variant in input_vcf:
 
             variant_source = source
-            if source == "QUERY":
+            if source == "MULTIPLE":
                 try:
                     # we expect the first field in the INFO to have the source information
                     # e.g. - 1A      539     1A_539  ACGGGA  GCGGGA,GCGGAG   .       .       Watkins-exome-capture;TSA=substitution
