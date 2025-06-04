@@ -690,7 +690,7 @@ def main(args=None):
     # Prepare empty dicts
     ensembl_prepared = {}
     ensembl_planned = {}
-    eva_updates = {}
+    ensembl_released = {}
 
     # Loop over only those assemblies present in BOTH Ensembl and EVA
     for asm in set(ensembl_assemblies) & set(eva_species):
@@ -762,7 +762,7 @@ def main(args=None):
 
                 if update and seq_region_matches(eva_file=file_loc, ensembl_file=vcf_path):
                     genome_key = f"{meta['species']}_{meta['assembly_name']}"
-                    eva_updates.setdefault(genome_key, []).append(record)
+                    ensembl_released.setdefault(genome_key, []).append(record)
 
     # Write the output JSON files
     with open(
@@ -776,8 +776,8 @@ def main(args=None):
     ) as out:
         json.dump(ensembl_planned, out, indent=4)
 
-    with open(os.path.join(args.output_dir, "eva_updates.json"), "w") as out:
-        json.dump(eva_updates, out, indent=4)
+    with open(os.path.join(args.output_dir, "ensembl_released.json"), "w") as out:
+        json.dump(ensembl_released, out, indent=4)
 
 
 if __name__ == "__main__":
