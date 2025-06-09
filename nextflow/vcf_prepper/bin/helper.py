@@ -89,7 +89,6 @@ def dump_variant_source(server: dict, variation_db: str, dump_file: str) -> str:
 
     return process.returncode
 
-@deprecated(version='June 2025', reason="Variation database with old schema should not be used anymore")
 def get_sources_meta_info(sources_meta_file: str) -> dict:
     if not os.path.isfile(sources_meta_file):
         print("[WARNING] no such file - {sources_meta_file}, cannot get variant sources metadata.")
