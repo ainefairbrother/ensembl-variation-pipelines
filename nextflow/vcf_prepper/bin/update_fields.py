@@ -136,14 +136,24 @@ def main(args = None):
 
             variant_source = source
             if source == "MULTIPLE":
-                try:
-                    # we expect the first field in the INFO to have the source information
-                    # e.g. - 1A      539     1A_539  ACGGGA  GCGGGA,GCGGAG   .       .       Watkins-exome-capture;TSA=substitution
+                variant_source = "."
+
+                # 1st attempt:
+                # try to extract source from INFO/SOURCE
+                source_from_info = variant.INFO.get("SOURCE")
+                if isinstance(source_from_info, str):
+                    variant_source = source_from_info
+
+                # 2nd attempt:
+                # VCF dump of Ensembl database contains the source in the INFO
+                # But it does not have key-value format, rather only key, e.g - 
+                # 1A      539     1A_539  ACGGGA  GCGGGA,GCGGAG   .       .       Watkins-exome-capture;TSA=substitution
+                # we are supporting them for now; so try to extract that information
+                if not source_from_info:
                     for (key, _) in variant.INFO:
-                        variant_source = key
+                        if key in sources:
+                            variant_source = key
                         break
-                except:
-                    variant_source = "."
 
             o_file.write("\t".join([
                     synonyms[variant.CHROM] if variant.CHROM in synonyms else variant.CHROM,
