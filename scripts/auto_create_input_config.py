@@ -20,20 +20,20 @@ Generates JSON configs of species requiring re-run based on genebuild status
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import configparser
 import argparse
-import os
-import json
-import subprocess
-import requests
-import time
-import re
-from pathlib import Path
-from collections import defaultdict
+import configparser
 import gzip
+import json
+import os
+import re
+from shutil import rmtree, copy2
 import subprocess
+import sys
+import time
+from collections import defaultdict
+from pathlib import Path
 from typing import List, Optional
+import requests
 
 ## IMPORTANT: currently this script only supports EVA - we should update the output to have Ensembl data manually -
 # - triticum_aestivum
@@ -84,6 +84,14 @@ def parse_args(args=None):
         default=".",
         required=False,
         help="Dir in which to write output files",
+    )
+
+    parser.add_argument(
+        "--tmp_dir",
+        dest="tmp_dir",
+        type=str,
+        default=None,
+        help="Optional scratch directory for building temporary VCF indexes",
     )
 
     return parser.parse_args(args)
@@ -321,10 +329,6 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
     ensembl_variant_counts = {}
     for ensembl_variant_count in process.stdout.decode().strip().split("\n"):
         (assembly, genome_uuid, variant_count) = ensembl_variant_count.split()
-        # ensembl_variant_counts[assembly] = {
-        #     "genome_uuid": genome_uuid,
-        #     "variant_count": int(variant_count)
-        # }
         ensembl_variant_counts[genome_uuid] = {
             "assembly": assembly,
             "variant_count": int(variant_count)
@@ -336,41 +340,28 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
 def get_eva_version_from_ensembl_vcf(vcf_path: str):
     """
     Extract the EVA version from the VCF header's ##source line and return it as an integer.
-
-    This function zgreps the compressed VCF for lines starting with "##source=",
-    filters for the one where source="EVA", parses out the version attribute and
-    casts it to int.
-
-    Parameters:
-        vcf_path (str): Path to the bgzipped VCF file.
-
-    Returns:
-        int | None: The EVA version as an integer if found and numeric, otherwise None.
-
-    Raises:
-        FileNotFoundError: If the specified VCF file does not exist.
     """
-    vcf = Path(vcf_path)
-    if not vcf.exists():
-        raise FileNotFoundError(f"{vcf_path!r} does not exist")
 
-    try:
-        output = subprocess.check_output(
-            ["zgrep", "^##source=", str(vcf)], stderr=subprocess.DEVNULL
-        )
-    except subprocess.CalledProcessError:
-        return None
+    path = Path(vcf_path)
+    if not path.exists():
+        raise FileNotFoundError(vcf_path)
 
-    for line in output.decode("utf-8").splitlines():
-        if 'source="EVA"' not in line:
-            continue
-        m = re.search(r'version="([^"]+)"', line)
-        if m:
-            version_str = m.group(1)
-            try:
-                return int(version_str)
-            except ValueError:
-                return None
+    opener = gzip.open if path.suffix == ".gz" else open
+    src_re = re.compile(r'##source=.*?EVA.*?version="([^"]+)"')
+
+    with opener(path, "rt") as fh:
+        for line in fh:
+            if not line.startswith("#"):
+                break
+
+            if line.startswith("##source=") and "EVA" in line:
+                m = src_re.search(line)
+                if m:
+                    try:
+                        return int(m.group(1))
+                    except ValueError:
+                        return None
+                break
 
     return None
 
@@ -461,104 +452,108 @@ def get_eva_species(release_version: int) -> dict:
     return eva_species
 
 
-def _tabix_list(path: str) -> Optional[List[str]]:
-    """Return list-of-seqnames via `tabix -l` or None if tabix fails."""
+def _tabix_list(path: str, workdir: Path = Path.cwd()) -> Optional[List[str]]:
+    """Run `tabix -l` and return the list of seqnames, or None on failure."""
     proc = subprocess.run(
         ["tabix", "-l", path],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        cwd=workdir,
     )
     return proc.stdout.strip().splitlines() if proc.returncode == 0 else None
 
 
 def _header_contigs(path: str) -> List[str]:
-    """Read ##contig IDs by streaming the header (works with .vcf or .vcf.gz)."""
-    import gzip
-
+    """Return the ##contig IDs by streaming the header."""
     opener = gzip.open if path.endswith(".gz") else open
-    contigs = []
     with opener(path, "rt") as fh:
-        for line in fh:
-            if not line.startswith("##"):
+        return [
+            ln.split("ID=")[1].split(",")[0].rstrip(">\n")
+            for ln in fh
+            if ln.startswith("##contig=<ID=")
+        ]
+
+
+def seq_region_matches(eva_file: str, ensembl_file: str, tmp_dir: Path) -> bool:
+    """
+    Return True if the two VCFs share at least one sequence-region.
+    """
+    
+    # Set up temp_dir/work to hold tmp files
+    if not tmp_dir.is_dir():
+        raise ValueError(f"--tmp_dir must exist: {tmp_dir}")
+
+    work = tmp_dir / f"work"
+    if work.exists():
+        print(f"[INFO] Removing stale work directory {work}", file=sys.stderr)
+        rmtree(work)
+    work.mkdir()
+
+    try:
+        # --- EVA (remote) -------------------------------
+        max_retries, retry_delay = 4, 60
+        eva_seq = None
+        for attempt in range(1, max_retries + 1):
+            eva_seq = _tabix_list(eva_file, work)
+            if eva_seq:
                 break
-            if line.startswith("##contig=<ID="):
-                contigs.append(line.split("ID=")[1].split(",")[0].rstrip(">\n"))
-    return contigs
-
-
-def seq_region_matches(eva_file: str, ensembl_file: str) -> bool:
-    """
-    True if EVA and Ensembl VCFs share at least one seq-region.
-
-    - Tries tabix -l up to max_retries on the remote EVA VCF
-      (to manage API connection issues).
-    - If EVA seq-regions cannot be obtained after the retries, return False.
-    - Builds a .tbi for the local Ensembl VCF if it is missing.
-      If index build fails, falls back to parsing ##contig headers.
-    """
-
-    max_retries, retry_delay = 4, 60  # seconds
-
-    # ---------- EVA VCF (remote) ---------------------------------------
-    eva_seq = None
-    for attempt in range(1, max_retries + 1):
-        eva_seq = _tabix_list(eva_file)
-        if eva_seq:
-            break
-        sys.stderr.write(
-            f"[WARN] tabix -l attempt {attempt}/{max_retries} failed for {eva_file}\n"
-        )
-        if attempt < max_retries:
-            time.sleep(retry_delay)
-
-    if not eva_seq:
-        # Could not retrieve seq-regions for the remote VCF – give up here.
-        sys.stderr.write(
-            f"[WARN] Cannot obtain seq-regions for remote EVA file {eva_file}; "
-            "skipping comparison.\n"
-        )
-        return False
-
-    # Remove any EVA index file saved in CWD
-    for ext in (".tbi", ".csi"):
-        tmp = Path(os.path.basename(eva_file) + ext)
-        if tmp.exists():
-            tmp.unlink()
-
-    # ---------- Ensembl VCF (local) ------------------------------------
-    ens_seq = _tabix_list(ensembl_file)
-    if not ens_seq:
-        sys.stderr.write(f"[INFO] Building index for {ensembl_file}\n")
-        build = subprocess.run(
-            ["tabix", "-p", "vcf", ensembl_file],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        if build.returncode != 0:
             sys.stderr.write(
-                f"[ERROR] tabix index build failed for {ensembl_file}: "
-                f"{build.stderr.strip()}\n"
+                f"[WARN] tabix -l attempt {attempt}/{max_retries} failed "
+                f"for {eva_file}\n"
             )
-            # Final fallback – parse header
-            try:
-                ens_seq = _header_contigs(ensembl_file)
-                sys.stderr.write(
-                    f"[INFO] contigs parsed from header: {ens_seq[:1]} …\n"
-                )
-            except Exception as exc:
-                sys.stderr.write(
-                    f"[ERROR] Cannot read header of {ensembl_file}: {exc}\n"
-                )
-                return False
-        else:
-            # If index was just built, re–try tabix -l (may yield [] if no contigs)
-            ens_seq = _tabix_list(ensembl_file) or []
+            if attempt < max_retries:
+                time.sleep(retry_delay)
 
-    # ---------- Compare -------------------------------------------------
-    return any(contig in ens_seq for contig in eva_seq)
+        if not eva_seq:
+            sys.stderr.write(
+                f"[WARN] Cannot obtain seq-regions for remote EVA file "
+                f"{eva_file}; skipping comparison.\n"
+            )
+            return False
 
+        # --- Ensembl local ------------------------------
+        ens_seq = _tabix_list(ensembl_file, work)
+        if not ens_seq:
+            tmp_copy = work / Path(ensembl_file).name
+            copy2(ensembl_file, tmp_copy)
+
+            sys.stderr.write(f"[INFO] Building index for {tmp_copy}\n")
+            build = subprocess.run(
+                ["tabix", "-p", "vcf", "-C", str(tmp_copy)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=work,
+            )
+
+            if build.returncode == 0:
+                sys.stderr.write(f"[INFO] Building index successful\n")
+                ens_seq = _tabix_list(tmp_copy, work) or []
+            else:  # tabix failed – fall back to header parse
+                sys.stderr.write(
+                    f"[ERROR] Index build failed for {tmp_copy}:\n"
+                    f"{build.stderr.strip()}\n"
+                )
+                try:
+                    sys.stderr.write(f"[INFO] Fall-back: attempting header-parse to retrieve contigs\n")
+                    ens_seq = _header_contigs(tmp_copy)
+                    sys.stderr.write(
+                        f"[INFO] Contigs parsed from header successfully"
+                        f"(e.g. {ens_seq[:1]}) ...\n"
+                    )
+                except Exception as exc:
+                    sys.stderr.write(
+                        f"[ERROR] Cannot read header of {tmp_copy}: {exc}\n"
+                    )
+                    return False
+
+        # --- Compare ------------------------------------
+        return any(contig in ens_seq for contig in eva_seq)
+
+    # Clean up tmp files
+    finally:
+        rmtree(work, ignore_errors=True)
 
 def get_ensembl_release_status(server: dict, meta_db: str) -> str:
     """
@@ -645,6 +640,14 @@ def main(args=None):
     args = parse_args(args)
     os.makedirs(args.output_dir, exist_ok=True)
 
+    # exit if no tmp dir provided
+    if not os.path.isdir(args.tmp_dir):
+        sys.stderr.write(
+            f"[ERROR] Temporary directory (--tmp_dir) must exist. "
+            f"Path given: {args.tmp_dir}\n"
+        )
+        sys.exit(1)
+
     # Pull EVA metadata
     eva_release = get_latest_eva_version()
     eva_species = get_eva_species(eva_release)
@@ -666,7 +669,7 @@ def main(args=None):
 
     # Get unique assemblies present in Ensembl 
     ensembl_assemblies = [x.get("assembly_id") for x in ensembl_vcf_paths.values()]
-    print(f"{len(set(ensembl_assemblies))} unique Ensembl assemblies identified")
+    print(f"[INFO] {len(set(ensembl_assemblies))} unique Ensembl assemblies identified")
 
     # Get release_id for "Planned" and "Prepared"
     planned_ids = set()
@@ -694,7 +697,6 @@ def main(args=None):
 
     # Loop over only those assemblies present in BOTH Ensembl and EVA
     for asm in set(ensembl_assemblies) & set(eva_species):
-    # for asm in ["GCA_015227675.2"]:
 
         # Get Ensembl genome_uuids associated with assemblies present in BOTH Ensembl and EVA
         associated_uuids = [
@@ -711,13 +713,14 @@ def main(args=None):
             vcf_meta = ensembl_vcf_paths.get(uuid)
 
             sp = meta["species"]
-            print(f"Processing... Assembly ID: {asm}. Species: {sp}. Genome: {uuid}.")
+            print(f"[INFO] Processing... Assembly ID: {asm}. Species: {sp}. Genome: {uuid}.")
 
             # Grab EVA metadata for assembly
             eva_meta = eva_species[asm]
 
             # Skip human
-            if meta["species"].startswith("homo"):
+            if sp.startswith("homo"):
+                print(f"[INFO] Skipping {sp}")
                 continue
 
             # Build template 'record' dict
@@ -733,19 +736,23 @@ def main(args=None):
                 "assembly": meta["assembly_name"],
                 "source_name": "EVA",
                 "file_type": "remote",
-                "file_location": file_loc,  # EVA file URL
+                "file_location": file_loc, # EVA file URL
             }
 
             # Check for genebuild/assembly candidates - candidates must have a planned, prepared or both statuses in the metdata db
             if status:
+                print(f"[INFO] Genebuild candidate in the metadata db")
                 genome_key = f"{meta['species']}_{meta['assembly_name']}"
                 if status["release_status"].lower() == "prepared":
+                    print(f"[INFO] 'prepared' status detected")
                     ensembl_prepared.setdefault(genome_key, []).append(record)
                 if status["release_status"].lower() == "planned":
+                    print(f"[INFO] 'planned' status detected")
                     ensembl_planned.setdefault(genome_key, []).append(record)
 
             # Check for EVA variant update candidates - only if we already have a VCF, and only if we haven't included it already (as a genebuild/assembly candidate)
             elif vcf_meta:
+                print(f"[INFO] Not genebuild candidate in the metadata db, so checking EVA")
                 vcf_path = vcf_meta["file_path"]
 
                 # If the current Ensembl EVA version can be grabbed from vcf header, grab and compare, otherwise revert to variant count comparison
@@ -753,31 +760,42 @@ def main(args=None):
 
                 update = False
                 if eva_ensembl_version:
+                    print(f"[INFO] EVA version parsed from Ensembl file header: {eva_ensembl_version}")
                     if eva_ensembl_version < eva_release:
                         update = True
                 else:
+                    print(f"[INFO] EVA version not found in Ensembl file header, comparing variant counts as fall-back")
                     ensembl_variant_count = ensembl_variant_counts.get(uuid)["variant_count"]
                     if ensembl_variant_count < eva_meta["variant_count"]:
                         update = True    
 
-                if update and seq_region_matches(eva_file=file_loc, ensembl_file=vcf_path):
+                if update and seq_region_matches(eva_file=file_loc, ensembl_file=vcf_path, tmp_dir=Path(args.tmp_dir)):
                     genome_key = f"{meta['species']}_{meta['assembly_name']}"
                     ensembl_released.setdefault(genome_key, []).append(record)
 
     # Write the output JSON files
-    with open(
-        os.path.join(args.output_dir, f"ensembl_prepared_{prepared_release_id}.json"),
-        "w",
-    ) as out:
-        json.dump(ensembl_prepared, out, indent=4)
+    print(f"[INFO] Auto-discovery complete. Writing JSON files.")
 
-    with open(
-        os.path.join(args.output_dir, f"ensembl_planned_{planned_release_id}.json"), "w"
-    ) as out:
-        json.dump(ensembl_planned, out, indent=4)
+    prepared_json  = os.path.join(args.output_dir,
+                                f"ensembl_prepared_{prepared_release_id}.json")
+    planned_json   = os.path.join(args.output_dir,
+                                f"ensembl_planned_{planned_release_id}.json")
+    released_json  = os.path.join(args.output_dir, "ensembl_released.json")
 
-    with open(os.path.join(args.output_dir, "ensembl_released.json"), "w") as out:
-        json.dump(ensembl_released, out, indent=4)
+    with open(prepared_json, "w") as fh:
+        json.dump(ensembl_prepared, fh, indent=4)
+    with open(planned_json, "w") as fh:
+        json.dump(ensembl_planned, fh, indent=4)
+    with open(released_json, "w") as fh:
+        json.dump(ensembl_released, fh, indent=4)
+
+    for path in (prepared_json, planned_json, released_json):
+        if os.path.isfile(path):
+            print(f"[INFO] JSON successfully written: {os.path.basename(path)}")
+        else:
+            print(f"[ERROR] Missing expected output: {path}", file=sys.stderr)
+
+    print(f"Done.")
 
 
 if __name__ == "__main__":
