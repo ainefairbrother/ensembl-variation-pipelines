@@ -23,10 +23,11 @@ process GENERATE_VEP_CONFIG {
   val meta
     
   output:
-  val genome_uuid
+  val genome
   
   shell:
   force_create_config = params.force_create_config
+  genome = meta.genome
   version = params.version
   species = meta.species
   assembly = meta.assembly
