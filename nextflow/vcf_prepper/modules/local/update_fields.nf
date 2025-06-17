@@ -39,7 +39,7 @@ process UPDATE_FIELDS {
     !{rename_clinvar_ids} \
     -O !{output_file} \
     --chromosomes ${chrs} \
-    --sources !{sources}
+    --sources !{sources} \
     --sources_meta_file !{sources_meta_file}
   '''
 }
