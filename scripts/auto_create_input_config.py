@@ -730,7 +730,7 @@ def main(args=None):
     if prepared_ids:
         prepared_release_id = prepared_ids.pop()
     else:
-        planned_release_id = None
+        prepared_release_id = None
 
     # Prepare empty dicts
     ensembl_prepared = {}
