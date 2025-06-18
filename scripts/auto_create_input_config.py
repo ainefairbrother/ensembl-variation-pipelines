@@ -689,7 +689,9 @@ def main(args=None):
 
     # Pull Ensembl metadata
     server = parse_ini(args.ini_file, "metadata")
-    ensembl_species = get_ensembl_species(server, meta_db="ensembl_genome_metadata")
+    ensembl_species = get_ensembl_species(
+        server, meta_db="ensembl_genome_metadata"
+    )
     ensembl_vcf_paths = get_ensembl_vcf_filepaths(
         server, meta_db="ensembl_genome_metadata"
     )
@@ -715,9 +717,9 @@ def main(args=None):
         elif release_status == "prepared":
             prepared_ids.add(release_id)
 
-    if len(planned_ids) != 1:
+    if len(planned_ids) > 1:
         print(f"[WARN] expected exactly one 'planned' release_id, got {planned_ids}")
-    if len(prepared_ids) != 1:
+    if len(prepared_ids) > 1:
         print(f"[WARN] expected exactly one 'prepared' release_id, got {prepared_ids}")
 
     planned_release_id = planned_ids.pop()
