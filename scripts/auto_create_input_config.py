@@ -689,7 +689,9 @@ def main(args=None):
 
     # Pull Ensembl metadata
     server = parse_ini(args.ini_file, "metadata")
-    ensembl_species = get_ensembl_species(server, meta_db="ensembl_genome_metadata")
+    ensembl_species = get_ensembl_species(
+        server, meta_db="ensembl_genome_metadata"
+    )
     ensembl_vcf_paths = get_ensembl_vcf_filepaths(
         server, meta_db="ensembl_genome_metadata"
     )
@@ -715,13 +717,20 @@ def main(args=None):
         elif release_status == "prepared":
             prepared_ids.add(release_id)
 
-    if len(planned_ids) != 1:
+    if len(planned_ids) > 1:
         print(f"[WARN] expected exactly one 'planned' release_id, got {planned_ids}")
-    if len(prepared_ids) != 1:
+    if len(prepared_ids) > 1:
         print(f"[WARN] expected exactly one 'prepared' release_id, got {prepared_ids}")
 
-    planned_release_id = planned_ids.pop()
-    prepared_release_id = prepared_ids.pop()
+    if planned_ids:
+        planned_release_id = planned_ids.pop()
+    else:
+        planned_release_id = None
+    
+    if prepared_ids:
+        prepared_release_id = prepared_ids.pop()
+    else:
+        prepared_release_id = None
 
     # Prepare empty dicts
     ensembl_prepared = {}
@@ -819,26 +828,31 @@ def main(args=None):
     # Write the output JSON files
     print(f"[INFO] Auto-discovery complete. Writing JSON files.")
 
-    prepared_json = os.path.join(
-        args.output_dir, f"ensembl_prepared_{prepared_release_id}.json"
-    )
-    planned_json = os.path.join(
-        args.output_dir, f"ensembl_planned_{planned_release_id}.json"
-    )
-    released_json = os.path.join(args.output_dir, "ensembl_released.json")
+    if prepared_release_id:
+        prepared_json = os.path.join(
+            args.output_dir, f"ensembl_prepared_{prepared_release_id}.json"
+        )
+        with open(prepared_json, "w") as fh:
+            json.dump(ensembl_prepared, fh, indent=4)
+        if os.path.isfile(prepared_json):
+            print(f"[INFO] 'Prepared' JSON successfully written: {os.path.basename(prepared_json)}")
+    else:
+        print(f"[INFO] No species found for 'Prepared', not writing output JSON.")
 
-    with open(prepared_json, "w") as fh:
-        json.dump(ensembl_prepared, fh, indent=4)
-    with open(planned_json, "w") as fh:
-        json.dump(ensembl_planned, fh, indent=4)
+    if planned_release_id:
+        planned_json = os.path.join(
+            args.output_dir, f"ensembl_planned_{planned_release_id}.json"
+        )
+        with open(planned_json, "w") as fh:
+            json.dump(ensembl_planned, fh, indent=4)
+        if os.path.isfile(planned_json):
+            print(f"[INFO] 'Planned' JSON successfully written: {os.path.basename(planned_json)}")
+    else:
+        print(f"[INFO] No species found for 'Planned', not writing output JSON.")
+
+    released_json = os.path.join(args.output_dir, "ensembl_released.json")
     with open(released_json, "w") as fh:
         json.dump(ensembl_released, fh, indent=4)
-
-    for path in (prepared_json, planned_json, released_json):
-        if os.path.isfile(path):
-            print(f"[INFO] JSON successfully written: {os.path.basename(path)}")
-        else:
-            print(f"[ERROR] Missing expected output: {path}", file=sys.stderr)
 
     print(f"Done.")
 
