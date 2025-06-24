@@ -819,9 +819,7 @@ def main(args=None):
                     else:
                         print(f'[INFO] For {sp} EVA variant count has not increased - {ensembl_variant_count} =< {eva_meta["variant_count"]}, skipping...')
 
-                if update and seq_region_matches(
-                    eva_file=file_loc, ensembl_file=vcf_path, tmp_dir=Path(args.tmp_dir)
-                ):
+                if update:
                     genome_key = f"{meta['species']}_{meta['assembly_name']}"
                     ensembl_released.setdefault(genome_key, []).append(record)
 
