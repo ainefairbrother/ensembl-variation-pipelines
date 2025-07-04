@@ -609,7 +609,7 @@ def get_ensembl_release_status(server: dict, meta_db: str) -> str:
             JOIN assembly AS a ON g.assembly_id = a.assembly_id
             JOIN genome_release AS gr ON gr.genome_id    = g.genome_id
             JOIN ensembl_release AS er ON er.release_id  = gr.release_id
-            WHERE er.status IN ('prepared','planned');
+            WHERE er.status IN ('prepared','preparing','planned');
     """
 
     process = subprocess.run(
@@ -703,38 +703,27 @@ def main(args=None):
     )
 
     # Get unique assemblies present in Ensembl
-    ensembl_assemblies = [x.get("assembly_id") for x in ensembl_vcf_paths.values()]
+    ensembl_assemblies = [x.get("assembly_id") for x in ensembl_species.values()]
     print(f"[INFO] {len(set(ensembl_assemblies))} unique Ensembl assemblies identified")
 
     # Get release_id for "Planned" and "Prepared"
     planned_ids = set()
+    preparing_ids = set()
     prepared_ids = set()
     for val in ensembl_status.values():
         release_status = val.get("release_status").lower()
         release_id = val.get("release_id")
         if release_status == "planned":
             planned_ids.add(release_id)
+        elif release_status == "preparing":
+            preparing_ids.add(release_id)
         elif release_status == "prepared":
             prepared_ids.add(release_id)
 
-    if len(planned_ids) > 1:
-        print(f"[WARN] expected exactly one 'planned' release_id, got {planned_ids}")
-    if len(prepared_ids) > 1:
-        print(f"[WARN] expected exactly one 'prepared' release_id, got {prepared_ids}")
-
-    if planned_ids:
-        planned_release_id = planned_ids.pop()
-    else:
-        planned_release_id = None
-    
-    if prepared_ids:
-        prepared_release_id = prepared_ids.pop()
-    else:
-        prepared_release_id = None
-
     # Prepare empty dicts
-    ensembl_prepared = {}
     ensembl_planned = {}
+    ensembl_preparing = {}
+    ensembl_prepared = {}
     ensembl_released = {}
 
     # Loop over only those assemblies present in BOTH Ensembl and EVA
@@ -779,18 +768,27 @@ def main(args=None):
                 "file_location": file_loc,  # EVA file URL
             }
 
-            # Check for genebuild/assembly candidates - candidates must have a planned, prepared or both statuses in the metdata db
+            # Check for genebuild/assembly candidates - candidates must have a planned, preparing, or prepared in the metdata db
             if status:
                 print(f"[INFO] Genebuild candidate in the metadata db")
                 genome_key = f"{meta['species']}_{meta['assembly_name']}"
+                release_id = status.get("release_id", None)
+                if release_id is None:
+                    print(f"[INFO] Could not find release id for - {uuid}; skipping...")
+                    continue
+
                 if status["release_status"].lower() == "prepared":
                     print(f"[INFO] 'prepared' status detected")
-                    ensembl_prepared.setdefault(genome_key, []).append(record)
+                    ensembl_prepared.setdefault(release_id, {}).setdefault(genome_key, []).append(record)
+                if status["release_status"].lower() == "preparing":
+                    print(f"[INFO] 'preparing' status detected")
+                    ensembl_preparing.setdefault(release_id, {}).setdefault(genome_key, []).append(record)
                 if status["release_status"].lower() == "planned":
                     print(f"[INFO] 'planned' status detected")
-                    ensembl_planned.setdefault(genome_key, []).append(record)
+                    ensembl_planned.setdefault(release_id, {}).setdefault(genome_key, []).append(record)
 
-            # Check for EVA variant update candidates - only if we already have a VCF, and only if we haven't included it already (as a genebuild/assembly candidate)
+            # Check for EVA variant update candidates that we haven't included it already (as a genebuild/assembly candidate)
+            # If we already have a variation data, check if there is any update to EVA 
             elif vcf_meta:
                 print(
                     f"[INFO] Not genebuild candidate in the metadata db, so checking EVA"
@@ -818,41 +816,57 @@ def main(args=None):
                     ]
                     if ensembl_variant_count < eva_meta["variant_count"]:
                         update = True
+                    else:
+                        print(f'[INFO] For {sp} EVA variant count has not increased - {ensembl_variant_count} =< {eva_meta["variant_count"]}, skipping...')
 
-                if update and seq_region_matches(
-                    eva_file=file_loc, ensembl_file=vcf_path, tmp_dir=Path(args.tmp_dir)
-                ):
+                if update:
                     genome_key = f"{meta['species']}_{meta['assembly_name']}"
                     ensembl_released.setdefault(genome_key, []).append(record)
+
+            # If we do not have variation data, it somehow slipped passed previous releases
+            else:
+                genome_key = f"{meta['species']}_{meta['assembly_name']}"
+                ensembl_released.setdefault(genome_key, []).append(record)
 
     # Write the output JSON files
     print(f"[INFO] Auto-discovery complete. Writing JSON files.")
 
-    if prepared_release_id:
-        prepared_json = os.path.join(
-            args.output_dir, f"ensembl_prepared_{prepared_release_id}.json"
-        )
-        with open(prepared_json, "w") as fh:
-            json.dump(ensembl_prepared, fh, indent=4)
-        if os.path.isfile(prepared_json):
-            print(f"[INFO] 'Prepared' JSON successfully written: {os.path.basename(prepared_json)}")
-    else:
-        print(f"[INFO] No species found for 'Prepared', not writing output JSON.")
-
-    if planned_release_id:
+    for release_id in ensembl_planned:
         planned_json = os.path.join(
-            args.output_dir, f"ensembl_planned_{planned_release_id}.json"
+            args.output_dir, f"ensembl_planned_{release_id}.json"
         )
-        with open(planned_json, "w") as fh:
-            json.dump(ensembl_planned, fh, indent=4)
+        if planned_json:
+            with open(planned_json, "w") as fh:
+                json.dump(ensembl_planned.get(release_id), fh, indent=4)
         if os.path.isfile(planned_json):
             print(f"[INFO] 'Planned' JSON successfully written: {os.path.basename(planned_json)}")
-    else:
-        print(f"[INFO] No species found for 'Planned', not writing output JSON.")
+        
+    for release_id in ensembl_preparing:
+        preparing_json = os.path.join(
+            args.output_dir, f"ensembl_preparing_{release_id}.json"
+        )
+        if preparing_json:
+            with open(preparing_json, "w") as fh:
+                json.dump(ensembl_preparing.get(release_id, {}), fh, indent=4)
+        if os.path.isfile(preparing_json):
+            print(f"[INFO] 'Prepared' JSON successfully written: {os.path.basename(preparing_json)}")
+
+    for release_id in ensembl_prepared:
+        prepared_json = os.path.join(
+            args.output_dir, f"ensembl_prepared_{release_id}.json"
+        )
+        if prepared_json:
+            with open(prepared_json, "w") as fh:
+                json.dump(ensembl_prepared.get(release_id, {}), fh, indent=4)
+        if os.path.isfile(prepared_json):
+            print(f"[INFO] 'Prepared' JSON successfully written: {os.path.basename(prepared_json)}")
 
     released_json = os.path.join(args.output_dir, "ensembl_released.json")
-    with open(released_json, "w") as fh:
-        json.dump(ensembl_released, fh, indent=4)
+    if ensembl_released:
+        with open(released_json, "w") as fh:
+            json.dump(ensembl_released, fh, indent=4)
+    if os.path.isfile(released_json):
+            print(f"[INFO] 'Released' JSON successfully written: {os.path.basename(released_json)}")
 
     print(f"Done.")
 
