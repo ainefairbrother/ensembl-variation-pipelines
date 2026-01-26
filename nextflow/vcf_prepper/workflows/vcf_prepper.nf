@@ -95,12 +95,11 @@ workflow VCF_PREPPER {
     
   // api files
   if (!params.skip_vep) {
-    // pre-process
     UPDATE_FIELDS( PREPARE_GENOME.out )
-    REMOVE_VARIANTS( UPDATE_FIELDS.out )
-    
+    // REMOVE_VARIANTS( UPDATE_FIELDS.out )
+
     // run vep
-    vep = RUN_VEP( REMOVE_VARIANTS.out )
+    vep = RUN_VEP( UPDATE_FIELDS.out )
 
     // post-process
     COUNT_VCF_VARIANT( vep )
