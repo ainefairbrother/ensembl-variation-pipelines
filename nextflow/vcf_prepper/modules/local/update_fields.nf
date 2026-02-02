@@ -41,5 +41,10 @@ process UPDATE_FIELDS {
     --chromosomes ${chrs} \
     --sources !{sources} \
     --sources_meta_file !{sources_meta_file}
+    
+  if ! bgzip -t !{output_file} >/dev/null 2>&1; then
+    bcftools view -Oz -o !{output_file}.tmp !{output_file}
+    mv -f !{output_file}.tmp !{output_file}
+  fi
   '''
 }
