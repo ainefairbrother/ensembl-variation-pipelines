@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
@@ -154,7 +155,12 @@ def generate_chrom_sizes(
     )
 
     with open(chrom_sizes, "a") as file:
-        file.write(process.stdout.decode().strip())
+        out = process.stdout.decode().strip()
+        if out:
+            if Path(chrom_sizes).stat().st_size > 0:
+                file.write("\n")
+            file.write(out)
+            file.write("\n")
 
     # remove duplicates
     with open(chrom_sizes, "r") as file:
@@ -162,7 +168,13 @@ def generate_chrom_sizes(
 
     lengths = {}
     for line in lines:
-        name, length = [col.strip() for col in line.split("\t")]
+        line = line.strip()
+        if not line:
+            continue
+        parts = [col.strip() for col in line.split("\t")]
+        if len(parts) != 2:
+            sys.exit(f"ERROR: invalid chrom_sizes row: {line!r}")
+        name, length = parts
         if name not in lengths or int(lengths[name]) < int(length):
             lengths[name] = length
 
