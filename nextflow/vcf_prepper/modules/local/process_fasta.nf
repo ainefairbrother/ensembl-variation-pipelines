@@ -35,6 +35,9 @@ process PROCESS_FASTA {
   out_dir = meta.genome_temp_dir
   ini_file = params.ini_file
   fasta_dir = meta.fasta_dir
+  ftp_cache_root = params.fasta_ftp_cache_dir ?: params.ftp_cache_dir
+  ftp_cache_dir = ftp_cache_root ? "--ftp_cache_dir ${ftp_cache_root}" : ""
+  download_retries = "--download_retries ${params.download_retries}"
   force_create_config = params.force_create_config ? "--force" : ""
   use_old_infra = params.use_old_infra ? "--use_old_infra" : ""
   
@@ -47,6 +50,8 @@ process PROCESS_FASTA {
     --out_dir !{out_dir} \
     --ini_file !{ini_file} \
     --fasta_dir !{fasta_dir} \
+    !{ftp_cache_dir} \
+    !{download_retries} \
     !{force_create_config} \
     !{use_old_infra}
   '''

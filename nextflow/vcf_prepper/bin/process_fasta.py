@@ -27,6 +27,7 @@ FASTA_DIR = "/nfs/production/flicek/ensembl/variation/data/VEP/fasta"
 FASTA_FTP_BASE_DIR = (
     "/hps/nobackup/flicek/ensembl/production/ensembl_dumps/ftp_mvp/organisms"
 )
+FASTA_FTP_BASE_URL = "https://ftp.ebi.ac.uk/pub/ensemblorganisms"
 FASTA_FILE_NAME = "unmasked.fa.gz"
 
 
@@ -87,6 +88,20 @@ def parse_args(args=None):
         dest="use_old_infra",
         action="store_true",
         help="Use old infrastructure to get FASTA file",
+    )
+    parser.add_argument(
+        "--ftp_cache_dir",
+        dest="ftp_cache_dir",
+        type=str,
+        required=False,
+        help="Writable local cache root mirroring pub/ensemblorganisms for new-infra FASTA downloads",
+    )
+    parser.add_argument(
+        "--download_retries",
+        dest="download_retries",
+        type=int,
+        default=3,
+        help="Number of download attempts for remote FTP fallback",
     )
     parser.add_argument("--force", dest="force", action="store_true")
 
@@ -293,18 +308,62 @@ def main(args=None):
             )
 
             if not os.path.isfile(source_fasta):
-                raise FileNotFoundError(f"Could not find - {source_fasta}")
-            else:
-                compressed_fasta = os.path.join(out_dir, FASTA_FILE_NAME)
-                returncode = copyto(source_fasta, compressed_fasta)
-                if returncode != 0:
-                    raise Exception(
-                        f"Failed to copy.\n\tSource - {source_fasta}\n\tTarget - {compressed_fasta}"
-                    )
+                source_fasta = find_local_mvp_file(
+                    args.ftp_cache_dir,
+                    scientific_name,
+                    assembly_accession,
+                    FASTA_FILE_NAME,
+                )
 
-                unzipped_fasta = ungzip_file(compressed_fasta)
-                bgzipped_fasta = bgzip_file(unzipped_fasta)
-                index_fasta(bgzipped_fasta, force=args.force)
+            if source_fasta:
+                print(f"[INFO] Using FASTA - {source_fasta}")
+            elif args.ftp_cache_dir:
+                cache_root = os.path.join(
+                    args.ftp_cache_dir,
+                    scientific_name,
+                    assembly_accession,
+                    "genome",
+                )
+                downloaded = False
+                for url in remote_mvp_candidate_urls(
+                    FASTA_FTP_BASE_URL,
+                    scientific_name,
+                    assembly_accession,
+                    FASTA_FILE_NAME,
+                ):
+                    date_dir = url.rstrip("/").split("/")[-2]
+                    cache_dir = (
+                        os.path.join(cache_root, date_dir)
+                        if date_dir != "genome"
+                        else cache_root
+                    )
+                    os.makedirs(cache_dir, exist_ok=True)
+                    source_fasta = os.path.join(cache_dir, FASTA_FILE_NAME)
+                    returncode = download_file_with_retries(
+                        source_fasta, url, args.download_retries
+                    )
+                    if returncode == 0:
+                        downloaded = True
+                        break
+                if not downloaded:
+                    raise FileNotFoundError(
+                        f"Could not find FASTA locally or download from {FASTA_FTP_BASE_URL} for {assembly_accession}"
+                    )
+            else:
+                raise FileNotFoundError(
+                    f"Could not find - {source_fasta}; provide --ftp_cache_dir to download from remote FTP"
+                )
+
+            compressed_fasta = os.path.join(out_dir, FASTA_FILE_NAME)
+            returncode = copyto(source_fasta, compressed_fasta)
+            if returncode != 0:
+                raise Exception(
+                    f"Failed to copy.\n\tSource - {source_fasta}\n\tTarget - {compressed_fasta}"
+                )
+
+            unzipped_fasta = ungzip_file(compressed_fasta)
+            bgzipped_fasta = bgzip_file(unzipped_fasta)
+            index_fasta(bgzipped_fasta, force=args.force)
 
 
 if __name__ == "__main__":

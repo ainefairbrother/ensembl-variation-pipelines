@@ -34,6 +34,9 @@ process PROCESS_GFF {
   out_dir = meta.genome_temp_dir
   ini_file = params.ini_file
   gff_dir = meta.gff_dir
+  ftp_cache_root = params.gff_ftp_cache_dir ?: params.ftp_cache_dir
+  ftp_cache_dir = ftp_cache_root ? "--ftp_cache_dir ${ftp_cache_root}" : ""
+  download_retries = "--download_retries ${params.download_retries}"
   force_create_config = params.force_create_config ? "--force" : ""
   
   '''
@@ -43,6 +46,8 @@ process PROCESS_GFF {
     --out_dir !{out_dir} \
     --ini_file !{ini_file} \
     --gff_dir !{gff_dir} \
+    !{ftp_cache_dir} \
+    !{download_retries} \
     !{force_create_config}
   '''
 }

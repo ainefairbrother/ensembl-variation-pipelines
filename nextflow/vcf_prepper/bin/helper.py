@@ -18,6 +18,10 @@ import subprocess
 import configparser
 import os
 import json
+import re
+import time
+import urllib.error
+import urllib.request
 from deprecated import deprecated
 
 
@@ -644,6 +648,123 @@ def download_file(local_filename: str, url: str) -> int:
         os.remove(local_filename)
 
     return process.returncode
+
+
+def download_file_with_retries(local_filename: str, url: str, retries: int = 3) -> int:
+    """Download a remote file with retry handling.
+
+    Args:
+        local_filename (str): Target filename to write.
+        url (str): Remote URL to download.
+        retries (int): Number of attempts before giving up.
+
+    Returns:
+        int: Zero on success, otherwise the last wget return code.
+    """
+    attempts = max(1, int(retries))
+    returncode = 1
+    for attempt in range(1, attempts + 1):
+        print(f"[INFO] Download attempt {attempt}/{attempts}: {url}")
+        returncode = download_file(local_filename, url)
+        if returncode == 0:
+            return 0
+        if attempt < attempts:
+            time.sleep(5)
+    return returncode
+
+
+def list_remote_dirs(url: str) -> list:
+    """Return immediate child directory names from an FTP/HTTP directory listing."""
+    request = urllib.request.Request(url.rstrip("/") + "/")
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            html = response.read().decode("utf-8", errors="ignore")
+    except urllib.error.URLError as exc:
+        print(f"[WARNING] Could not list remote directory {url}: {exc}")
+        return []
+
+    dirs = []
+    for href in re.findall(r'href=["\']([^"\']+/)["\']', html):
+        name = href.strip("/").split("/")[-1]
+        if name and name not in {".", ".."}:
+            dirs.append(name)
+    return sorted(set(dirs))
+
+
+def latest_dated_dir(dirs: list) -> str:
+    """Pick the latest YYYY_MM-like directory from a list, falling back to lexical order."""
+    dated = [d for d in dirs if re.fullmatch(r"\d{4}(?:_\d{2})?(?:_\d{2})?", d)]
+    candidates = dated or dirs
+    return sorted(candidates)[-1] if candidates else None
+
+
+def find_local_mvp_file(
+    base_dir: str,
+    scientific_name: str,
+    assembly_accession: str,
+    file_name: str,
+    annotation_source: str = None,
+    preferred_date: str = None,
+) -> str:
+    """Find an MVP FTP resource in a local mirror/cache, using latest dated subdir if needed."""
+    if not base_dir:
+        return None
+
+    resource_dir = os.path.join(base_dir, scientific_name, assembly_accession)
+    if annotation_source:
+        resource_dir = os.path.join(resource_dir, annotation_source, "geneset")
+    else:
+        resource_dir = os.path.join(resource_dir, "genome")
+
+    candidates = []
+    if os.path.isdir(resource_dir):
+        dated_dirs = [
+            d for d in os.listdir(resource_dir)
+            if os.path.isdir(os.path.join(resource_dir, d))
+        ]
+        latest = latest_dated_dir(dated_dirs)
+        if latest:
+            candidates.append(os.path.join(resource_dir, latest, file_name))
+    if preferred_date:
+        candidates.append(os.path.join(resource_dir, preferred_date, file_name))
+    candidates.append(os.path.join(resource_dir, file_name))
+
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def remote_mvp_candidate_urls(
+    base_url: str,
+    scientific_name: str,
+    assembly_accession: str,
+    file_name: str,
+    annotation_source: str = None,
+    preferred_date: str = None,
+) -> list:
+    """Build remote MVP FTP candidate URLs, preferring explicit/latest dated subdirs."""
+    resource_url = "/".join(
+        part.strip("/")
+        for part in [base_url, scientific_name, assembly_accession]
+        if part
+    )
+    if annotation_source:
+        resource_url = "/".join([resource_url, annotation_source.strip("/"), "geneset"])
+    else:
+        resource_url = "/".join([resource_url, "genome"])
+
+    urls = []
+    child_dirs = list_remote_dirs(resource_url)
+    latest = latest_dated_dir(child_dirs)
+    if latest:
+        urls.append("/".join([resource_url, latest, file_name]))
+
+    if preferred_date:
+        urls.append("/".join([resource_url, preferred_date, file_name]))
+
+    urls.append("/".join([resource_url, file_name]))
+    return list(dict.fromkeys(urls))
 
 
 def get_ftp_path(

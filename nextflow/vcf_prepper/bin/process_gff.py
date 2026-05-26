@@ -25,7 +25,9 @@ from helper import *
 GFF_FASTA_BASE_DIR = (
     "/hps/nobackup/flicek/ensembl/production/ensembl_dumps/ftp_mvp/organisms"
 )
+GFF_FASTA_BASE_URL = "https://ftp.ebi.ac.uk/pub/ensemblorganisms"
 GFF_FILE_NAME = "sorted_genes.gff3.gz"
+REMOTE_GFF_FILE_NAME = "genes.gff3.gz"
 
 
 def parse_args(args=None):
@@ -59,6 +61,20 @@ def parse_args(args=None):
     )
     parser.add_argument(
         "--gff_dir", dest="gff_dir", type=str, required=False, help="GFF directory"
+    )
+    parser.add_argument(
+        "--ftp_cache_dir",
+        dest="ftp_cache_dir",
+        type=str,
+        required=False,
+        help="Writable local cache root mirroring pub/ensemblorganisms for GFF downloads",
+    )
+    parser.add_argument(
+        "--download_retries",
+        dest="download_retries",
+        type=int,
+        default=3,
+        help="Number of download attempts for remote FTP fallback",
     )
     parser.add_argument("--force", dest="force", action="store_true")
 
@@ -205,23 +221,73 @@ def main(args=None):
             annotation_source,
             "geneset",
             last_geneset_update,
-            "genes.gff3.gz",
+            REMOTE_GFF_FILE_NAME,
         )
 
         if not os.path.isfile(source_gff):
-            raise FileNotFoundError(f"Could not find - {source_gff}")
-        else:
-            compressed_gff = os.path.join(out_dir, "genes.gff3.gz")
-            returncode = copyto(source_gff, compressed_gff)
-            if returncode != 0:
-                raise Exception(
-                    f"Failed to copy.\n\tSource - {source_gff}\n\tTarget - {compressed_gff}"
-                )
+            source_gff = find_local_mvp_file(
+                args.ftp_cache_dir,
+                scientific_name,
+                assembly_accession,
+                REMOTE_GFF_FILE_NAME,
+                annotation_source,
+                last_geneset_update,
+            )
 
-            unzipped_gff = ungzip_file(compressed_gff)
-            sorted_gff = sort_gff(unzipped_gff)
-            bgzipped_gff = bgzip_file(sorted_gff)
-            index_gff(bgzipped_gff, force=args.force)
+        if source_gff:
+            print(f"[INFO] Using GFF - {source_gff}")
+        elif args.ftp_cache_dir:
+            cache_root = os.path.join(
+                args.ftp_cache_dir,
+                scientific_name,
+                assembly_accession,
+                annotation_source,
+                "geneset",
+            )
+            os.makedirs(cache_root, exist_ok=True)
+            downloaded = False
+            for url in remote_mvp_candidate_urls(
+                GFF_FASTA_BASE_URL,
+                scientific_name,
+                assembly_accession,
+                REMOTE_GFF_FILE_NAME,
+                annotation_source,
+                last_geneset_update,
+            ):
+                date_dir = url.rstrip("/").split("/")[-2]
+                cache_dir = (
+                    os.path.join(cache_root, date_dir)
+                    if date_dir != "geneset"
+                    else cache_root
+                )
+                os.makedirs(cache_dir, exist_ok=True)
+                source_gff = os.path.join(cache_dir, REMOTE_GFF_FILE_NAME)
+                returncode = download_file_with_retries(
+                    source_gff, url, args.download_retries
+                )
+                if returncode == 0:
+                    downloaded = True
+                    break
+            if not downloaded:
+                raise FileNotFoundError(
+                    f"Could not find GFF locally or download from {GFF_FASTA_BASE_URL} for {assembly_accession}"
+                )
+        else:
+            raise FileNotFoundError(
+                f"Could not find - {source_gff}; provide --ftp_cache_dir to download from remote FTP"
+            )
+
+        compressed_gff = os.path.join(out_dir, REMOTE_GFF_FILE_NAME)
+        returncode = copyto(source_gff, compressed_gff)
+        if returncode != 0:
+            raise Exception(
+                f"Failed to copy.\n\tSource - {source_gff}\n\tTarget - {compressed_gff}"
+            )
+
+        unzipped_gff = ungzip_file(compressed_gff)
+        sorted_gff = sort_gff(unzipped_gff)
+        bgzipped_gff = bgzip_file(sorted_gff)
+        index_gff(bgzipped_gff, force=args.force)
 
 
 if __name__ == "__main__":
