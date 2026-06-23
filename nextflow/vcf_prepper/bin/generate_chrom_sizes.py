@@ -24,6 +24,11 @@ import os
 from helper import parse_ini, get_db_name
 
 
+def populated_file(path: str) -> bool:
+    """Return True when path exists and has content."""
+    return os.path.exists(path) and os.path.getsize(path) > 0
+
+
 def parse_args(args=None):
     """Parse command-line arguments for generate_chrom_sizes.
 
@@ -54,6 +59,13 @@ def parse_args(args=None):
         help="file with chromomsome sizes, default - <species>_<assembly>.chrom.sizes in the same directory.",
     )
     parser.add_argument(
+        "--fasta",
+        dest="fasta",
+        type=str,
+        required=False,
+        help="Bgzipped FASTA to use for chrom sizes when no core database is available.",
+    )
+    parser.add_argument(
         "--force",
         dest="force",
         action="store_true",
@@ -61,6 +73,38 @@ def parse_args(args=None):
     )
 
     return parser.parse_args(args)
+
+
+def generate_chrom_sizes_from_fasta(
+    fasta: str, chrom_sizes: str, force: bool = False
+) -> None:
+    """Generate chromosome sizes from a FASTA .fai index."""
+    if populated_file(chrom_sizes) and not force:
+        print(f"[INFO] {chrom_sizes} file already exists, skipping ...")
+        return
+
+    if not fasta or not os.path.isfile(fasta):
+        raise FileNotFoundError(f"Could not generate chrom sizes. FASTA missing - {fasta}")
+
+    fai = fasta + ".fai"
+    if not os.path.isfile(fai):
+        process = subprocess.run(
+            ["samtools", "faidx", fasta],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if process.returncode != 0:
+            raise Exception(
+                f"Could not index FASTA for chrom sizes - {fasta}\n{process.stderr.decode().strip()}"
+            )
+
+    with open(fai, "r") as in_file, open(chrom_sizes, "w") as out_file:
+        for line in in_file:
+            parts = line.strip().split("\t")
+            if len(parts) < 2:
+                continue
+            name, length = parts[0], parts[1]
+            out_file.write(f"{name}\t{int(length) + 1}\n")
 
 
 def generate_chrom_sizes(
@@ -84,7 +128,7 @@ def generate_chrom_sizes(
     Returns:
         None
     """
-    if os.path.exists(chrom_sizes) and not force:
+    if populated_file(chrom_sizes) and not force:
         print(f"[INFO] {chrom_sizes} file already exists, skipping ...")
         return
 
@@ -204,8 +248,19 @@ def main(args=None):
     ini_file = args.ini_file or "DEFAULT.ini"
     core_server = parse_ini(ini_file, "core")
     core_db = get_db_name(core_server, args.version, species, type="core")
+    if core_db == "" or core_db is None:
+        print(
+            f"[WARNING] Could not resolve core database for {species} release {args.version}; generating chrom sizes from FASTA"
+        )
+        generate_chrom_sizes_from_fasta(args.fasta, chrom_sizes, args.force)
+        return
 
     generate_chrom_sizes(core_server, core_db, chrom_sizes, assembly, args.force)
+    if not populated_file(chrom_sizes):
+        print(
+            f"[WARNING] Core database {core_db} did not produce chrom sizes for {species} {assembly}; generating chrom sizes from FASTA"
+        )
+        generate_chrom_sizes_from_fasta(args.fasta, chrom_sizes, True)
 
 
 if __name__ == "__main__":

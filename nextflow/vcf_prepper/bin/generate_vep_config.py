@@ -541,11 +541,6 @@ def main(args=None):
     ini_file = args.ini_file or "DEFAULT.ini"
     repo_dir = args.repo_dir or REPO_DIR
 
-    # get species division
-    core_server = parse_ini(ini_file, "core")
-    core_db = get_db_name(core_server, args.version, species, type="core")
-    division = args.division or get_division(core_server, core_db)
-
     # TMP - until we use fasta from new website infra
     species = "homo_sapiens" if species == "homo_sapiens_37" else species
 
@@ -556,6 +551,13 @@ def main(args=None):
 
     cache_version = version
     if args.cache_dir:
+        core_server = parse_ini(ini_file, "core")
+        core_db = get_db_name(core_server, args.version, species, type="core")
+        if core_db == "" or core_db is None:
+            raise Exception(
+                f"[ERROR] Could not resolve core database for {species} release {args.version}"
+            )
+        division = args.division or get_division(core_server, core_db)
         cache_dir = args.cache_dir
         cache_version = get_relative_version(version, division)
         genome_cache_dir = os.path.join(

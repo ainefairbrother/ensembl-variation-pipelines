@@ -30,6 +30,39 @@ GFF_FILE_NAME = "sorted_genes.gff3.gz"
 REMOTE_GFF_FILE_NAME = "genes.gff3.gz"
 
 
+def format_geneset_date(value):
+    if not value:
+        return None
+    return re.sub("[-\\s]", "_", value)
+
+
+def get_genome_genebuild_date(server, metadata_db, genome_uuid):
+    query = f"SELECT genebuild_date FROM genome WHERE genome_uuid = '{genome_uuid}';"
+    process = subprocess.run(
+        [
+            "mysql",
+            "--host",
+            server["host"],
+            "--port",
+            server["port"],
+            "--user",
+            server["user"],
+            "--database",
+            metadata_db,
+            "-N",
+            "--execute",
+            query,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if process.returncode != 0:
+        print(f"[WARNING] Failed to retrieve genome.genebuild_date for genome - {genome_uuid}")
+        print(f"\tError - {process.stderr.decode().strip()}")
+        return None
+    return process.stdout.decode().strip() or None
+
+
 def parse_args(args=None):
     """Parse command-line arguments for processing a GFF.
 
@@ -196,10 +229,12 @@ def main(args=None):
             "genebuild.annotation_source",
         )
         if annotation_source == "" or annotation_source is None:
-            raise Exception(
-                f"[ERROR] Could not retrieve genebuild annotation source for genome uuid - {genome_uuid} and release id - {release_id}"
+            annotation_source = "ensembl"
+            print(
+                f"[WARNING] Could not retrieve genebuild annotation source for genome uuid - {genome_uuid} and release id - {release_id}; using '{annotation_source}'"
             )
-        annotation_source = annotation_source.lower()
+        else:
+            annotation_source = annotation_source.lower()
         last_geneset_update = get_dataset_attribute_value(
             metadb_server,
             "ensembl_genome_metadata",
@@ -207,24 +242,33 @@ def main(args=None):
             release_id,
             "genebuild.last_geneset_update",
         )
-        if last_geneset_update == "" or last_geneset_update is None:
-            raise Exception(
-                f"[ERROR] Could not retrieve last genebuild udpate date for genome uuid - {genome_uuid} and release id - {release_id}"
+        if last_geneset_update:
+            last_geneset_update = format_geneset_date(last_geneset_update)
+        else:
+            genome_genebuild_date = get_genome_genebuild_date(
+                metadb_server, "ensembl_genome_metadata", genome_uuid
             )
-        last_geneset_update = last_geneset_update.replace("-", "_")
-        last_geneset_update = re.sub("[\-\s]", "_", last_geneset_update)
+            if genome_genebuild_date:
+                last_geneset_update = format_geneset_date(genome_genebuild_date)
+                print(
+                    f"[WARNING] Could not retrieve last genebuild update date for genome uuid - {genome_uuid} and release id - {release_id}; using genome.genebuild_date {last_geneset_update}"
+                )
+            else:
+                last_geneset_update = None
+                print(
+                    f"[WARNING] Could not retrieve last genebuild update date for genome uuid - {genome_uuid} and release id - {release_id}; using latest available geneset directory"
+                )
 
-        source_gff = os.path.join(
+        source_gff = find_local_mvp_file(
             GFF_FASTA_BASE_DIR,
             scientific_name,
             assembly_accession,
-            annotation_source,
-            "geneset",
-            last_geneset_update,
             REMOTE_GFF_FILE_NAME,
+            annotation_source,
+            last_geneset_update,
         )
 
-        if not os.path.isfile(source_gff):
+        if not source_gff or not os.path.isfile(source_gff):
             source_gff = find_local_mvp_file(
                 args.ftp_cache_dir,
                 scientific_name,

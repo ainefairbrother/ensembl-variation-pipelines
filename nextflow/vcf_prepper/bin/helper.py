@@ -638,14 +638,30 @@ def download_file(local_filename: str, url: str) -> int:
     Returns:
         int: Return code from the wget subprocess; non-zero indicates failure.
     """
+    tmp_filename = f"{local_filename}.{os.getpid()}.part"
     process = subprocess.run(
-        ["wget", url, "-O", local_filename],
+        [
+            "wget",
+            "--tries=1",
+            "--timeout=120",
+            "--read-timeout=120",
+            "--retry-connrefused",
+            url,
+            "-O",
+            tmp_filename,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
 
-    if process.returncode != 0 and os.path.isfile(local_filename):
-        os.remove(local_filename)
+    if process.returncode != 0:
+        stderr = process.stderr.decode().strip()
+        if stderr:
+            print(f"[WARNING] wget failed for {url}\n{stderr}")
+        if os.path.isfile(tmp_filename):
+            os.remove(tmp_filename)
+    else:
+        os.replace(tmp_filename, local_filename)
 
     return process.returncode
 
@@ -692,10 +708,9 @@ def list_remote_dirs(url: str) -> list:
 
 
 def latest_dated_dir(dirs: list) -> str:
-    """Pick the latest YYYY_MM-like directory from a list, falling back to lexical order."""
+    """Pick the latest YYYY_MM-like directory from a list."""
     dated = [d for d in dirs if re.fullmatch(r"\d{4}(?:_\d{2})?(?:_\d{2})?", d)]
-    candidates = dated or dirs
-    return sorted(candidates)[-1] if candidates else None
+    return sorted(dated)[-1] if dated else None
 
 
 def find_local_mvp_file(

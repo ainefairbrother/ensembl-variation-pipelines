@@ -112,6 +112,8 @@ def generate_synonym_file(
 
     names = {}
     for line in lines:
+        if not line.strip():
+            continue
         synonym, name = [col.strip() for col in line.split("\t")]
         if synonym not in names or len(names[synonym]) > len(name):
             names[synonym] = name
@@ -170,6 +172,13 @@ def main(args=None):
     ini_file = args.ini_file or "DEFAULT.ini"
     core_server = parse_ini(ini_file, "core")
     core_db = get_db_name(core_server, args.version, species, type="core")
+    if core_db == "" or core_db is None:
+        print(
+            f"[WARNING] Could not resolve core database for {species} release {args.version}; writing empty synonym file"
+        )
+        if not os.path.exists(synonym_file) or args.force:
+            open(synonym_file, "w").close()
+        return
 
     generate_synonym_file(core_server, core_db, synonym_file, args.force)
 

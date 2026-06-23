@@ -121,7 +121,26 @@ workflow PREPARE_GENOME {
     }
 
     // prepare for tracks files
-    ch_prepared_track = params.skip_tracks ? ch_skip : GENERATE_CHROM_SIZES( ch_prepare_genome_meta )
+    if (params.skip_tracks) {
+      ch_prepared_track = ch_skip
+    }
+    else if (!params.skip_vep && !params.use_old_infra) {
+      ch_chrom_sizes_meta = ch_prepare_genome_meta
+      .map {
+        meta ->
+          [meta.genome, meta]
+      }
+      .join( ch_processed_fasta )
+      .map {
+        genome, meta ->
+          meta
+      }
+
+      ch_prepared_track = GENERATE_CHROM_SIZES( ch_chrom_sizes_meta )
+    }
+    else {
+      ch_prepared_track = GENERATE_CHROM_SIZES( ch_prepare_genome_meta )
+    }
 
     // we join channels to only create DAG edges
     ch_prepare_genome

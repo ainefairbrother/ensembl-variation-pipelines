@@ -33,6 +33,7 @@ process GENERATE_CHROM_SIZES {
   version = params.version
   ini_file = params.ini_file
   chrom_sizes = meta.chrom_sizes
+  fasta = "${meta.fasta_dir}/unmasked.fa.gz"
   force_create_config = params.force_create_config ? "--force" : ""
   
   '''
@@ -42,6 +43,7 @@ process GENERATE_CHROM_SIZES {
     !{version} \
     --ini_file !{ini_file} \
     --chrom_sizes !{chrom_sizes} \
+    --fasta !{fasta} \
     !{force_create_config}
   '''
 }

@@ -88,21 +88,36 @@ def main(args=None):
     assembly = args.assembly
     version = args.version
     ini_file = args.ini_file or "DEFAULT.ini"
-    core_server = parse_ini(ini_file, "core")
-    core_db = get_db_name(core_server, args.version, species, type="core")
-    division = args.division or get_division(core_server, core_db)
-
     conservation_data_dir = args.conservation_data_dir or CONSERVATION_DATA_DIR
     conservation_bw = os.path.join(
         conservation_data_dir, f"gerp_conservation_scores.{species}.{assembly}.bw"
     )
     if os.path.isfile(conservation_bw):
+        if args.conservation_data_dir:
+            print(f"[INFO] {conservation_bw} exists. Skipping ...")
+            exit(0)
         if not args.force:
             print(f"[INFO] {conservation_bw} exists. Skipping ...")
             exit(0)
         else:
             print(f"[INFO] {conservation_bw} exists. Will be overwritten ...")
             os.remove(conservation_bw)
+
+    if args.conservation_data_dir:
+        print(
+            f"[INFO] Conservation file not found in configured directory - {conservation_bw}. Skipping ..."
+        )
+        exit(0)
+
+    core_server = parse_ini(ini_file, "core")
+    core_db = get_db_name(core_server, args.version, species, type="core")
+    if core_db == "" or core_db is None:
+        print(
+            f"[INFO] Could not resolve core database for {species} release {args.version}. Skipping conservation data ..."
+        )
+        exit(0)
+
+    division = args.division or get_division(core_server, core_db)
 
     src_conservation_bw = get_ftp_path(
         species, assembly, division, version, "conservation"

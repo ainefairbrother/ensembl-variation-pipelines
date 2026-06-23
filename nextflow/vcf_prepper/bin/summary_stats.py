@@ -171,6 +171,9 @@ def main(args=None):
 
         for species_patt in population_data:
             if re.fullmatch(species_patt, species):
+                if len(population_data[species_patt]) == 0:
+                    continue
+
                 for population in population_data[species_patt]:
                     if population.get("representative"):
                         population_name = population["name"]
