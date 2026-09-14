@@ -34,7 +34,7 @@ PGPORT=database_port
 PGSCHEMA=phenotypes
 ```
 
-Load .env:
+Load `.env`:
 
 ```bash
 set -a; source .env; set +a
@@ -42,7 +42,7 @@ set -a; source .env; set +a
 
 ## PostgreSQL setup **(first time only)**
 
-The schema requires PostgreSQL 10 or later and was tested with PostgreSQL 16.2. Load the postgresql/16 module:
+The schema requires PostgreSQL 10 or later and was tested with PostgreSQL 16.2. Load the `postgresql/16` module:
 
 ```bash
 module load postgresql/16
@@ -56,10 +56,9 @@ CREATE SCHEMA phenotypes AUTHORIZATION ensevp;
 
 ## Create the tables **(first time only)**
 
-Apply [sql/schema.sql](sql/schema.sql) to the configured empty schema:
+Apply `sql/schema.sql` to the configured empty schema:
 
 ```bash
-# will prompt a pw, see conflunce for pw
 ./bin/apply_schema.sh
 ```
 
@@ -68,6 +67,8 @@ Check tables got generated correctly:
 ```bash
 psql
 ```
+
+At psql prompt: 
 
 ```SQL
 -- list schemas
