@@ -180,7 +180,7 @@ CREATE TABLE phenotype_annotation (
     phenotype_annotation_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     source_report_id BIGINT UNIQUE REFERENCES source_report (source_report_id) ON DELETE CASCADE,
     phenotype_assessment_id BIGINT UNIQUE REFERENCES phenotype_assessment (phenotype_assessment_id) ON DELETE CASCADE,
-    inheritance_type TEXT,
+    inheritance_types TEXT[] NOT NULL DEFAULT '{}',
     disease_mechanism TEXT,
     allelic_requirement TEXT,
     variation_consequence TEXT,

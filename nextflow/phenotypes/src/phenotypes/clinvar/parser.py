@@ -535,6 +535,16 @@ def _combined_assessment_value(
     return ":".join(part for part in parts if part)
 
 
+def _inheritance_types(assertion: ET.Element) -> list[str]:
+    """Return direct ModeOfInheritance values without losing earlier values."""
+    return _unique(
+        value
+        for attribute in assertion.findall("./AttributeSet/Attribute")
+        if attribute.get("Type") == "ModeOfInheritance"
+        if (value := _text(attribute)) is not None
+    )
+
+
 def _aggregate_assessments(
     reference_assertion: ET.Element,
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -664,6 +674,7 @@ def _submission_assessments(
             _publication_ids(classification_container)
             + _publication_ids(assertion.find("ObservedIn"))
         )
+        inheritance_types = _inheritance_types(assertion)
 
         for element in classification_elements:
             assessment_type, somatic_status = CLASSIFICATION_TYPES[element.tag]
@@ -677,23 +688,26 @@ def _submission_assessments(
             if date_warning:
                 warnings.append(date_warning)
 
-            assessments.append(
-                {
-                    "assessment_type": assessment_type,
-                    "assessment_value": value,
-                    "assessment_level": "submission",
-                    "somatic_status": somatic_status,
-                    "review_status": _text(classification_container.find("ReviewStatus")),
-                    "last_evaluated_date": last_evaluated_date,
-                    "source_accession": accession,
-                    "submitters": [submitter] if submitter else [],
-                    "publications": publications,
-                    "_trait_indexes": sorted(trait_indexes),
+            assessment = {
+                "assessment_type": assessment_type,
+                "assessment_value": value,
+                "assessment_level": "submission",
+                "somatic_status": somatic_status,
+                "review_status": _text(classification_container.find("ReviewStatus")),
+                "last_evaluated_date": last_evaluated_date,
+                "source_accession": accession,
+                "submitters": [submitter] if submitter else [],
+                "publications": publications,
+                "_trait_indexes": sorted(trait_indexes),
+            }
+            if inheritance_types:
+                assessment["annotation"] = {
+                    "inheritance_types": inheritance_types,
                 }
-            )
+            assessments.append(assessment)
     return assessments, warnings
 
-def _source_context(clinvar_set: ET.Element, reference_assertion: ET.Element) -> dict[str, Any]:
+def _source_context(clinvar_set: ET.Element) -> dict[str, Any]:
     species = []
     origins = []
     for sample in clinvar_set.findall(".//ObservedIn/Sample"):
@@ -727,22 +741,9 @@ def _source_context(clinvar_set: ET.Element, reference_assertion: ET.Element) ->
         if origin:
             origins.append(origin)
 
-    inheritance_type = None
-    for attribute in reference_assertion.findall("./AttributeSet/Attribute"):
-        if attribute.get("Type") == "ModeOfInheritance":
-            inheritance_type = _text(attribute)
-    if inheritance_type is None:
-        reference_origins = [
-            _text(origin)
-            for origin in reference_assertion.findall("./ObservedIn/Sample/Origin")
-        ]
-        if "somatic" in reference_origins:
-            inheritance_type = "Somatic mutation"
-
     return {
         "species": _unique(species),
         "sample_origins": _unique(origins),
-        "inheritance_type": inheritance_type,
     }
 
 
@@ -804,7 +805,8 @@ def parse_clinvar_set(
 
     assertion = reference_assertion.find("Assertion")
     relationship_type = assertion.get("Type") if assertion is not None else None
-    context = _source_context(clinvar_set, reference_assertion)
+    context = _source_context(clinvar_set)
+    aggregate_inheritance_types = _inheritance_types(reference_assertion)
     reported_alleles = reported_variant["alternate_alleles"]
     reported_allele = reported_alleles[0] if reported_alleles else None
 
@@ -842,6 +844,10 @@ def parse_clinvar_set(
                     "source_context": context,
                     "source_report": {
                         "source_accession": rcv_accession,
+                        "annotation": (
+                            {"inheritance_types": aggregate_inheritance_types}
+                            if aggregate_inheritance_types else None
+                        ),
                         "reported_phenotype_name": trait_set["reported_name"],
                         "reported_genes": variant["reported_genes"],
                         "reported_allele": reported_allele,
