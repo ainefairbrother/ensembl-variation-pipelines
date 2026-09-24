@@ -9,3 +9,11 @@ __pycache__/
 src/phenotypes/__init__.py
 
 .env
+
+/sql/README.md
+
+# Nextflow-generated files
+.nextflow/
+.nextflow.log*
+work/
+results/

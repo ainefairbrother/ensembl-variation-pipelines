@@ -1,6 +1,11 @@
 # Phenotypes pipeline
 
 Pipeline to download, parse, clean and load phenotype data into PostgreSQL.
+This pipeline uses Nextflow 26.04.0.
+
+```bash
+module load nextflow/26.04.0
+```
 
 ## Project setup
 
@@ -26,7 +31,7 @@ cp .env.example .env
 
 Set these values in `.env`:
 
-```bash
+```.env
 PGDATABASE=database_name
 PGUSER=database_user
 PGHOST=database_host
@@ -42,7 +47,7 @@ set -a; source .env; set +a
 
 ## PostgreSQL setup **(first time only)**
 
-The schema requires PostgreSQL 10 or later and was tested with PostgreSQL 16.2. Load the `postgresql/16` module:
+The schema requires PostgreSQL 10 or later and was created using PostgreSQL 16.2. Load the `postgresql/16` module:
 
 ```bash
 module load postgresql/16
@@ -80,3 +85,16 @@ SET search_path TO phenotypes;
 -- list tables
 \dt
 ```
+
+## ClinVar
+
+By default, the pipeline downloads the current [ClinVar RCV XML release](https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/RCV_release/ClinVarRCVRelease_00-latest.xml.gz).
+Failed download attempts are retried three times.
+
+To use a manually downloaded ClinVar XML file instead:
+
+```bash
+nextflow run main.nf -profile standard --input /path/to/ClinVarRCVRelease_00-latest.xml.gz
+```
+
+Using `--input` skips the download.
