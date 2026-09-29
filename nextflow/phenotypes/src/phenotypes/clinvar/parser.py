@@ -14,6 +14,18 @@ from typing import Any, BinaryIO, Iterable
 
 
 PHENOTYPE_NOT_SPECIFIED = "ClinVar: phenotype not specified"
+PLACEHOLDER_PHENOTYPE_NAMES = {
+    "none",
+    "not provided",
+    "not specified",
+    "not in omim",
+    "variant of unknown significance",
+    "not_provided",
+    "clinvar: phenotype not specified",
+    "see cases",
+    "?",
+    ".",
+}
 
 # Map each supported ClinVar classification XML tag to:
 # (PhenotypeAssessment.assessment_type, PhenotypeAssociation.somatic_status).
@@ -128,12 +140,25 @@ def _publication_ids(parent: ET.Element | None) -> list[dict[str, str]]:
         return []
     publications = []
     for identifier in parent.findall(".//Citation/ID"):
-        if identifier.get("Source") != "PubMed":
+        source = identifier.get("Source")
+        if source is None or source.casefold() not in {"pubmed", "pmid"}:
             continue
         value = _text(identifier)
+        if value is not None:
+            value = re.sub(r"^PMID:\s*", "", value, flags=re.IGNORECASE)
         if value:
             publications.append({"identifier": f"PMID:{value}", "source": "PubMed"})
     return _unique(publications)
+
+
+def _observed_in_publication_ids(
+    assertion: ET.Element,
+) -> list[dict[str, str]]:
+    return _unique(
+        publication
+        for observed_in in assertion.findall("ObservedIn")
+        for publication in _publication_ids(observed_in)
+    )
 
 
 def _normalise_name(value: str) -> str:
@@ -270,7 +295,7 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
             )
 
         reported_name = preferred_name
-        if preferred_name.casefold() in {"not provided", "not specified"}:
+        if _normalise_name(preferred_name) in PLACEHOLDER_PHENOTYPE_NAMES:
             reported_name = PHENOTYPE_NOT_SPECIFIED
             warnings.append("placeholder_phenotype_used")
 
@@ -278,6 +303,7 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
         ontology_mappings = _primary_ontology_mappings(all_ontology_mappings)
         match_names, match_accessions = _trait_match_keys(trait)
         parsed_trait = {
+            "source_reported_name": preferred_name,
             "phenotype": {
                 "trait_set_id": trait_set.get("ID"),
                 "trait_set_type": trait_set_type,
@@ -315,7 +341,7 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
             "trait_set_id": trait_set.get("ID"),
             "trait_set_type": trait_set_type,
             "reported_name": "; ".join(
-                trait["phenotype"]["reported_name"] for trait in traits
+                trait["source_reported_name"] for trait in traits
             ),
             "traits": traits,
         },
@@ -559,41 +585,49 @@ def _aggregate_assessments(
         if classification is None:
             continue
         assessment_type, somatic_status = classification
-        description = element.find("Description")
-        value = _combined_assessment_value(
-            description if description is not None else element,
-            _text(description),
-            element.tag,
-        )
-        if value is None:
+        descriptions = element.findall("Description")
+        if not descriptions:
             continue
+        if element.tag != "SomaticClinicalImpact":
+            descriptions = descriptions[:1]
 
         publications = _publication_ids(element)
         if element.tag == "GermlineClassification":
             publications = _unique(
-                publications + _publication_ids(reference_assertion.find("ObservedIn"))
+                publications + _observed_in_publication_ids(reference_assertion)
             )
 
-        raw_date = (
-            description.get("DateLastEvaluated") if description is not None else None
-        ) or element.get("DateLastEvaluated")
-        last_evaluated_date, date_warning = _normalise_last_evaluated_date(raw_date)
-        if date_warning:
-            warnings.append(date_warning)
+        for description in descriptions:
+            value = _combined_assessment_value(
+                description,
+                _text(description),
+                element.tag,
+            )
+            if value is None:
+                continue
 
-        assessments.append(
-            {
-                "assessment_type": assessment_type,
-                "assessment_value": value,
-                "assessment_level": "aggregate",
-                "somatic_status": somatic_status,
-                "review_status": _text(element.find("ReviewStatus")),
-                "last_evaluated_date": last_evaluated_date,
-                "source_accession": None,
-                "submitters": [],
-                "publications": publications,
-            }
-        )
+            raw_date = description.get("DateLastEvaluated") or element.get(
+                "DateLastEvaluated"
+            )
+            last_evaluated_date, date_warning = _normalise_last_evaluated_date(
+                raw_date
+            )
+            if date_warning:
+                warnings.append(date_warning)
+
+            assessments.append(
+                {
+                    "assessment_type": assessment_type,
+                    "assessment_value": value,
+                    "assessment_level": "aggregate",
+                    "somatic_status": somatic_status,
+                    "review_status": _text(element.find("ReviewStatus")),
+                    "last_evaluated_date": last_evaluated_date,
+                    "source_accession": None,
+                    "submitters": [],
+                    "publications": publications,
+                }
+            )
     return assessments, warnings
 
 
@@ -672,7 +706,7 @@ def _submission_assessments(
         submitter = submission.get("submitter") if submission is not None else None
         publications = _unique(
             _publication_ids(classification_container)
-            + _publication_ids(assertion.find("ObservedIn"))
+            + _observed_in_publication_ids(assertion)
         )
         inheritance_types = _inheritance_types(assertion)
 
