@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import gzip
 import json
 import re
@@ -305,16 +306,7 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
         parsed_trait = {
             "source_reported_name": preferred_name,
             "phenotype": {
-                "trait_set_id": trait_set.get("ID"),
-                "trait_set_type": trait_set_type,
-                "trait_id": trait.get("ID"),
-                "trait_type": trait.get("Type"),
                 "reported_name": reported_name,
-                "relationship_types": _unique(
-                    relationship.get("Type")
-                    for relationship in trait.findall("TraitRelationship")
-                    if relationship.get("Type")
-                ),
                 "ontology_mappings": ontology_mappings,
             },
             "match_names": _unique(
@@ -338,8 +330,6 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
 
     return (
         {
-            "trait_set_id": trait_set.get("ID"),
-            "trait_set_type": trait_set_type,
             "reported_name": "; ".join(
                 trait["source_reported_name"] for trait in traits
             ),
@@ -359,6 +349,10 @@ def _parse_location(element: ET.Element) -> dict[str, Any]:
         "stop": _integer(element.get("stop")),
         "display_start": _integer(element.get("display_start")),
         "display_stop": _integer(element.get("display_stop")),
+        "outer_start": _integer(element.get("outerStart")),
+        "inner_start": _integer(element.get("innerStart")),
+        "inner_stop": _integer(element.get("innerStop")),
+        "outer_stop": _integer(element.get("outerStop")),
         "position_vcf": _integer(element.get("positionVCF")),
         "reference_allele_vcf": element.get("referenceAlleleVCF"),
         "alternate_allele_vcf": element.get("alternateAlleleVCF"),
@@ -421,7 +415,7 @@ def _parse_genomic_hgvs(measure: ET.Element, assembly: str) -> list[str]:
 def _structural_variant_details(
     measure: ET.Element, dbvar_ids: list[str]
 ) -> dict[str, Any] | None:
-    """Describe why a ClinVar measure is temporarily treated as structural."""
+    """Identify structural signals for reporting, not for rejecting a record."""
     signals = []
     measure_type = measure.get("Type")
     if measure_type and measure_type.casefold() in STRUCTURAL_MEASURE_TYPES:
@@ -503,10 +497,15 @@ def _parse_variant(reference_assertion: ET.Element, assembly: str) -> dict[str, 
     rs_ids = _unique(rs_ids)
     dbvar_ids = _unique(dbvar_ids)
     structural_details = _structural_variant_details(measure, dbvar_ids)
-    if structural_details is not None:
-        raise RejectedRecord(
-            "unsupported_structural_variant", structural_details
-        )
+    warnings = ["structural_variant_retained"] if structural_details else []
+    structural_attributes = {}
+    for attribute in measure.findall("./AttributeSet/Attribute"):
+        attribute_type = attribute.get("Type")
+        value = _text(attribute) or attribute.get("integerValue")
+        if attribute_type in STRUCTURAL_ATTRIBUTE_TYPES and value is not None:
+            values = structural_attributes.setdefault(attribute_type, [])
+            if value not in values:
+                values.append(value)
 
     locations = _preferred_locations(
         [
@@ -515,33 +514,41 @@ def _parse_variant(reference_assertion: ET.Element, assembly: str) -> dict[str, 
             if location.get("Assembly") == assembly
         ]
     )
+    if not locations:
+        raise RejectedRecord(
+            "missing_requested_assembly_location",
+            {
+                "requested_assembly": assembly,
+                "available_assemblies": _unique(
+                    location.get("Assembly")
+                    for location in measure.findall("SequenceLocation")
+                    if location.get("Assembly")
+                ),
+            },
+        )
     canonical_spdi = _text(measure.find("CanonicalSPDI"))
-
-    if not rs_ids and not canonical_spdi and not locations:
-        raise RejectedRecord("missing_variant_lookup_input")
+    genomic_hgvs = _parse_genomic_hgvs(measure, assembly)
 
     genes = []
     for value in measure.findall("./MeasureRelationship/Symbol/ElementValue"):
         if value.get("Type") == "Preferred" and _text(value):
             genes.append(_text(value))
 
-    reference, alternates, ambiguous_location = _reported_alleles(locations)
-
     return {
-        "measure_set_type": measure_set_type,
-        "measure_type": measure.get("Type"),
+        "is_structural": structural_details is not None,
         "rs_ids": rs_ids,
         "dbvar_ids": dbvar_ids,
         "canonical_spdi": canonical_spdi,
-        "genomic_hgvs": _parse_genomic_hgvs(measure, assembly),
+        "genomic_hgvs": genomic_hgvs,
         "reported_genes": _unique(gene for gene in genes if gene),
-        "locations": locations,
-        "_warnings": ["ambiguous_primary_location"] if ambiguous_location else [],
+        "_warnings": warnings,
         "reported_variant": {
             "identifier": vcv_accession,
-            "assembly": assembly if locations else None,
-            "reference_allele": reference,
-            "alternate_alleles": alternates,
+            "variant_type": measure.get("Type"),
+            # Keep source coordinates once, at their permanent model destination.
+            # A future resolver reads these; canonical locations remain separate.
+            "locations": locations,
+            "structural_attributes": structural_attributes,
         },
     }
 
@@ -743,7 +750,6 @@ def _submission_assessments(
 
 def _source_context(clinvar_set: ET.Element) -> dict[str, Any]:
     species = []
-    origins = []
     for sample in clinvar_set.findall(".//ObservedIn/Sample"):
         species_element = sample.find("Species")
         species_name = _text(species_element)
@@ -771,47 +777,11 @@ def _source_context(clinvar_set: ET.Element) -> dict[str, Any]:
                 species.append(species_entry)
             elif matching_species["taxonomy_id"] is None:
                 matching_species["taxonomy_id"] = species_entry["taxonomy_id"]
-        origin = _text(sample.find("Origin"))
-        if origin:
-            origins.append(origin)
-
-    return {
-        "species": _unique(species),
-        "sample_origins": _unique(origins),
-    }
-
-
-def _resolution_placeholders() -> dict[str, Any]:
-    return {
-        "status": "pending",
-        "entity_identifier": None,
-        "entity_label": None,
-        "genome_uuid": None,
-        "species_taxon_id": None,
-        "species_scientific_name": None,
-        "organism_id": None,
-        "organism_display_name": None,
-        "canonical_locations": [],
-    }
-
-
-def _rejection_details(clinvar_set: ET.Element) -> dict[str, Any]:
-    reference_assertion = clinvar_set.find("ReferenceClinVarAssertion")
-    if reference_assertion is None:
-        return {
-            "clinvar_set_id": clinvar_set.get("ID"),
-            "rcv_accession": None,
-            "vcv_accession": None,
-        }
-    return {
-        "clinvar_set_id": clinvar_set.get("ID"),
-        "rcv_accession": _versioned_accession(reference_assertion.find("ClinVarAccession")),
-        "vcv_accession": _versioned_accession(reference_assertion.find("MeasureSet")),
-    }
+    return {"species": _unique(species)}
 
 
 def parse_clinvar_set(
-    clinvar_set: ET.Element, release_date: str, assembly: str
+    clinvar_set: ET.Element, assembly: str
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Parse one ClinVarSet into one record per trait and somatic-status group."""
     reference_assertion = clinvar_set.find("ReferenceClinVarAssertion")
@@ -826,7 +796,15 @@ def parse_clinvar_set(
     aggregate_traits = trait_set["traits"]
     variant = _parse_variant(reference_assertion, assembly)
     reported_variant = variant.pop("reported_variant")
+    reported_genes = variant.pop("reported_genes")
     warnings.extend(variant.pop("_warnings"))
+    # The focal allele belongs to the report; source allele pairs stay on each
+    # location. Do not select a focal allele when those representations disagree.
+    _, reported_alleles, ambiguous_location = _reported_alleles(
+        reported_variant["locations"]
+    )
+    if ambiguous_location:
+        warnings.append("ambiguous_primary_location")
     aggregate_assessments, aggregate_warnings = _aggregate_assessments(reference_assertion)
     warnings.extend(aggregate_warnings)
     if not aggregate_assessments:
@@ -841,7 +819,6 @@ def parse_clinvar_set(
     relationship_type = assertion.get("Type") if assertion is not None else None
     context = _source_context(clinvar_set)
     aggregate_inheritance_types = _inheritance_types(reference_assertion)
-    reported_alleles = reported_variant["alternate_alleles"]
     reported_allele = reported_alleles[0] if reported_alleles else None
 
     records = []
@@ -867,11 +844,6 @@ def parse_clinvar_set(
 
             records.append(
                 {
-                    "release_date": release_date,
-                    "clinvar_set_id": clinvar_set.get("ID"),
-                    "clinvar_set_status": _text(clinvar_set.find("RecordStatus")),
-                    "rcv_record_status": _text(reference_assertion.find("RecordStatus")),
-                    "rcv_accession": rcv_accession,
                     "somatic_status": somatic_status,
                     "phenotype": trait["phenotype"],
                     "variant_lookup": variant,
@@ -883,7 +855,7 @@ def parse_clinvar_set(
                             if aggregate_inheritance_types else None
                         ),
                         "reported_phenotype_name": trait_set["reported_name"],
-                        "reported_genes": variant["reported_genes"],
+                        "reported_genes": reported_genes,
                         "reported_allele": reported_allele,
                         "comparison_allele": None,
                         "allele_role": None,
@@ -891,7 +863,6 @@ def parse_clinvar_set(
                         "reported_variant": reported_variant,
                     },
                     "assessments": status_assessments,
-                    "resolution": _resolution_placeholders(),
                 }
             )
     return records, warnings
@@ -906,46 +877,46 @@ def parse_clinvar(
     input_path: str | Path,
     assembly: str,
     records_path: str | Path,
-    rejected_path: str | Path,
     summary_path: str | Path,
 ) -> dict[str, Any]:
     """Stream a ClinVar RCV XML file and write parser outputs."""
     input_path = Path(input_path)
     records_path = Path(records_path)
-    rejected_path = Path(rejected_path)
     summary_path = Path(summary_path)
+    warnings_path = summary_path.parent / "warnings.txt"
+    rejections_path = summary_path.parent / "rejections.txt"
 
-    for output_path in (records_path, rejected_path, summary_path):
+    for output_path in (records_path, summary_path):
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
     summary: dict[str, Any] = {
         "source": "ClinVar",
         "release_date": None,
         "requested_assembly": assembly,
-        "clinvar_sets_seen": 0,
-        "accepted_records_emitted": 0,
-        "clinvar_sets_rejected": 0,
-        "assessments_by_level": {"aggregate": {}, "submission": {}},
-        "assessment_rows_emitted_by_level": {"aggregate": {}, "submission": {}},
+        "n_records_seen": 0,
+        "n_records_accepted": 0,
+        "perc_records_accepted": 0.0,
+        "n_records_rejected": 0,
+        "perc_records_rejected": 0.0,
         "rejections_by_reason": {},
+        "n_records_emitted": 0,
+        "n_unique_phenotypes": 0,
         "warnings": {},
-    }
-    source_assessment_counts = {
-        "aggregate": Counter(),
-        "submission": Counter(),
-    }
-    emitted_assessment_counts = {
-        "aggregate": Counter(),
-        "submission": Counter(),
     }
     rejection_counts: Counter[str] = Counter()
     warning_counts: Counter[str] = Counter()
+    unique_phenotype_names: set[str] = set()
 
     with (
         _open_xml(input_path) as xml_handle,
         records_path.open("w", encoding="utf-8") as records_handle,
-        rejected_path.open("w", encoding="utf-8") as rejected_handle,
+        warnings_path.open("w", encoding="utf-8", newline="") as warnings_handle,
+        rejections_path.open("w", encoding="utf-8", newline="") as rejections_handle,
     ):
+        warnings_writer = csv.writer(warnings_handle, delimiter="\t", lineterminator="\n")
+        rejections_writer = csv.writer(rejections_handle, delimiter="\t", lineterminator="\n")
+        warnings_writer.writerow(["RCV", "VCV", "warning", "details"])
+        rejections_writer.writerow(["RCV", "VCV", "rejection_reason", "details"])
         root = None
         release_date = None
         for event, element in ET.iterparse(xml_handle, events=("start", "end")):
@@ -962,33 +933,40 @@ def parse_clinvar(
             if event != "end" or element.tag != "ClinVarSet":
                 continue
 
-            summary["clinvar_sets_seen"] += 1
+            summary["n_records_seen"] += 1
             try:
-                records, warnings = parse_clinvar_set(element, release_date, assembly)
+                records, warnings = parse_clinvar_set(element, assembly)
             except RejectedRecord as error:
-                rejection = _rejection_details(element)
-                rejection.update(
-                    {"reason": error.reason, "source_value": error.source_value}
+                rcv_accession = _versioned_accession(
+                    element.find("ReferenceClinVarAssertion/ClinVarAccession")
                 )
-                rejected_handle.write(json.dumps(rejection, ensure_ascii=False, sort_keys=True))
-                rejected_handle.write("\n")
-                summary["clinvar_sets_rejected"] += 1
+                vcv_accession = _versioned_accession(
+                    element.find("ReferenceClinVarAssertion/MeasureSet")
+                )
+                details = error.source_value
+                if isinstance(details, (dict, list)):
+                    details = json.dumps(details, ensure_ascii=False)
+                rejections_writer.writerow([
+                    rcv_accession, vcv_accession, error.reason, details,
+                ])
+                summary["n_records_rejected"] += 1
                 rejection_counts[error.reason] += 1
             else:
-                source_assessments_seen = set()
+                summary["n_records_accepted"] += 1
                 for record in records:
                     records_handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
                     records_handle.write("\n")
-                    summary["accepted_records_emitted"] += 1
-                    for assessment in record["assessments"]:
-                        level = assessment["assessment_level"]
-                        assessment_type = assessment["assessment_type"]
-                        emitted_assessment_counts[level][assessment_type] += 1
-                        fingerprint = json.dumps(assessment, sort_keys=True)
-                        if fingerprint not in source_assessments_seen:
-                            source_assessments_seen.add(fingerprint)
-                            source_assessment_counts[level][assessment_type] += 1
+                    summary["n_records_emitted"] += 1
+                    unique_phenotype_names.add(
+                        _normalise_name(record["phenotype"]["reported_name"])
+                    )
                 warning_counts.update(warnings)
+                for warning in warnings:
+                    warnings_writer.writerow([
+                        records[0]["source_report"]["source_accession"],
+                        records[0]["source_report"]["reported_variant"]["identifier"],
+                        warning, "",
+                    ])
 
             element.clear()
             if root is not None:
@@ -997,18 +975,18 @@ def parse_clinvar(
     if summary["release_date"] is None:
         raise ValueError("No ReleaseSet root found")
 
-    summary["assessments_by_level"] = {
-        level: dict(sorted(counts.items()))
-        for level, counts in source_assessment_counts.items()
-    }
-    summary["assessment_rows_emitted_by_level"] = {
-        level: dict(sorted(counts.items()))
-        for level, counts in emitted_assessment_counts.items()
-    }
+    # RCV percentages use input records, not output rows from split traits.
+    if summary["n_records_seen"]:
+        for outcome in ("accepted", "rejected"):
+            summary[f"perc_records_{outcome}"] = round(
+                100 * summary[f"n_records_{outcome}"] / summary["n_records_seen"],
+                2,
+            )
+    summary["n_unique_phenotypes"] = len(unique_phenotype_names)
     summary["rejections_by_reason"] = dict(sorted(rejection_counts.items()))
     summary["warnings"] = dict(sorted(warning_counts.items()))
     with summary_path.open("w", encoding="utf-8") as summary_handle:
-        json.dump(summary, summary_handle, ensure_ascii=False, indent=2, sort_keys=True)
+        json.dump(summary, summary_handle, ensure_ascii=False, indent=2)
         summary_handle.write("\n")
     return summary
 
@@ -1018,7 +996,6 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", required=True, type=Path, help="ClinVar RCV XML or XML.GZ")
     parser.add_argument("--assembly", required=True, help="ClinVar assembly label, e.g. GRCh38")
     parser.add_argument("--records", required=True, type=Path, help="Accepted JSONL output")
-    parser.add_argument("--rejected", required=True, type=Path, help="Rejected JSONL output")
     parser.add_argument("--summary", required=True, type=Path, help="Summary JSON output")
     return parser
 
@@ -1029,13 +1006,11 @@ def main() -> int:
         input_path=args.input,
         assembly=args.assembly,
         records_path=args.records,
-        rejected_path=args.rejected,
         summary_path=args.summary,
     )
-    print(json.dumps(summary, sort_keys=True))
+    print(json.dumps(summary))
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

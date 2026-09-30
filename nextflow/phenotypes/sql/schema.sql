@@ -1,5 +1,5 @@
 -- Phenotype datastore schema
--- Model: variation-datastore-models/phenotypes (ee376ea683b8c46fc33e532cbd7e720a6d3e7c75)
+-- Model: variation-datastore-models/phenotypes
 
 BEGIN;
 
@@ -117,9 +117,34 @@ CREATE TABLE source_report (
 CREATE TABLE reported_variant (
     source_report_id BIGINT PRIMARY KEY REFERENCES source_report (source_report_id) ON DELETE CASCADE,
     identifier TEXT,
+    variant_type TEXT,
+    -- Source copy-number and cytogenetic values, without interpreting them.
+    structural_attributes JSONB NOT NULL DEFAULT '{}'
+);
+
+-- Source locations do not require an Ensembl match. Keep missing values null;
+-- the importer checks coordinates without turning uncertain bounds into exact ones.
+CREATE TABLE reported_variant_location (
+    reported_variant_location_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    source_report_id BIGINT NOT NULL REFERENCES reported_variant (source_report_id) ON DELETE CASCADE,
     assembly TEXT,
-    reference_allele TEXT,
-    alternate_alleles TEXT[] NOT NULL DEFAULT '{}'
+    assembly_accession TEXT,
+    assembly_status TEXT,
+    chromosome TEXT,
+    sequence_accession TEXT,
+    start BIGINT,
+    stop BIGINT,
+    display_start BIGINT,
+    display_stop BIGINT,
+    outer_start BIGINT,
+    inner_start BIGINT,
+    inner_stop BIGINT,
+    outer_stop BIGINT,
+    position_vcf BIGINT,
+    reference_allele_vcf TEXT,
+    alternate_allele_vcf TEXT,
+    variant_length BIGINT,
+    strand TEXT
 );
 
 CREATE TABLE phenotype_ontology_mapping (
