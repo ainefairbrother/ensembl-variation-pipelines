@@ -12,6 +12,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any, BinaryIO, Iterable
+from urllib.parse import urlsplit
 
 
 PHENOTYPE_NOT_SPECIFIED = "ClinVar: phenotype not specified"
@@ -34,30 +35,16 @@ CLASSIFICATION_TYPES = {
     "GermlineClassification": ("germline_classification", "germline"),
     "SomaticClinicalImpact": ("somatic_clinical_impact", "somatic"),
     "OncogenicityClassification": ("oncogenicity", "somatic"),
+    # Evidence was supplied without a clinical judgement or established context.
+    "NoClassification": ("no_classification", "unspecified"),
 }
 
-# These ClinVar measure types are structural regardless of their reported length.
-STRUCTURAL_MEASURE_TYPES = {
-    "duplication",
-    "tandem duplication",
-    "structural variant",
-    "copy number gain",
-    "copy number loss",
-    "fusion",
-    "inversion",
-    "translocation",
-}
+# Source attributes retained without classifying or filtering the variant.
 STRUCTURAL_ATTRIBUTE_TYPES = {
     "AbsoluteCopyNumber",
     "ReferenceCopyNumber",
     "CopyNumberTuple",
     "ISCNCoordinates",
-}
-IMPRECISE_LOCATION_ATTRIBUTES = {
-    "outerStart",
-    "innerStart",
-    "innerStop",
-    "outerStop",
 }
 
 
@@ -136,26 +123,77 @@ def _unique(values: Iterable[Any]) -> list[Any]:
     return result
 
 
-def _publication_ids(parent: ET.Element | None) -> list[dict[str, str]]:
+def _unique_publications(publications: Iterable[dict[str, str]]) -> list[dict[str, str]]:
+    """Deduplicate known identifiers, retaining the first supplied URL."""
+    result = {}
+    for publication in publications:
+        key = (publication["source"], publication["identifier"])
+        if key not in result:
+            result[key] = dict(publication)
+        elif "url" not in result[key] and publication.get("url"):
+            result[key]["url"] = publication["url"]
+    return list(result.values())
+
+
+def _publication_ids(
+    parent: ET.Element | None, *, citation_path: str = ".//Citation"
+) -> list[dict[str, str]]:
+    """Keep one reference per Citation: prefer PubMed, then DOI, then URL."""
     if parent is None:
         return []
     publications = []
-    for identifier in parent.findall(".//Citation/ID"):
-        source = identifier.get("Source")
-        if source is None or source.casefold() not in {"pubmed", "pmid"}:
+    for citation in parent.findall(citation_path):
+        identifiers = {}
+        for identifier in citation.findall("ID"):
+            source = (identifier.get("Source") or "").strip().casefold()
+            value = _text(identifier)
+            if value is None:
+                continue
+            if source in {"pubmed", "pmid"}:
+                source = "PubMed"
+                value = re.sub(r"^PMID:\s*", "", value, flags=re.IGNORECASE).strip()
+            elif source == "doi":
+                source = "DOI"
+                value = re.sub(
+                    r"^(?:DOI:\s*|https?://(?:dx\.)?doi\.org/)", "", value,
+                    flags=re.IGNORECASE,
+                ).strip()
+            else:
+                continue
+            if value:
+                identifiers.setdefault(source, value)
+
+        url = None
+        for element in citation.findall("URL"):
+            value = _text(element)
+            if not value or any(character.isspace() for character in value):
+                continue
+            try:
+                parts = urlsplit(value)
+            except ValueError:
+                continue
+            if parts.scheme.casefold() in {"http", "https"} and parts.netloc:
+                url = value
+                break
+
+        if "PubMed" in identifiers:
+            publication = {"identifier": f"PMID:{identifiers['PubMed']}", "source": "PubMed"}
+        elif "DOI" in identifiers:
+            publication = {"identifier": f"DOI:{identifiers['DOI']}", "source": "DOI"}
+        elif url:
+            publication = {"identifier": url, "source": "URL"}
+        else:
             continue
-        value = _text(identifier)
-        if value is not None:
-            value = re.sub(r"^PMID:\s*", "", value, flags=re.IGNORECASE)
-        if value:
-            publications.append({"identifier": f"PMID:{value}", "source": "PubMed"})
-    return _unique(publications)
+        if url:
+            publication["url"] = url
+        publications.append(publication)
+    return _unique_publications(publications)
 
 
 def _observed_in_publication_ids(
     assertion: ET.Element,
 ) -> list[dict[str, str]]:
-    return _unique(
+    return _unique_publications(
         publication
         for observed_in in assertion.findall("ObservedIn")
         for publication in _publication_ids(observed_in)
@@ -189,8 +227,9 @@ def _normalise_ontology_reference(
             accession = f"Orphanet:{accession}"
     elif database in {"EFO", "EFO: The Experimental Factor Ontology"}:
         database = "EFO"
-        if not accession.startswith("EFO:"):
-            accession = f"EFO:{accession}"
+        # ClinVar can supply the ontology's underscore form or a colon form.
+        accession = re.sub(r"^EFO[:_]", "", accession)
+        accession = f"EFO:{accession}"
     elif database == "OMIM" and reference_type == "MIM":
         if not accession.startswith("OMIM:"):
             accession = f"OMIM:{accession}"
@@ -234,10 +273,52 @@ def _trait_ontology_mappings(trait: ET.Element) -> list[dict[str, str]]:
 def _trait_match_keys(trait: ET.Element) -> tuple[list[str], list[str]]:
     _, names = _trait_names(trait)
     mappings = _trait_ontology_mappings(trait)
+    accessions = [mapping["accession"] for mapping in mappings]
+    # SCVs can identify a condition by MedGen or MeSH alone, without a name.
+    # Use these concept IDs for matching, independently of which references
+    # qualify as exported ontology mappings. Keep database prefixes so IDs
+    # from different databases cannot accidentally match.
+    for path in ("XRef", "Name/XRef", "Symbol/XRef", "AttributeSet/XRef"):
+        for xref in trait.findall(path):
+            database = xref.get("DB")
+            accession = xref.get("ID")
+            if database in {"MedGen", "MeSH"} and accession:
+                accession = accession.removeprefix(f"{database}:")
+                if accession:
+                    accessions.append(f"{database}:{accession}")
     return (
         _unique(_normalise_name(name) for name in names),
-        _unique(mapping["accession"] for mapping in mappings),
+        _unique(accessions),
     )
+
+
+def _trait_external_references(
+    trait: ET.Element, primary_mappings: Iterable[dict[str, str]]
+) -> list[dict[str, str]]:
+    """Keep phenotype cross-references without promoting them to primary mappings."""
+    primary_keys = {
+        (mapping["database"], mapping["accession"])
+        for mapping in primary_mappings
+    }
+    result = []
+    for path in ("XRef", "Name/XRef", "Symbol/XRef", "AttributeSet/XRef"):
+        for xref in trait.findall(path):
+            database = xref.get("DB")
+            accession = xref.get("ID")
+            if not accession or database not in {"MONDO", "MedGen", "Orphanet", "OMIM"}:
+                continue
+            # OMIM's MIM is an entry type, not a primary/secondary mapping rank.
+            if database == "OMIM" and xref.get("Type") != "MIM":
+                continue
+            mapping = _normalise_ontology_reference(xref)
+            if mapping and (mapping["database"], mapping["accession"]) in primary_keys:
+                continue
+            result.append({
+                "database": database,
+                "accession": accession,
+                "reference_subject": "phenotype",
+            })
+    return _unique(result)
 
 
 def _primary_ontology_mappings(
@@ -277,7 +358,7 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
         raise RejectedRecord("missing_trait_set")
 
     trait_set_type = trait_set.get("Type")
-    if trait_set_type not in {"Disease", "Finding"}:
+    if trait_set_type not in {"Disease", "Finding", "PhenotypeInstruction"}:
         raise RejectedRecord("unsupported_trait_set_type", trait_set_type)
 
     trait_elements = trait_set.findall("Trait")
@@ -295,8 +376,17 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
                 {"trait_id": trait.get("ID"), "trait_type": trait.get("Type")},
             )
 
+        is_placeholder = _normalise_name(preferred_name) in PLACEHOLDER_PHENOTYPE_NAMES
+        # An instruction is not a disease name. Accept only labels already
+        # recognised as unspecified phenotypes, while preserving the source text.
+        if trait_set_type == "PhenotypeInstruction" and not is_placeholder:
+            raise RejectedRecord(
+                "unsupported_phenotype_instruction",
+                {"trait_id": trait.get("ID"), "reported_name": preferred_name},
+            )
+
         reported_name = preferred_name
-        if _normalise_name(preferred_name) in PLACEHOLDER_PHENOTYPE_NAMES:
+        if is_placeholder:
             reported_name = PHENOTYPE_NOT_SPECIFIED
             warnings.append("placeholder_phenotype_used")
 
@@ -305,6 +395,7 @@ def _parse_traits(reference_assertion: ET.Element) -> tuple[dict[str, Any], list
         match_names, match_accessions = _trait_match_keys(trait)
         parsed_trait = {
             "source_reported_name": preferred_name,
+            "external_references": _trait_external_references(trait, ontology_mappings),
             "phenotype": {
                 "reported_name": reported_name,
                 "ontology_mappings": ontology_mappings,
@@ -412,61 +503,6 @@ def _parse_genomic_hgvs(measure: ET.Element, assembly: str) -> list[str]:
     return values
 
 
-def _structural_variant_details(
-    measure: ET.Element, dbvar_ids: list[str]
-) -> dict[str, Any] | None:
-    """Identify structural signals for reporting, not for rejecting a record."""
-    signals = []
-    measure_type = measure.get("Type")
-    if measure_type and measure_type.casefold() in STRUCTURAL_MEASURE_TYPES:
-        signals.append("structural_measure_type")
-    if dbvar_ids:
-        signals.append("dbvar_identifier")
-
-    structural_attributes = _unique(
-        attribute.get("Type")
-        for attribute in measure.findall("./AttributeSet/Attribute")
-        if attribute.get("Type") in STRUCTURAL_ATTRIBUTE_TYPES
-    )
-    if structural_attributes:
-        signals.append("copy_number_or_cytogenetic_attribute")
-
-    locations = measure.findall("SequenceLocation")
-    if any(
-        any(
-            location.get(attribute) is not None
-            for attribute in IMPRECISE_LOCATION_ATTRIBUTES
-        )
-        for location in locations
-    ):
-        signals.append("imprecise_location_bounds")
-
-    variant_lengths = []
-    for location in locations:
-        variant_length = _integer(location.get("variantLength"))
-        if variant_length is None:
-            start = _integer(location.get("start"))
-            stop = _integer(location.get("stop"))
-            if start is not None and stop is not None:
-                variant_length = abs(stop - start) + 1
-        if variant_length is not None:
-            variant_lengths.append(abs(variant_length))
-
-    maximum_length = max(variant_lengths, default=None)
-    if maximum_length is not None and maximum_length >= 50:
-        signals.append("variant_length_ge_50")
-
-    if not signals:
-        return None
-    return {
-        "measure_type": measure_type,
-        "structural_signals": signals,
-        "dbvar_ids": dbvar_ids,
-        "structural_attributes": structural_attributes,
-        "variant_length": maximum_length,
-    }
-
-
 def _parse_variant(reference_assertion: ET.Element, assembly: str) -> dict[str, Any]:
     measure_set = reference_assertion.find("MeasureSet")
     if measure_set is None or not measure_set.get("Type"):
@@ -496,8 +532,6 @@ def _parse_variant(reference_assertion: ET.Element, assembly: str) -> dict[str, 
 
     rs_ids = _unique(rs_ids)
     dbvar_ids = _unique(dbvar_ids)
-    structural_details = _structural_variant_details(measure, dbvar_ids)
-    warnings = ["structural_variant_retained"] if structural_details else []
     structural_attributes = {}
     for attribute in measure.findall("./AttributeSet/Attribute"):
         attribute_type = attribute.get("Type")
@@ -527,6 +561,12 @@ def _parse_variant(reference_assertion: ET.Element, assembly: str) -> dict[str, 
             },
         )
     canonical_spdi = _text(measure.find("CanonicalSPDI"))
+    # Keep the source SPDI only on a retained requested-assembly sequence.
+    # Compare complete accessions, including versions; do not convert coordinates.
+    if canonical_spdi and canonical_spdi.split(":", 1)[0] not in {
+        location["sequence_accession"] for location in locations
+    }:
+        canonical_spdi = None
     genomic_hgvs = _parse_genomic_hgvs(measure, assembly)
 
     genes = []
@@ -535,13 +575,11 @@ def _parse_variant(reference_assertion: ET.Element, assembly: str) -> dict[str, 
             genes.append(_text(value))
 
     return {
-        "is_structural": structural_details is not None,
         "rs_ids": rs_ids,
         "dbvar_ids": dbvar_ids,
         "canonical_spdi": canonical_spdi,
         "genomic_hgvs": genomic_hgvs,
         "reported_genes": _unique(gene for gene in genes if gene),
-        "_warnings": warnings,
         "reported_variant": {
             "identifier": vcv_accession,
             "variant_type": measure.get("Type"),
@@ -564,6 +602,8 @@ def _combined_assessment_value(
         value,
         element.get("ClinicalImpactAssertionType"),
         element.get("ClinicalImpactClinicalSignificance"),
+        # Keep the treatment with the assertion that actually reports it.
+        element.get("DrugForTherapeuticAssertion"),
     ]
     return ":".join(part for part in parts if part)
 
@@ -599,8 +639,8 @@ def _aggregate_assessments(
             descriptions = descriptions[:1]
 
         publications = _publication_ids(element)
-        if element.tag == "GermlineClassification":
-            publications = _unique(
+        if element.tag in {"GermlineClassification", "NoClassification"}:
+            publications = _unique_publications(
                 publications + _observed_in_publication_ids(reference_assertion)
             )
 
@@ -687,10 +727,19 @@ def _submission_trait_indexes(
 
 def _submission_assessments(
     clinvar_set: ET.Element, aggregate_traits: list[dict[str, Any]]
-) -> tuple[list[dict[str, Any]], list[str]]:
+) -> tuple[list[dict[str, Any]], list[tuple[str, str | None, str]]]:
     assessments = []
     warnings = []
     for assertion in clinvar_set.findall("ClinVarAssertion"):
+        accession = _versioned_accession(assertion.find("ClinVarAccession"))
+        status = _text(assertion.find("RecordStatus"))
+        if status and status != "current":
+            warnings.append((
+                "non_current_submission", accession,
+                f"ClinVarAssertion/RecordStatus: {status}",
+            ))
+            continue
+
         classification_container = assertion.find("Classification")
         if classification_container is None:
             continue
@@ -706,14 +755,17 @@ def _submission_assessments(
             assertion, aggregate_traits
         )
         if trait_warning:
-            warnings.append(trait_warning)
+            warnings.append((trait_warning, accession, ""))
 
-        accession = _versioned_accession(assertion.find("ClinVarAccession"))
         submission = assertion.find("ClinVarSubmissionID")
         submitter = submission.get("submitter") if submission is not None else None
-        publications = _unique(
+        # These are references associated with this SCV, not necessarily
+        # direct support for its classification. Keep the three agreed scopes;
+        # searching the whole assertion would also include method/trait citations.
+        publications = _unique_publications(
             _publication_ids(classification_container)
             + _observed_in_publication_ids(assertion)
+            + _publication_ids(assertion, citation_path="Citation")
         )
         inheritance_types = _inheritance_types(assertion)
 
@@ -727,7 +779,7 @@ def _submission_assessments(
                 raw_date
             )
             if date_warning:
-                warnings.append(date_warning)
+                warnings.append((date_warning, accession, ""))
 
             assessment = {
                 "assessment_type": assessment_type,
@@ -782,8 +834,17 @@ def _source_context(clinvar_set: ET.Element) -> dict[str, Any]:
 
 def parse_clinvar_set(
     clinvar_set: ET.Element, assembly: str
-) -> tuple[list[dict[str, Any]], list[str]]:
+) -> tuple[list[dict[str, Any]], list[tuple[str, str | None, str]]]:
     """Parse one ClinVarSet into one record per trait and somatic-status group."""
+    # Only an explicit non-current status excludes data. Missing/empty statuses
+    # retain the previous behaviour; neither is converted into a source value.
+    for path in ("RecordStatus", "ReferenceClinVarAssertion/RecordStatus"):
+        status = _text(clinvar_set.find(path))
+        if status and status != "current":
+            raise RejectedRecord("non_current_record", {
+                "xml_field": f"ClinVarSet/{path}", "source_value": status,
+            })
+
     reference_assertion = clinvar_set.find("ReferenceClinVarAssertion")
     if reference_assertion is None:
         raise RejectedRecord("missing_reference_assertion")
@@ -797,7 +858,6 @@ def parse_clinvar_set(
     variant = _parse_variant(reference_assertion, assembly)
     reported_variant = variant.pop("reported_variant")
     reported_genes = variant.pop("reported_genes")
-    warnings.extend(variant.pop("_warnings"))
     # The focal allele belongs to the report; source allele pairs stay on each
     # location. Do not select a focal allele when those representations disagree.
     _, reported_alleles, ambiguous_location = _reported_alleles(
@@ -809,10 +869,13 @@ def parse_clinvar_set(
     warnings.extend(aggregate_warnings)
     if not aggregate_assessments:
         raise RejectedRecord("unsupported_classification")
+    # Warning entries carry (reason, SCV accession, details). Aggregate/record
+    # warnings have no SCV; submission warnings retain theirs even if unmatched.
+    contextual_warnings = [(warning, None, "") for warning in warnings]
     submission_assessments, submission_warnings = _submission_assessments(
         clinvar_set, aggregate_traits
     )
-    warnings.extend(submission_warnings)
+    contextual_warnings.extend(submission_warnings)
     assessments = aggregate_assessments + submission_assessments
 
     assertion = reference_assertion.find("Assertion")
@@ -823,6 +886,10 @@ def parse_clinvar_set(
 
     records = []
     statuses = _unique(item["somatic_status"] for item in aggregate_assessments)
+    # Retain matched evidence-only SCVs even if the RCV only summarises clinical
+    # classifications. Do not assign that evidence a germline/somatic context.
+    if any(item["assessment_type"] == "no_classification" for item in submission_assessments):
+        statuses = _unique([*statuses, "unspecified"])
     for somatic_status in statuses:
         for trait_index, trait in enumerate(aggregate_traits):
             status_assessments = []
@@ -842,6 +909,9 @@ def parse_clinvar_set(
                     }
                 )
 
+            if not status_assessments:
+                continue
+
             records.append(
                 {
                     "somatic_status": somatic_status,
@@ -855,17 +925,16 @@ def parse_clinvar_set(
                             if aggregate_inheritance_types else None
                         ),
                         "reported_phenotype_name": trait_set["reported_name"],
+                        "external_references": trait["external_references"],
                         "reported_genes": reported_genes,
                         "reported_allele": reported_allele,
-                        "comparison_allele": None,
-                        "allele_role": None,
                         "reported_relationship_type": relationship_type,
                         "reported_variant": reported_variant,
                     },
                     "assessments": status_assessments,
                 }
             )
-    return records, warnings
+    return records, contextual_warnings
 
 def _open_xml(path: Path) -> BinaryIO:
     if path.suffix.lower() == ".gz":
@@ -915,7 +984,7 @@ def parse_clinvar(
     ):
         warnings_writer = csv.writer(warnings_handle, delimiter="\t", lineterminator="\n")
         rejections_writer = csv.writer(rejections_handle, delimiter="\t", lineterminator="\n")
-        warnings_writer.writerow(["RCV", "VCV", "warning", "details"])
+        warnings_writer.writerow(["RCV", "VCV", "SCV", "warning", "details"])
         rejections_writer.writerow(["RCV", "VCV", "rejection_reason", "details"])
         root = None
         release_date = None
@@ -960,12 +1029,12 @@ def parse_clinvar(
                     unique_phenotype_names.add(
                         _normalise_name(record["phenotype"]["reported_name"])
                     )
-                warning_counts.update(warnings)
-                for warning in warnings:
+                warning_counts.update(warning for warning, _, _ in warnings)
+                for warning, scv_accession, details in warnings:
                     warnings_writer.writerow([
                         records[0]["source_report"]["source_accession"],
                         records[0]["source_report"]["reported_variant"]["identifier"],
-                        warning, "",
+                        scv_accession, warning, details,
                     ])
 
             element.clear()

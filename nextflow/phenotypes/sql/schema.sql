@@ -94,7 +94,7 @@ CREATE TABLE phenotype_association (
     phenotype_association_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     phenotype_id BIGINT NOT NULL REFERENCES phenotype (phenotype_id) ON DELETE RESTRICT,
     entity_id BIGINT NOT NULL REFERENCES entity (entity_id) ON DELETE RESTRICT,
-    somatic_status TEXT NOT NULL CHECK (somatic_status IN ('germline', 'somatic')),
+    somatic_status TEXT NOT NULL CHECK (somatic_status IN ('germline', 'somatic', 'unspecified')),
     UNIQUE (entity_id, phenotype_id, somatic_status)
 );
 
