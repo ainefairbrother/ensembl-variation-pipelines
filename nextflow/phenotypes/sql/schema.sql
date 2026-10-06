@@ -118,12 +118,9 @@ CREATE TABLE reported_variant (
     source_report_id BIGINT PRIMARY KEY REFERENCES source_report (source_report_id) ON DELETE CASCADE,
     identifier TEXT,
     variant_type TEXT,
-    -- Source copy-number and cytogenetic values, without interpreting them.
     structural_attributes JSONB NOT NULL DEFAULT '{}'
 );
 
--- Source locations do not require an Ensembl match. Keep missing values null;
--- the importer checks coordinates without turning uncertain bounds into exact ones.
 CREATE TABLE reported_variant_location (
     reported_variant_location_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     source_report_id BIGINT NOT NULL REFERENCES reported_variant (source_report_id) ON DELETE CASCADE,
