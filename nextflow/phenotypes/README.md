@@ -94,10 +94,15 @@ Failed download attempts are retried three times.
 To use a manually downloaded ClinVar XML file instead:
 
 ```bash
-nextflow run main.nf -profile standard --input /path/to/ClinVarRCVRelease_00-latest.xml.gz
+nextflow run main.nf -profile standard \
+    --input /path/to/ClinVarRCVRelease_00-latest.xml.gz \
+    --assembly GRCh38
 ```
 
-Using `--input` skips the download.
+Using `--input` skips the download, not parsing. Both downloaded and supplied
+XML files are passed to the parser. Assembly defaults to GRCh38; change it with
+`--assembly`. The process uses the project's `.venv/bin/python`, created by
+`uv sync`, so activating the environment is not required for Nextflow.
 
 The Python parser extracts the XML into an intermediate `clinvar_output.jsonl`
 file ahead of database loading. Each line is a JSON object containing a supported
@@ -110,11 +115,17 @@ Explicitly non-current RCVs are rejected; non-current SCV assessments are
 omitted with a warning while the current RCV is retained.
 References can be PubMed papers, DOI citations or HTTP/HTTPS evidence links.
 
+The parser prints a start message, progress every 10,000 RCVs and a completion
+summary to stderr. Updates show processed, accepted and rejected RCV counts,
+emitted rows and elapsed time. No total-input percentage is shown because the
+file is read once as a stream. Under Nextflow, these messages are captured in
+the parser task's `.command.err` file in its work directory.
+
 The parser does not write to PostgreSQL. Resolution and loading will be separate
 stages: resolution identifies optional Ensembl website links, and loading writes
 the results into the database model. An unmatched supported association can still
-be retained. The parser currently runs separately from Nextflow; those later
-stages are not yet implemented.
+be retained. Parsing is wired into Nextflow; resolution and database loading
+are not yet implemented.
 
 The parser also writes:
 
@@ -122,6 +133,15 @@ The parser also writes:
   and percentages, emitted rows, unique phenotype names and warning counts.
 - `warnings.txt`: tab-separated RCV, VCV, SCV, warning and details columns.
 - `rejections.txt`: tab-separated RCV, VCV, rejection reason and details columns.
+
+All four output files are copied to `${outdir}/clinvar/`, which defaults to
+`results/clinvar/` in the pipeline directory. Use `--outdir /path/to/results`
+to select another destination. The parser process requests one CPU, 8 GB memory
+and 12 hours; `standard` runs locally and `slurm` submits it to Slurm.
+
+Use `-resume` to reuse completed tasks while keeping the run's `work/` and
+`.nextflow/` directories. The parser script is a staged input, so edits to it
+invalidate the parser task without changing the completed download task.
 
 Only source placements on the requested assembly are retained. Source variant
 values are preserved, including structural attributes and uncertain coordinates;

@@ -7,15 +7,18 @@ import csv
 import gzip
 import json
 import re
+import sys
 import xml.etree.ElementTree as ET
 from collections import Counter
 from datetime import date
 from pathlib import Path
+from time import monotonic
 from typing import Any, BinaryIO, Iterable
 from urllib.parse import urlsplit
 
 
 PHENOTYPE_NOT_SPECIFIED = "ClinVar: phenotype not specified"
+PROGRESS_INTERVAL = 10_000
 PLACEHOLDER_PHENOTYPE_NAMES = {
     "none",
     "not provided",
@@ -942,6 +945,18 @@ def _open_xml(path: Path) -> BinaryIO:
     return path.open("rb")
 
 
+def _report_progress(summary: dict[str, Any], started_at: float, stage: str) -> None:
+    """Keep progress on stderr, separate from JSON output and diagnostics."""
+    elapsed = monotonic() - started_at
+    print(
+        f"[ClinVar] {stage}: {summary['n_records_seen']:,} RCVs processed; "
+        f"{summary['n_records_accepted']:,} accepted; "
+        f"{summary['n_records_rejected']:,} rejected; "
+        f"{summary['n_records_emitted']:,} rows emitted; elapsed {elapsed:.1f}s",
+        file=sys.stderr, flush=True,
+    )
+
+
 def parse_clinvar(
     input_path: str | Path,
     assembly: str,
@@ -975,6 +990,11 @@ def parse_clinvar(
     rejection_counts: Counter[str] = Counter()
     warning_counts: Counter[str] = Counter()
     unique_phenotype_names: set[str] = set()
+    started_at = monotonic()
+    print(
+        f"[ClinVar] Starting {input_path} (assembly: {assembly})",
+        file=sys.stderr, flush=True,
+    )
 
     with (
         _open_xml(input_path) as xml_handle,
@@ -1040,6 +1060,8 @@ def parse_clinvar(
             element.clear()
             if root is not None:
                 root.clear()
+            if summary["n_records_seen"] % PROGRESS_INTERVAL == 0:
+                _report_progress(summary, started_at, "Progress")
 
     if summary["release_date"] is None:
         raise ValueError("No ReleaseSet root found")
@@ -1057,6 +1079,7 @@ def parse_clinvar(
     with summary_path.open("w", encoding="utf-8") as summary_handle:
         json.dump(summary, summary_handle, ensure_ascii=False, indent=2)
         summary_handle.write("\n")
+    _report_progress(summary, started_at, "Complete")
     return summary
 
 
