@@ -6,14 +6,4 @@ __pycache__/
 .pytest_cache/
 .ruff_cache
 
-src/phenotypes/__init__.py
-
 .env
-
-/sql/README.md
-
-# Nextflow-generated files
-.nextflow/
-.nextflow.log*
-work/
-results/
