@@ -1143,7 +1143,7 @@ def parse_clinvar(
     warning_counts: Counter[str] = Counter()
     unique_phenotype_names: set[str] = set()
     with (
-        VcvMappings(vcv_input, directory=summary_path.parent) as vcv,
+        VcvMappings(vcv_input) as vcv,
         _open_xml(rcv_input) as xml_handle,
         records_path.open("w", encoding="utf-8") as records_handle,
         warnings_path.open("w", encoding="utf-8", newline="") as warnings_handle,
