@@ -36,7 +36,7 @@ CREATE TABLE import_run (
 
 CREATE TABLE publication (
     publication_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    identifier TEXT NOT NULL,
+    identifier TEXT,
     source TEXT NOT NULL,
     url TEXT,
     UNIQUE (source, identifier)
@@ -115,15 +115,24 @@ CREATE TABLE source_report (
 );
 
 CREATE TABLE reported_variant (
-    source_report_id BIGINT PRIMARY KEY REFERENCES source_report (source_report_id) ON DELETE CASCADE,
+    reported_variant_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    -- A root belongs to one report; a component belongs to one parent variant.
+    source_report_id BIGINT UNIQUE REFERENCES source_report (source_report_id) ON DELETE CASCADE,
+    parent_reported_variant_id BIGINT REFERENCES reported_variant (reported_variant_id) ON DELETE CASCADE,
+    component_ordinal INTEGER,
     identifier TEXT,
+    alternative_identifiers TEXT[] NOT NULL DEFAULT '{}',
     variant_type TEXT,
-    structural_attributes JSONB NOT NULL DEFAULT '{}'
+    structural_attributes JSONB NOT NULL DEFAULT '{}',
+    UNIQUE (parent_reported_variant_id, component_ordinal),
+    CHECK (
+        (source_report_id IS NOT NULL) <> (parent_reported_variant_id IS NOT NULL)
+    )
 );
 
 CREATE TABLE reported_variant_location (
     reported_variant_location_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    source_report_id BIGINT NOT NULL REFERENCES reported_variant (source_report_id) ON DELETE CASCADE,
+    reported_variant_id BIGINT NOT NULL REFERENCES reported_variant (reported_variant_id) ON DELETE CASCADE,
     assembly TEXT,
     assembly_accession TEXT,
     assembly_status TEXT,

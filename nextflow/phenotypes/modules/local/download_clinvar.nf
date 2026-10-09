@@ -1,17 +1,24 @@
 process DOWNLOAD_CLINVAR {
-    tag 'ClinVar RCV XML'
+    tag "ClinVar ${release_type} XML"
+
+    input:
+    val release_type
 
     output:
-    path 'ClinVarRCVRelease_00-latest.xml.gz', emit: xml
+    tuple val(release_type), path("ClinVar${release_type}Release_00-latest.xml.gz"), emit: xml
 
     script:
+    def filename = "ClinVar${release_type}Release_00-latest.xml.gz"
+    def url = release_type == 'RCV' ?
+        "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/RCV_release/${filename}" :
+        "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/${filename}"
     """
     curl --fail --location --silent --show-error \
         --retry 3 \
         --retry-delay 10 \
         --retry-all-errors \
-        --output ClinVarRCVRelease_00-latest.xml.gz.part \
-        'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/RCV_release/ClinVarRCVRelease_00-latest.xml.gz'
-    mv ClinVarRCVRelease_00-latest.xml.gz.part ClinVarRCVRelease_00-latest.xml.gz
+        --output '${filename}.part' \
+        '${url}'
+    mv '${filename}.part' '${filename}'
     """
 }

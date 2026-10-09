@@ -1,9 +1,10 @@
 process PARSE_CLINVAR {
-    tag "${clinvar_xml.name} (${assembly})"
+    tag "${rcv_xml.name} (${assembly})"
 
     input:
-    path clinvar_xml
-    path parser_script
+    path rcv_xml
+    path vcv_xml
+    path python_source
     val assembly
 
     output:
@@ -14,8 +15,10 @@ process PARSE_CLINVAR {
 
     script:
     """
-    "${projectDir}/.venv/bin/python" "${parser_script}" \
-        --input "${clinvar_xml}" \
+    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="${python_source}" \
+    "${projectDir}/.venv/bin/python" -m phenotypes.clinvar.rcv_parser \
+        --rcv-input "${rcv_xml}" \
+        --vcv-input "${vcv_xml}" \
         --assembly "${assembly}" \
         --records clinvar_output.jsonl \
         --summary clinvar_summary.json
