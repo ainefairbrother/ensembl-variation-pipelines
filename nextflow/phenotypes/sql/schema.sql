@@ -28,10 +28,11 @@ CREATE TABLE source (
 CREATE TABLE import_run (
     import_run_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     source_version TEXT,
-    download_url TEXT,
-    download_date DATE,
-    ingestion_date DATE NOT NULL,
-    pipeline_version TEXT
+    -- Non-empty, equally sized arrays are paired by the importer.
+    file_names TEXT[] NOT NULL,
+    file_checksums TEXT[] NOT NULL,
+    pipeline_run_date DATE NOT NULL,
+    pipeline_revision TEXT
 );
 
 CREATE TABLE publication (
@@ -67,10 +68,15 @@ CREATE TABLE entity_component (
 CREATE TABLE genome_context (
     genome_context_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     entity_id BIGINT NOT NULL REFERENCES entity (entity_id) ON DELETE CASCADE,
-    species_taxon_id INTEGER NOT NULL,
-    species_scientific_name TEXT NOT NULL,
+    species_taxonomy_id INTEGER NOT NULL,
+    species_production_name TEXT NOT NULL,
     organism_id TEXT,
     organism_display_name TEXT,
+    -- The importer requires assembly when adding entity_location rows.
+    assembly TEXT,
+    assembly_accession TEXT,
+    assembly_uuid TEXT,
+    -- Optional annotated Ensembl dataset, not the assembly identifier.
     genome_uuid TEXT
 );
 

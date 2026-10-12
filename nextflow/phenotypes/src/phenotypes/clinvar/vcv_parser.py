@@ -21,6 +21,12 @@ def normalise_name(value):
     return " ".join(value.split()).casefold()
 
 
+def is_current(status):
+    """Only an explicit non-empty status other than current excludes data."""
+    status = (status or "").strip()
+    return not status or status == "current"
+
+
 def mapping_key(kind, reference, value):
     if kind == "Name":
         value = normalise_name(value)
@@ -80,7 +86,7 @@ class VcvMappings:
                 if event != "end" or element.tag != "VariationArchive":
                     continue
                 self.n_records += 1
-                if element.findtext("RecordStatus") in (None, "current"):
+                if is_current(element.findtext("RecordStatus")):
                     self._add_record(element)
                 element.clear()
                 root.clear()
@@ -104,7 +110,7 @@ class VcvMappings:
         # The internal assertion ID can differ from the accession's number.
         scvs = {}
         for assertion in classified.findall("ClinicalAssertionList/ClinicalAssertion"):
-            if assertion.findtext("RecordStatus") not in (None, "current"):
+            if not is_current(assertion.findtext("RecordStatus")):
                 continue
             accession = assertion.find("ClinVarAccession")
             if (accession is not None and accession.get("Accession")
