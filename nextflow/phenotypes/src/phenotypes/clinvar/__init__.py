@@ -1,2 +1,0 @@
-"""ClinVar phenotype import support."""
-

@@ -16,7 +16,6 @@ connection_env=$(PYTHONPATH="${PIPELINE_DIR}/src" "$PYTHON_BIN" -m phenotypes.co
     --env-file "$ENV_FILE" --postgresql-env)
 eval "$connection_env"
 
-# The configured schema must already exist. Quote its name as a SQL identifier.
 psql -X -v ON_ERROR_STOP=1 -v target_schema="$PGSCHEMA" \
     -v schema_file="$SCHEMA_FILE" <<'SQL'
 SET search_path TO :"target_schema";

@@ -1,5 +1,4 @@
-"""Read source input files, species and assemblies from source_config.json."""
-
+import argparse
 import json
 import re
 from pathlib import Path
@@ -9,7 +8,6 @@ DEFAULT_SOURCE_CONFIG = Path(__file__).resolve().parents[2] / "assets/source_con
 
 
 def validate_genome_context(context: dict) -> dict:
-    """Return the model fields from one fully specified processing context."""
     if not isinstance(context, dict):
         raise ValueError("GenomeContext must be a JSON object")
     taxon_id = context.get("species_taxonomy_id")
@@ -20,12 +18,16 @@ def validate_genome_context(context: dict) -> dict:
         raise ValueError("GenomeContext requires a positive integer species_taxonomy_id")
     if not isinstance(species_production_name, str) or not species_production_name.strip():
         raise ValueError("GenomeContext requires species_production_name")
-    if not isinstance(assembly, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+", assembly):
-        raise ValueError("GenomeContext requires an assembly label")
-    if not isinstance(assembly_uuid, str) or not re.fullmatch(
-        r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", assembly_uuid,
+    if assembly is not None and (
+        not isinstance(assembly, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+", assembly)
     ):
-        raise ValueError("GenomeContext requires a valid assembly_uuid")
+        raise ValueError("GenomeContext assembly must be a label or null")
+    if assembly_uuid is not None and (
+        not isinstance(assembly_uuid, str) or not re.fullmatch(
+            r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", assembly_uuid,
+        )
+    ):
+        raise ValueError("GenomeContext assembly_uuid must be a UUID or null")
     return {
         "species_taxonomy_id": taxon_id,
         "species_production_name": species_production_name,
@@ -35,15 +37,15 @@ def validate_genome_context(context: dict) -> dict:
 
 
 def validate_clinvar_context(context: dict) -> dict:
-    """Validate ClinVar's human context without changing configured values."""
     context = validate_genome_context(context)
     if context["species_taxonomy_id"] != 9606 or context["species_production_name"] != "homo_sapiens":
         raise ValueError("ClinVar contexts require species_taxonomy_id 9606 and species_production_name homo_sapiens")
+    if context["assembly"] is None:
+        raise ValueError("ClinVar requires an assembly to select source placements")
     return context
 
 
 def load_source_config(path: str | Path = DEFAULT_SOURCE_CONFIG) -> dict:
-    """Read the source/context lists. Only ClinVar has a workflow currently."""
     config_path = Path(path).resolve()
     with config_path.open(encoding="utf-8") as handle:
         config = json.load(handle)
@@ -68,7 +70,12 @@ def load_source_config(path: str | Path = DEFAULT_SOURCE_CONFIG) -> dict:
                 continue
             if not isinstance(input_path, str) or not input_path.strip():
                 raise ValueError(f"sources.{source}.inputs.{name} must be a file path or null")
-            resolved_inputs[name] = str((config_path.parent / input_path).resolve())
+            if any(character in input_path for character in "*?[]{}"):
+                raise ValueError(f"sources.{source}.inputs.{name} requires one literal file path, not a wildcard")
+            input_file = (config_path.parent / input_path).resolve()
+            if not input_file.is_file():
+                raise ValueError(f"sources.{source}.inputs.{name} is not a file: {input_file}")
+            resolved_inputs[name] = str(input_file)
         settings["inputs"] = resolved_inputs
         seen = set()
         validated = []
@@ -81,3 +88,19 @@ def load_source_config(path: str | Path = DEFAULT_SOURCE_CONFIG) -> dict:
             validated.append(context)
         settings["contexts"] = validated
     return config
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description='Read source input files, species and assemblies from source_config.json.')
+    parser.add_argument("path", type=Path)
+    args = parser.parse_args()
+    try:
+        config = load_source_config(args.path)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
+    print(json.dumps(config))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

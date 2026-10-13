@@ -1,5 +1,3 @@
-"""Match SCV traits to RCV components using ClinVar VCV mappings."""
-
 from phenotypes.clinvar.vcv_parser import normalise_name
 
 
@@ -19,7 +17,6 @@ class SubmissionMatching:
                              and self.vcv.has_rcv_version(vcv_accession, accession))
 
     def match(self, direct_matches, aggregate_traits, scv, *, submission_trait):
-        """Keep unique direct matches; let VCV resolve absent or ambiguous ones."""
         if len(direct_matches) == 1 or self.vcv is None:
             return direct_matches
         if not self._has_rcv:
@@ -42,7 +39,5 @@ class SubmissionMatching:
                            if normalise_name(name) in trait["match_names"]}
             matches.update(targets)
         if len(matches) == 1 and (not direct_matches or matches <= direct_matches):
-            # A tie-break must select an original candidate, not replace the
-            # direct evidence with a different phenotype elsewhere in the RCV.
             return matches
         return direct_matches

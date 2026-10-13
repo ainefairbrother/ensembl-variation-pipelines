@@ -1,6 +1,6 @@
 # Phenotypes pipeline
 
-Pipeline to download, parse, clean and load phenotype data into PostgreSQL.
+Pipeline to download and parse phenotype data for PostgreSQL. Database loading is not yet implemented.
 This pipeline uses Nextflow 26.04.0.
 
 ```bash
@@ -71,7 +71,8 @@ Apply `sql/schema.sql` to the configured empty schema:
 Check tables got generated correctly:
 
 ```bash
-psql
+# Use the connection values from .env:
+psql -h database_host -p database_port -U database_user -d database_name
 ```
 
 At psql prompt: 
@@ -97,7 +98,13 @@ Failed download attempts are retried three times.
 
 To use manually downloaded files, set `sources.clinvar.inputs.rcv` and/or `sources.clinvar.inputs.vcv` in the source configuration (`assets/source_config.json`). Inputs, species and assembly also come from `assets/source_config.json`. At present, these are hard-coded and can be edited by the user running the pipeline. 
 
-By default, the source config file below is supplied to the pipeline. Here, `rcv` and `vcv` are `null`, and so the pipeline will download the files for you. You can supply an alternative `source_config.json` file using `nextflow run main.nf" --source_config /path/to/source_config.json`
+Each non-null input must name one existing file; relative paths are resolved from the configuration file's directory. Wildcards are not supported. ClinVar requires a human context and an assembly for its location filter; `assembly_uuid` is optional. Shared context validation also permits species-only contexts for future sources.
+
+By default, the source config file below is supplied to the pipeline. Here, `rcv` and `vcv` are `null`, and so the pipeline will download the files for you. You can supply an alternative `source_config.json` file using:
+
+```bash
+nextflow run "$PIPELINE_DIR/main.nf" --source_config /path/to/source_config.json
+```
 
 ```json
 {
@@ -119,3 +126,8 @@ By default, the source config file below is supplied to the pipeline. Here, `rcv
   }
 }
 ```
+
+Outputs are published to `<outdir>/clinvar/<species_production_name>/<assembly>/`.
+The first JSONL line contains shared `metadata`; subsequent lines contain associations.
+`pipeline_run_date` is the parser's production date and stays unchanged when an output is reused with `-resume`.
+The summary's `warnings` counts include routine placeholder substitutions, trait splits and TraitChoice combinations; these three events are not repeated in `warnings.txt`. Matching warnings include submitted and aggregate trait details.

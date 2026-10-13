@@ -1,6 +1,3 @@
--- Phenotype datastore schema
--- Model: variation-datastore-models/phenotypes
-
 BEGIN;
 
 CREATE TABLE entity (
@@ -28,7 +25,6 @@ CREATE TABLE source (
 CREATE TABLE import_run (
     import_run_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     source_version TEXT,
-    -- Non-empty, equally sized arrays are paired by the importer.
     file_names TEXT[] NOT NULL,
     file_checksums TEXT[] NOT NULL,
     pipeline_run_date DATE NOT NULL,
@@ -72,11 +68,9 @@ CREATE TABLE genome_context (
     species_production_name TEXT NOT NULL,
     organism_id TEXT,
     organism_display_name TEXT,
-    -- The importer requires assembly when adding entity_location rows.
     assembly TEXT,
     assembly_accession TEXT,
     assembly_uuid TEXT,
-    -- Optional annotated Ensembl dataset, not the assembly identifier.
     genome_uuid TEXT
 );
 
@@ -122,7 +116,6 @@ CREATE TABLE source_report (
 
 CREATE TABLE reported_variant (
     reported_variant_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    -- A root belongs to one report; a component belongs to one parent variant.
     source_report_id BIGINT UNIQUE REFERENCES source_report (source_report_id) ON DELETE CASCADE,
     parent_reported_variant_id BIGINT REFERENCES reported_variant (reported_variant_id) ON DELETE CASCADE,
     component_ordinal INTEGER,

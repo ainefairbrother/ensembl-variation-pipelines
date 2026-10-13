@@ -1,5 +1,3 @@
-"""Collect input filenames and SHA-256 checksums for an import run."""
-
 from hashlib import file_digest
 from pathlib import Path
 import subprocess
@@ -7,7 +5,6 @@ from typing import Iterable
 
 
 def git_revision(directory: str | Path) -> str | None:
-    """Return the checkout's commit SHA, or null outside an available Git repo."""
     try:
         result = subprocess.run(
             ["git", "-C", str(directory), "rev-parse", "HEAD"],
@@ -19,7 +16,6 @@ def git_revision(directory: str | Path) -> str | None:
 
 
 def input_file_provenance(paths: Iterable[str | Path]) -> dict[str, list[str]]:
-    """Return paired arrays in input order, hashing files without decompressing."""
     file_names: list[str] = []
     file_checksums: list[str] = []
     for path in paths:

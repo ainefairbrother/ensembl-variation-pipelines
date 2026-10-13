@@ -1,5 +1,3 @@
-"""Read the run-directory .env INI sections for database connections."""
-
 import argparse
 import configparser
 import shlex
@@ -8,7 +6,6 @@ from pathlib import Path
 
 
 def database_config(section: str, env_file: str | Path = ".env") -> dict:
-    """Read only the requested connection; do not log credentials or interpolate values."""
     path = Path(env_file)
     config = configparser.ConfigParser(interpolation=None)
     try:
@@ -33,7 +30,6 @@ def database_config(section: str, env_file: str | Path = ".env") -> dict:
 
 
 def postgresql_environment(env_file: str | Path = ".env") -> dict[str, str]:
-    """Translate the PostgreSQL section into the environment understood by psql."""
     values = database_config("postgresql", env_file)
     if not values.get("schema"):
         raise ValueError(f"Missing [postgresql] schema in {env_file}")
@@ -44,14 +40,13 @@ def postgresql_environment(env_file: str | Path = ".env") -> dict[str, str]:
         "PGDATABASE": values["name"],
         "PGSCHEMA": values["schema"],
     }
-    # A blank optional password leaves .pgpass or an existing PGPASSWORD usable.
     if values.get("password"):
         result["PGPASSWORD"] = values["password"]
     return result
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description='Read the run-directory .env INI sections for database connections.')
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
     parser.add_argument("--postgresql-env", action="store_true", required=True,
                         help="Print quoted exports for a Bash caller; do not log this output")

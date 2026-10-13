@@ -1,5 +1,3 @@
-"""Stream VCV XML and keep ClinVar's submitted-trait mappings in memory."""
-
 import gzip
 import sys
 import xml.etree.ElementTree as ET
@@ -7,7 +5,6 @@ from pathlib import Path
 from time import monotonic
 
 
-# Shared default for VCV indexing and RCV parsing; counts input records.
 PROGRESS_INTERVAL = 100_000
 
 
@@ -22,7 +19,6 @@ def normalise_name(value):
 
 
 def is_current(status):
-    """Only an explicit non-empty status other than current excludes data."""
     status = (status or "").strip()
     return not status or status == "current"
 
@@ -36,7 +32,6 @@ def mapping_key(kind, reference, value):
 
 
 def trait_keys(trait):
-    """Keep raw trait context: exported identifiers may omit some useful XRefs."""
     result = set()
     for name in trait.findall("Name/ElementValue"):
         if name.text and name.text.strip():
@@ -106,8 +101,6 @@ class VcvMappings:
             if identifier and version:
                 self._rcv_versions.add((vcv, f"{identifier}.{version}"))
 
-        # Join using ClinicalAssertion/@ID, not the digits in an SCV accession.
-        # The internal assertion ID can differ from the accession's number.
         scvs = {}
         for assertion in classified.findall("ClinicalAssertionList/ClinicalAssertion"):
             if not is_current(assertion.findtext("RecordStatus")):
@@ -127,8 +120,6 @@ class VcvMappings:
                 continue
             kind, reference, value = mapping_key(kind, reference, value)
             key = (vcv, scv, kind, reference, value)
-            # Keep every target: conflicting mappings must remain ambiguous,
-            # rather than allowing a later mapping to overwrite an earlier one.
             self._mappings.setdefault(key, []).append(
                 (mapping.get("TraitType", ""), medgen.get("CUI"), medgen.get("Name"))
             )
