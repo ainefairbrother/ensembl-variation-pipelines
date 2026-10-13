@@ -17,6 +17,7 @@
 import sys
 import argparse
 import os
+import getpass
 import json
 import subprocess
 import requests
@@ -350,7 +351,8 @@ def main(args=None):
             source_meta = get_source_meta_from_vcf(api_vcf)
 
             payload = {}
-            payload["team_responsible"] = "Ensembl Variation"
+            payload["team_responsible"] = "variation"
+            payload["user"] = getpass.getuser()
 
             payload["name"] = source
             source_version = source_meta.get("version", "")
