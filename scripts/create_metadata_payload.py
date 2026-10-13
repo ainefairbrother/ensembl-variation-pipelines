@@ -60,6 +60,12 @@ def parse_args(args=None):
         default="all",
         help="dataset type, accepted values: 'short_variants', 'evidence' or 'all'; Default is 'all'",
     )
+    parser.add_argument(
+        "--release",
+        dest="release",
+        type=str,
+        help="release version for the dataset if we want to specify it explicitly",
+    )
     parser.add_argument("--debug", dest="debug", action="store_true")
 
     return parser.parse_args(args)
@@ -440,6 +446,9 @@ def main(args=None):
                 payload["track_source"]["name"] = source
             payload["track_source"]["url"] = source_meta.get("url", "")
             payload["track_source"]["details"] = version
+
+            if args.release is not None:
+                payload["release_name"] = args.release
 
             if debug:
                 aggregate_payload.append(payload)
