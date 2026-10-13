@@ -1,3 +1,6 @@
+// Use local ClinVar XML files or download the missing RCV and VCV releases.
+// Run the parser once for each configured species and assembly context.
+
 include { DOWNLOAD_CLINVAR } from '../modules/local/download_clinvar'
 include { PARSE_CLINVAR } from '../modules/local/parse_clinvar'
 

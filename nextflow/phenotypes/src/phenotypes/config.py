@@ -1,3 +1,9 @@
+"""Read database connection details from an .env file.
+
+Provide the selected connection settings to callers, or print shell variable
+assignments that let scripts connect to PostgreSQL.
+"""
+
 import argparse
 import configparser
 import shlex

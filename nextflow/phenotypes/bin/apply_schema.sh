@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Create the phenotype tables in the configured PostgreSQL schema.
+# Read connection details from an .env file and apply sql/schema.sql.
+
 set -euo pipefail
 
 PIPELINE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"

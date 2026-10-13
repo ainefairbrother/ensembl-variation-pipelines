@@ -1,3 +1,5 @@
+// Read and validate source settings, then run the source workflows.
+
 include { CLINVAR } from './clinvar'
 
 def read_source_config(config_path) {

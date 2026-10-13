@@ -1,3 +1,6 @@
+-- Create the tables and relationships for the phenotype datastore.
+-- Run in the target schema after it has been created.
+
 BEGIN;
 
 CREATE TABLE entity (

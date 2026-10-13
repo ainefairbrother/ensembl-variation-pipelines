@@ -1,3 +1,6 @@
+// Parse the supplied ClinVar files for one species and assembly.
+// Publish the association records, summary, warnings and rejections.
+
 process PARSE_CLINVAR {
     tag "ClinVar ${processing_context.species_production_name} ${processing_context.assembly}"
 
