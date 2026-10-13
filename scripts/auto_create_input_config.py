@@ -217,7 +217,7 @@ def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> dict:
             ON gd.genome_id = g.genome_id
             JOIN assembly AS a
             ON g.assembly_id = a.assembly_id
-            WHERE t.name = 'variation'
+            WHERE t.name = 'short_variants'
             AND s.type = 'vcf';
     """
 
@@ -248,14 +248,17 @@ def get_ensembl_vcf_filepaths(server: dict, meta_db: str) -> dict:
 
     ensembl_filepaths = {}
     for filepath_meta in process.stdout.decode().strip().split("\n"):
-        (accession, production_name, genome_uuid, file_path) = filepath_meta.split()
-        ensembl_filepaths[
-            genome_uuid
-        ] = {  # using genome_uuid as key, as assembly_id isn't unique i.e. GCA_015227675.2 is mapped to two genome_uuid
-            "species": production_name,
-            "assembly_id": accession,
-            "file_path": file_path,
-        }
+        try:
+            (accession, production_name, genome_uuid, file_path) = filepath_meta.split()
+            ensembl_filepaths[
+                genome_uuid
+            ] = {  # using genome_uuid as key, as assembly_id isn't unique i.e. GCA_015227675.2 is mapped to two genome_uuid
+                "species": production_name,
+                "assembly_id": accession,
+                "file_path": file_path,
+            }
+        except ValueError:
+            print(f"[WARNING] Cannot form VCF file path from metadata, malformed path: {filepath_meta}")
 
     return ensembl_filepaths
 
@@ -286,7 +289,7 @@ def get_ensembl_variant_counts(server: dict, meta_db: str) -> dict:
             JOIN genome AS g             ON gd.genome_id        = g.genome_id
             JOIN assembly AS a           ON g.assembly_id       = a.assembly_id
             WHERE
-                dt.name = 'variation'
+                dt.name = 'short_variants'
                 AND attr.name = 'variation.stats.short_variants';
     """
 
